@@ -25,5 +25,12 @@ services:
       - pgvector_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://webhooks:8000
+    depends_on:
+      - webhooks
+    restart: unless-stopped
+
 volumes:
   pgvector_data:

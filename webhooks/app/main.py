@@ -1,9 +1,18 @@
+import json
 from fastapi import FastAPI, Request, HTTPException
 
 from app.services.slack_service import verify_slack_signature
 from app.utils.message_utils import filter_message, store_in_db
 
 app = FastAPI()
+
+
+@app.post("/")
+async def verify(request: Request):
+    payload = await request.json()
+    if payload.get("type") == "url_verification":
+        return {"challenge": payload.get("challenge")}
+    return {"ok": True}
 
 
 @app.post("/slack/events")
@@ -15,14 +24,14 @@ async def slack_events(request: Request):
     signature = headers.get("X-Slack-Signature", "")
     
     if not verify_slack_signature(body, timestamp, signature):
+        print("Invalid signature")
         raise HTTPException(status_code=403, detail="Invalid signature")
     
-    payload = await request.json()
     
-    if payload.get("type") == "url_verification":
-        return {"challenge": payload.get("challenge")}
+    payload = json.loads(body)
+    print(payload)
     
-    if payload.get("event", {}).get("type") == "message": # v1 focuses only on messages, not reactions or edits
+    if payload.get("event", {}).get("type") == "message":
         text = payload["event"].get("text", "")
         print(text)
         
