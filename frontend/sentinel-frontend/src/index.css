@@ -3,7 +3,7 @@
 @theme {
 
   --color-top: #e38d26;    /* Rich Golden Orange */
-  --color-bottom: #fff6e0; /* Warm Oatmeal */
+  --color-bottom: #f7e9c1; /* Warm Oatmeal */
   
   /* UI Elements */
   --color-brand-deep: #3f0345;  /* Deep purple for contrast */
@@ -19,13 +19,3 @@
   }
 }
 
-/* The Golden Halo Logo */
-.halo-ring {
-  @apply relative w-20 h-20 rounded-full border-[3px] border-brand-accent/40 flex items-center justify-center;
-  box-shadow: 0 0 30px rgba(251, 191, 36, 0.5), inset 0 0 20px rgba(251, 191, 36, 0.3);
-}
-
-.halo-ring::after {
-  content: '';
-  @apply absolute -inset-1 rounded-full border border-brand-accent/20 animate-pulse;
-}
