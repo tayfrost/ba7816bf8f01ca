@@ -3,6 +3,7 @@ import Signup from "./pages/Signup";
 import ChoosePlan from "./pages/ChoosePlan";
 import Payment from "./pages/Payment";
 import Usage from "./pages/Usage";
+import Playground from "./pages/Playground";
 
 export default function App() {
   return (
@@ -12,6 +13,8 @@ export default function App() {
       <Route path="/plan" element={<ChoosePlan />} />
       <Route path="/payment" element={<Payment />} />
       <Route path="/usage" element={<Usage />} />
+
+      <Route path="/playground" element={<Playground />} />
       <Route path="*" element={<Navigate to="/signup" replace />} />
     </Routes>
   );
