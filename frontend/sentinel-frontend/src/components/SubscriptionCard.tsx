@@ -9,6 +9,9 @@ interface SubscriptionProps {
 }
 
 export default function SubscriptionCard({ title, price, period, features }: SubscriptionProps) {
+
+  const buttonVariant = (period === "mo" || period === "yr") ? "primary" : "secondary";
+
   return (
     <div className="relative max-w-sm w-full bg-white/20 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl overflow-hidden transition-transform hover:scale-[1.02]">
 
@@ -25,8 +28,9 @@ export default function SubscriptionCard({ title, price, period, features }: Sub
 
       <div className="p-8 space-y-4">
         <ul className="space-y-3">
-          {features.map((item) => (
-            <li key={item} className="flex items-center gap-3 text-sm text-brand-deep/80">
+          {features.map((item, index) => (
+
+            <li key={index} className="flex items-center gap-3 text-sm text-brand-deep/80">
               <svg className="w-5 h-5 text-brand-deep/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
               </svg>
@@ -37,8 +41,7 @@ export default function SubscriptionCard({ title, price, period, features }: Sub
       </div>
 
       <div className="p-8 pt-0">
-    
-        <Button variant={(period === "mo") ? "primary" : "secondary"}>
+        <Button variant={buttonVariant}>
           Get Started
         </Button>
       </div>
