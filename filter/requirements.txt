@@ -1,2 +1,8 @@
 fastapi
 uvicorn
+torch
+transformers
+peft
+datasets
+accelerate
+scikit-learn
