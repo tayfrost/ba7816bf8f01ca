@@ -1,77 +1,45 @@
-# SentinelAI HR Risk Dataset v2.0
+Overview
+Comprehensive workplace mental health dataset for training AI-based early-warning systems.
+Total Examples: 5,000
+Version: 3.0
+Date: February 2025
+Category Distribution
+CategoryCount%neutral1,01720.3%humor_sarcasm93418.7%stress67913.6%burnout62812.6%depression61412.3%harassment58811.8%suicidal_ideation54010.8%
+Stage Distribution
+StageCount%none1,95139.0%early1,05521.1%middle1,04420.9%late95019.0%
+Risk Distribution
 
-## Overview
-Synthetic workplace mental health dataset for training early-warning detection systems.
-Clinically grounded, with timestamp data for temporal analysis.
+Risk messages (is_risk=1): 3,049 (61.0%)
+Non-risk messages (is_risk=0): 1,951 (39.0%)
 
-## Key Stats
-| Metric | Value |
-|--------|-------|
-| Total examples | 1,005 |
-| Risk messages | 610 (61%) |
-| Neutral / True negatives | 395 (39%) |
-| Late-night messages (00:00-05:00) | 173 |
+Schema
+FieldTypeDescriptionidintUnique identifiertimestampstringYYYY-MM-DD HH:MM formatmessagestringWorkplace communication textcategorystringClassification categorystagestringSeverity stage (none/early/middle/late)severity_scoreint0-10 severity ratingis_riskintBinary risk flag (0/1)recommended_actionstringSuggested interventioncontextstringCommunication channel (slack/email)clinical_basisstringClinical framework reference
+Categories Explained
+neutral
+Normal workplace communication with no mental health concerns.
+humor_sarcasm
+Workplace humor, memes, and sarcastic comments. Includes markers like "lol", "jk", hyperbole, and self-deprecating jokes. Critical for reducing false positives.
+stress
+Acute and chronic stress responses ranging from mild anxiety to severe panic symptoms.
+burnout
+Following Maslach Burnout Inventory (MBI) dimensions: emotional exhaustion, depersonalization, reduced personal accomplishment.
+depression
+Aligned with DSM-5 criteria: anhedonia, sleep disturbance, cognitive symptoms, hopelessness.
+harassment
+Based on UK Equality Act 2010: microaggressions, hostile environment, discrimination, bullying.
+suicidal_ideation
+Clinical staging: passive ideation → active ideation without plan → active ideation with plan/intent.
+Recommended Actions
+ActionDescriptionnoneNo intervention neededmonitorContinue observationhr_reviewFlag for HR reviewurgent_hr_interventionImmediate HR involvementimmediate_crisis_interventionCrisis response required
+Clinical Grounding
 
-## Categories
+Burnout: Maslach Burnout Inventory (MBI)
+Depression: DSM-5 Major Depressive Episode criteria
+Harassment: UK Equality Act 2010
+Suicidal Ideation: Clinical risk assessment frameworks
 
-| Category | Count | Clinical Basis |
-|----------|-------|----------------|
-| `neutral` | 210 | Normal workplace communication |
-| `humor_sarcasm` | 185 | Dark humor distinguishable from real distress |
-| `stress` | 139 | Acute/chronic stress response, physiological markers |
-| `depression` | 127 | DSM-5 Major Depressive Disorder criteria |
-| `burnout` | 124 | Maslach Burnout Inventory (MBI) |
-| `harassment` | 119 | UK Equality Act 2010, workplace bullying literature |
-| `suicidal_ideation` | 101 | Clinical suicide risk assessment frameworks |
+Usage Notes
 
-## Severity Stages
-- **early**: Subtle signs, easily dismissed → `monitor`
-- **middle**: Clear symptoms, functional impact → `hr_review`
-- **late**: Crisis level → `urgent_hr_intervention` or `immediate_crisis_intervention`
-
-## Columns
-
-| Column | Description |
-|--------|-------------|
-| `id` | Unique identifier |
-| `timestamp` | YYYY-MM-DD HH:MM (simulated, realistic distribution) |
-| `message` | Simulated workplace message |
-| `category` | Risk category |
-| `stage` | early / middle / late / none |
-| `severity_score` | 0-10 scale |
-| `is_risk` | Binary (1=risk, 0=neutral/humor) |
-| `recommended_action` | Suggested response (kept for reference, not primary) |
-| `context` | slack / email |
-| `clinical_basis` | Clinical/theoretical grounding |
-
-## Timestamp Logic
-- **Normal messages**: Working hours (8am-6pm)
-- **Early stage**: Slight extension into evenings
-- **Middle stage**: Evening hours, some late night
-- **Late stage / Crisis**: Significant late-night representation (00:00-05:00)
-- **Suicidal ideation (late)**: Heavy late-night weighting
-
-This enables temporal analysis: same message at 10am vs 3am carries different weight.
-
-## humor_sarcasm Category
-Critical for reducing false positives. Examples include:
-- "This deadline is killing me lol" → humor
-- "My code has imposter syndrome" → humor
-- Explicit markers: "kidding", "joking", meme formats
-
-The model must distinguish workplace dark humor from genuine distress signals.
-
-## Usage Notes
-1. UK English workplace context (Slack/email style)
-2. Timestamps enable time-of-day feature engineering
-3. `recommended_action` kept but not primary focus
-4. `humor_sarcasm` is crucial for false-positive reduction
-
-## Ethical Positioning
-- Synthetic data only - no real PII
-- Support-focused, not punitive
-- Human-in-the-loop required for all alerts
-
-## Version History
-- v1.0: Initial release (400 examples)
-- v2.0: Added timestamps, humor_sarcasm category, expanded to 1,005 examples
+Dataset includes diverse communication styles: formal, casual, British English, Gen Z slang, emoji-heavy
+Timestamp distribution reflects real workplace patterns (late-stage messages weighted toward night hours)
+Designed for UK workplace context but applicable internationally
