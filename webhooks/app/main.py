@@ -30,6 +30,7 @@ async def slack_events(request: Request):
     
     if payload.get("type") == "event_callback" and payload.get("event", {}).get("type") == "message":
         text = payload["event"].get("text", "")
+        message_ts = payload["event"].get("ts", "")
         logger.info(f"Processing message: {text}")
         
         if filter_message(text):
