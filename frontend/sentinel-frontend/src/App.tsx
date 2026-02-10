@@ -3,7 +3,6 @@ import Signup from "./pages/Signup";
 import ChoosePlan from "./pages/ChoosePlan";
 import Payment from "./pages/Payment";
 import Usage from "./pages/Usage";
-import Playground from "./pages/Playground";
 import RequireOnboarding from "./guards/RequireOnboarding";
 
 export default function App() {
@@ -23,7 +22,7 @@ export default function App() {
         }
       />
 
-      <Route path="/playground" element={<Playground />} />
+      
       <Route path="*" element={<Navigate to="/plan" replace />} />
     </Routes>
   );
