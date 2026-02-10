@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Stepper from "../components/Stepper";
 import Input from "../components/Input";
 import Button from "../components/Button";
@@ -8,8 +8,11 @@ import { useOnboarding } from "../state/onboarding";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { setSignup } = useOnboarding();
 
+  const { setSignup, setPlan } = useOnboarding();
+
+  const [searchParams] = useSearchParams();
+  const selectedPlan = searchParams.get("plan") as "free" | "paid" | null;
 
   const [companyName, setCompanyName] = useState("");
   const [adminName, setAdminName] = useState("");
@@ -24,6 +27,10 @@ export default function Signup() {
       adminEmail,
     });
 
+    if (selectedPlan) {
+      setPlan(selectedPlan);
+    }
+
     navigate("/plan");
   }
 
@@ -31,17 +38,16 @@ export default function Signup() {
     <div className="min-h-screen pb-20 bg-transparent">
       <Stepper currentPath="/signup" />
 
-
       <div className="flex flex-col items-center mt-16 mb-12">
-        <img 
-          src="/logo-icon.png" 
-          alt="SentinelAI Logo" 
-          className="h-32 md:h-42 w-auto mb-6 drop-shadow-2xl" 
+        <img
+          src="/logo-icon.png"
+          alt="SentinelAI Logo"
+          className="h-32 md:h-42 w-auto mb-6 drop-shadow-2xl"
         />
-        <img 
-          src="/logo-text.png" 
-          alt="SentinelAI" 
-          className="h-10 md:h-14 w-auto opacity-90" 
+        <img
+          src="/logo-text.png"
+          alt="SentinelAI"
+          className="h-10 md:h-14 w-auto opacity-90"
         />
       </div>
 
