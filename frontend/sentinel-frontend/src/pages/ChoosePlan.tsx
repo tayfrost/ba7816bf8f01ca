@@ -8,13 +8,10 @@ export default function ChoosePlan() {
   const navigate = useNavigate();
   const { setPlan } = useOnboarding();
 
-  function selectPlan(plan: "free" | "paid") {
+function selectPlan(plan: "free" | "paid") {
     setPlan(plan);
-    if (plan === "free") {
-      navigate("/usage");
-    } else {
-      navigate("/payment");
-    }
+    
+    navigate(`/signup?plan=${plan}`);
   }
 
   return (
