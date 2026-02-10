@@ -9,7 +9,7 @@ import RequireOnboarding from "./guards/RequireOnboarding";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/signup" replace />} />
+      <Route path="/" element={<Navigate to="/plan" replace />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/plan" element={<ChoosePlan />} />
       <Route path="/payment" element={<Payment />} />
@@ -24,7 +24,7 @@ export default function App() {
       />
 
       <Route path="/playground" element={<Playground />} />
-      <Route path="*" element={<Navigate to="/signup" replace />} />
+      <Route path="*" element={<Navigate to="/plan" replace />} />
     </Routes>
   );
 }
