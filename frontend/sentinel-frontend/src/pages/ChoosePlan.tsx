@@ -8,12 +8,7 @@ export default function ChoosePlan() {
 
   function selectPlan(plan: "free" | "paid") {
     setPlan(plan);
-
-    if (plan === "free") {
-      navigate("/usage");
-    } else {
-      navigate("/payment");
-    }
+    navigate(`/signup?plan=${plan}`);
   }
 
   return (
