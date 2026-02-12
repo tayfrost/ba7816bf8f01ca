@@ -6,3 +6,7 @@ peft
 datasets
 accelerate
 scikit-learn
+numpy
+pandas
+matplotlib
+seaborn
