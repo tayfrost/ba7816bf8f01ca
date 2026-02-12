@@ -1,0 +1,168 @@
+from typing import List
+from typing import Optional
+from sqlalchemy import ForeignKey
+from sqlalchemy import BigInteger, Text, CHAR, String, CheckConstraint, DateTime,func, text, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import relationship
+from datetime import datetime
+
+
+class Base(DeclarativeBase):
+    pass
+
+class SubscriptionPlan(Base):
+    __tablename__ = "subscription_plan"
+
+    __table_args__ = (
+            CheckConstraint("char_length(trim(plan_name)) > 1", name="ck_plan_name_len"),
+            CheckConstraint("plan_cost_pennies >= 0", name="ck_plan_cost_nonneg"),
+            CheckConstraint("max_employees > 0", name="ck_max_employees_pos"),
+        )
+
+    plan_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    plan_name: Mapped[str] = mapped_column(Text, nullable = False, unique=True)
+    plan_cost_pennies: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(CHAR(3), nullable=False, server_default= text("'GBP'"))
+    max_employees: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    companies: Mapped[List["Company"]] = relationship(back_populates="plan")
+
+    def __repr__(self) -> str:
+        return (
+            "SubscriptionPlan("
+            f"plan_id={self.plan_id!r}, "
+            f"plan_name={self.plan_name!r}, "
+            f"plan_cost_pennies={self.plan_cost_pennies!r}, "
+            f"currency={self.currency!r}, "
+            f"max_employees={self.max_employees!r}"
+            ")"
+        )
+
+class Company(Base):
+    __tablename__ = "companies"
+
+    __table_args__ = (CheckConstraint("char_length(trim(company_name)) > 1", name="ck_company_name_len"),)
+
+    company_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    plan_id: Mapped[int] = mapped_column(BigInteger,ForeignKey("subscription_plan.plan_id", ondelete="RESTRICT"),
+                                          nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False, server_default=func.now())
+    company_name: Mapped[str] = mapped_column(Text, nullable = False)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True),nullable=True)
+
+    plan: Mapped["SubscriptionPlan"] = relationship(back_populates="companies")
+    company_roles: Mapped[list["SaasCompanyRole"]] = relationship(back_populates="company")
+    slack_trackers: Mapped[list["SlackTracker"]] = relationship(back_populates="company")
+    workspaces: Mapped[list["Workspace"]] = relationship(back_populates="company")
+
+    def __repr__(self) -> str:
+        return f"Company(company_id={self.company_id!r}, company_name={self.company_name!r}, plan_id={self.plan_id!r})"
+
+class SaasUserData(Base):
+    __tablename__ = "saas_user_data"
+
+    __table_args__ = (
+            CheckConstraint("char_length(trim(name)) > 1", name="ck_saas_name_len"),
+            CheckConstraint("char_length(trim(surname)) > 1", name="ck_saas_surname_len"),
+            CheckConstraint("char_length(trim(email)) > 3 AND position('@' in trim(email)) > 1 AND position('@' in trim(email)) < char_length(trim(email))", name="ck_saas_email")
+        )
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable = False)
+    surname: Mapped[str] = mapped_column(Text, nullable = False)
+    email: Mapped[str] = mapped_column(Text, nullable = False, unique=True)
+    password_hash: Mapped[str] = mapped_column(Text, nullable = False)
+    
+    company_roles: Mapped[list["SaasCompanyRole"]] = relationship(back_populates="user")
+    def __repr__(self) -> str:
+        return (
+            "SaasUserData("
+            f"user_id={self.user_id!r}, "
+            f"name={self.name!r}, "
+            f"surname={self.surname!r}, "
+            f"email={self.email!r}"
+            ")"
+        )
+
+class SaasCompanyRole(Base):
+    __tablename__ = "saas_company_roles"
+
+    __table_args__ = (
+        CheckConstraint("role IN ('admin','viewer','biller')", name="ck_company_role"),
+        CheckConstraint("status IN ('active','inactive','removed')", name="ck_company_role_status"),
+    )
+
+    company_id: Mapped[int] = mapped_column(BigInteger,ForeignKey("companies.company_id", ondelete="RESTRICT"),
+                                            primary_key=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(BigInteger,ForeignKey("saas_user_data.user_id", ondelete="RESTRICT"),
+                                            primary_key=True, nullable=False)
+    role: Mapped[str] = mapped_column(Text, primary_key=True, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+
+    company: Mapped["Company"] = relationship(back_populates="company_roles")
+    user: Mapped["SaasUserData"] = relationship(back_populates="company_roles")
+
+    def __repr__(self) -> str:
+        return (
+            "SaasCompanyRole("
+            f"company_id={self.company_id!r}, "
+            f"user_id={self.user_id!r}, "
+            f"role={self.role!r}, "
+            f"status={self.status!r}"
+            ")"
+        )
+
+class Workspace(Base):
+    __tablename__ = "slack_workspaces"
+    
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    company_id: Mapped[int] = mapped_column(BigInteger,ForeignKey("companies.company_id", ondelete="RESTRICT"),
+                                            nullable=False)
+    slack_team_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+
+    company: Mapped["Company"] = relationship(back_populates="workspaces")
+    slack_trackers: Mapped[list["SlackTracker"]] = relationship(back_populates="workspace")
+
+    def __repr__(self) -> str:
+        return (
+            "Workspace("
+            f"id={self.id!r}, "
+            f"company_id={self.company_id!r}, "
+            f"slack_team_id={self.slack_team_id!r}"
+            ")"
+        )
+
+class SlackTracker(Base):
+    __tablename__ = "slack_tracker"
+
+    __table_args__ = (
+        CheckConstraint("char_length(trim(name)) > 1", name="ck_tracker_name_len"),
+        CheckConstraint("char_length(trim(surname)) > 1", name="ck_tracker_surname_len"),
+        CheckConstraint("status IN ('active','inactive','removed')", name="ck_tracker_status"),
+        UniqueConstraint("slack_team_id", "slack_user_id", name="uq_tracker_team_user")
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    company_id: Mapped[int] = mapped_column(BigInteger,ForeignKey("companies.company_id", ondelete="RESTRICT"),
+                                            nullable=False)
+    slack_team_id: Mapped[str] = mapped_column(Text, ForeignKey("slack_workspaces.slack_team_id", ondelete="RESTRICT"),
+                                               nullable=False)
+    slack_user_id: Mapped[str] = mapped_column(Text, nullable = False)
+    name: Mapped[str] = mapped_column(Text, nullable = False)
+    surname: Mapped[str] = mapped_column(Text, nullable = False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False, server_default=func.now())
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+
+    company: Mapped["Company"] = relationship(back_populates="slack_trackers")
+    workspace: Mapped["Workspace"] = relationship(back_populates="slack_trackers")
+
+    def __repr__(self) -> str:
+        return (
+            "SlackTracker("
+            f"id={self.id!r}, "
+            f"slack_team_id={self.slack_team_id!r}, "
+            f"slack_user_id={self.slack_user_id!r}, "
+            f"status={self.status!r}"
+            ")"
+        )
