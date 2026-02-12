@@ -1,0 +1,14 @@
+{
+  "total_examples": 5000,
+  "num_categories": 7,
+  "num_severity_stages": 4,
+  "risk_percentage": 61.0,
+  "median_token_length": 9,
+  "mean_token_length": 10.2,
+  "max_token_length": 30,
+  "messages_exceeding_128": 0,
+  "truncation_rate": 0.0,
+  "category_balance": 0.26,
+  "most_common_category": "neutral",
+  "least_common_category": "suicidal_ideation"
+}
