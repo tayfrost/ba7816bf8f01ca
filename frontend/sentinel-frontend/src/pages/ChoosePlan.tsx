@@ -8,37 +8,39 @@ export default function ChoosePlan() {
   const navigate = useNavigate();
   const { setPlan } = useOnboarding();
 
-function selectPlan(plan: "free" | "paid") {
+  function selectPlan(plan: "free" | "paid") {
     setPlan(plan);
-    
     navigate(`/signup?plan=${plan}`);
   }
 
   return (
-    <div className="h-screen flex flex-col justify-around bg-transparent font-sans py-8 overflow-hidden">
+
+    <div className="min-h-screen flex flex-col justify-center gap-y-8 bg-transparent font-sans py-10 overflow-hidden">
       <LandingHeader />
 
 
-      <div className="flex flex-col items-center mt-18">
+      <div className="flex flex-col items-center">
         <img 
           src="/logo-icon.png" 
           alt="SentinelAI Logo" 
-          className="h-24 md:h-40 w-auto mb-6" 
+          className="h-32 md:h-48 w-auto mb-2" 
         />
+
         <img 
           src="/logo-text.png" 
           alt="SentinelAI" 
-          className="h-8 md:h-18 w-auto opacity-90" 
+          className="h-10 md:h-20 w-auto opacity-90" 
         />
         
-        <div className="mt-10">
+    
+        <div className="mt-12">
           <Stepper currentPath="/plan" />
         </div>
       </div>
 
-
+      {/* Plan Cards Section */}
       <div className="max-w-7xl mx-auto px-6 w-full">
-        <div className="flex flex-wrap justify-center gap-6 md:gap-8 scale-95 md:scale-100 origin-center">
+        <div className="flex flex-wrap justify-center gap-6 md:gap-8 scale-95 md:scale-100 origin-top mt-7">
           
           <div onClick={() => selectPlan("free")} className="w-full max-w-[320px] cursor-pointer">
             <SubscriptionCard 
