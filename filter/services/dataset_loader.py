@@ -7,6 +7,7 @@ Handles tokenization, label encoding, and PyTorch dataset creation.
 
 from typing import Dict, List, Tuple
 import json
+from pathlib import Path
 
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
@@ -86,25 +87,50 @@ def load_dataset(
     train_split: float = 0.8,
     val_split: float = 0.1,
     max_length: int = 128,
-    seed: int = 42
+    seed: int = 42,
+    mix_datasets: bool = True
 ) -> Tuple[DataLoader, DataLoader, DataLoader, AutoTokenizer]:
     """
     Load and split the mental health dataset.
     
     Args:
-        dataset_path (str): Path to dataset JSON file
+        dataset_path (str): Path to dataset JSON file (v0.1 or v0.2)
         model_name (str): Pretrained model name for tokenizer
         train_split (float): Training set proportion
         val_split (float): Validation set proportion
         max_length (int): Maximum sequence length
         seed (int): Random seed for reproducibility
+        mix_datasets (bool): If True, mix v0.1 (5k) + v0.2 (2k random) = 7k total
     
     Returns:
         Tuple of (train_loader, val_loader, test_loader, tokenizer)
     """
-    # Load dataset
-    with open(dataset_path, 'r') as f:
-        data = json.load(f)
+    # Load dataset(s)
+    if mix_datasets:
+        # Mix v0.1 (all 5k) + v0.2 (random 2k) for balanced quality + diversity
+        dataset_dir = Path(dataset_path).parent
+        v01_path = dataset_dir / "sentinelai_dataset_v0.1.json"
+        v02_path = dataset_dir / "sentinelai_dataset_v0.2.json"
+
+        with open(v01_path, 'r') as f:
+            data_v01 = json.load(f)
+
+        with open(v02_path, 'r') as f:
+            data_v02 = json.load(f)
+
+        # Keep all v0.1 (natural phrasing)
+        data = data_v01.copy()
+
+        # Add 2000 random samples from v0.2 (diversity boost)
+        torch.manual_seed(seed)
+        v02_indices = torch.randperm(len(data_v02))[:2000].tolist()
+        data.extend([data_v02[i] for i in v02_indices])
+
+        print(f"Mixed dataset: {len(data_v01)} v0.1 + {len(v02_indices)} v0.2 = {len(data)} total")
+    else:
+        with open(dataset_path, 'r') as f:
+            data = json.load(f)
+        print(f"Loaded dataset: {len(data)} examples from {Path(dataset_path).name}")
 
     # Shuffle data
     torch.manual_seed(seed)
