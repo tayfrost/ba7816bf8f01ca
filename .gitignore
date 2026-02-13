@@ -32,3 +32,6 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+
+# Big models
+*.pt
