@@ -112,10 +112,10 @@ def load_dataset(
         v01_path = dataset_dir / "sentinelai_dataset_v0.1.json"
         v02_path = dataset_dir / "sentinelai_dataset_v0.2.json"
 
-        with open(v01_path, 'r') as f:
+        with open(v01_path, 'r', encoding='utf-8') as f:
             data_v01 = json.load(f)
 
-        with open(v02_path, 'r') as f:
+        with open(v02_path, 'r', encoding='utf-8') as f:
             data_v02 = json.load(f)
 
         # Keep all v0.1 (natural phrasing)
@@ -128,7 +128,7 @@ def load_dataset(
 
         print(f"Mixed dataset: {len(data_v01)} v0.1 + {len(v02_indices)} v0.2 = {len(data)} total")
     else:
-        with open(dataset_path, 'r') as f:
+        with open(dataset_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         print(f"Loaded dataset: {len(data)} examples from {Path(dataset_path).name}")
 
