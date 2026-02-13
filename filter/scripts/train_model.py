@@ -158,7 +158,7 @@ def main():
 
     # Load dataset
     print("\nLoading dataset...")
-    dataset_path = Path(__file__).parent.parent.parent / "datasets" / "sentinelai_dataset_v0.1.json"
+    dataset_path = Path(__file__).parent.parent.parent / "datasets" / "sentinelai_dataset_v0.2.json"
     train_loader, val_loader, test_loader, tokenizer = load_dataset(
         str(dataset_path),
         model_name=CONFIG["model_name"],
