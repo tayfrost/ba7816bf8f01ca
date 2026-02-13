@@ -17,7 +17,7 @@ export default function SubscriptionCard({ title, price, period, features }: Sub
 
       <div className="p-8 pb-0 text-center">
         <h2 className="text-3xl font-serif font-black text-brand-deep mt-4">{title}</h2>
-        <div className="flex items-baseline justify-center mt-2">
+        <div className="flex items-baseline justify-center mt-3">
           <span className="text-4xl font-bold text-brand-deep">{price}</span>
           
           {period !== "" && (
@@ -26,12 +26,13 @@ export default function SubscriptionCard({ title, price, period, features }: Sub
         </div>
       </div>
 
-      <div className="p-8 space-y-4">
-        <ul className="space-y-3">
+      <div className="p-8 space-y-4 ">
+        <ul className="space-y-4"> 
           {features.map((item, index) => (
 
-            <li key={index} className="flex items-center gap-3 text-sm text-brand-deep/80">
-              <svg className="w-5 h-5 text-brand-deep/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <li key={index} className="flex items-center gap-3 text-lg font-medium text-brand-deep/90">
+
+              <svg className="w-6 h-6 text-brand-deep/50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
               </svg>
               {item}
@@ -40,7 +41,7 @@ export default function SubscriptionCard({ title, price, period, features }: Sub
         </ul>
       </div>
 
-      <div className="p-8 pt-0">
+      <div className="p-8 pt-0 ">
         <Button variant={buttonVariant}>
           Get Started
         </Button>

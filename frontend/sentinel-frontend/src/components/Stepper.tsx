@@ -23,7 +23,7 @@ export default function Stepper({ currentPath }: { currentPath: string }) {
           <div
             key={s.path}
             className={`
-              px-5 py-2.5 rounded-full border text-[11px] font-bold uppercase tracking-wider transition-all duration-300
+              px-5 py-2.5 rounded-full border text-[12px] font-bold uppercase tracking-wider transition-all duration-300
               ${isActive 
                 ? "bg-white/40 backdrop-blur-md border-white/50 text-brand-deep shadow-lg scale-105" 
                 : "bg-white/10 backdrop-blur-sm border-white/20 text-brand-deep/40"}
