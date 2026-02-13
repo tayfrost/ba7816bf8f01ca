@@ -71,11 +71,16 @@ async def slack_events(request: Request):
         raise HTTPException(status_code=403, detail="Invalid signature")
     
     if payload.get("type") == "event_callback" and payload.get("event", {}).get("type") == "message":
+        team_id = payload.get("team_id", "")
         text = payload["event"].get("text", "")
-        message_ts = payload["event"].get("ts", "")
-        logger.info(f"Processing message: {text}")
+        logger.info(f"Processing message from team {team_id}: {text}")
         
         if filter_message(text):
-            store_in_db(payload["event"])
+            structured_data = {
+                "team_id": team_id,
+                "text": text,
+                "timestamp": timestamp
+            }
+            store_in_db(structured_data)
     
     return {"ok": True}
