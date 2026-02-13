@@ -27,7 +27,9 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate --url http://webhooks:8000
+    command: tunnel --no-autoupdate run sentinelai
+    volumes:
+      - ./cloudflared:/etc/cloudflared
     depends_on:
       - webhooks
     restart: unless-stopped
