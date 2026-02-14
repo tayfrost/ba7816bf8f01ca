@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+torch
+transformers
+peft
+datasets
+accelerate
+scikit-learn
+numpy
+pandas
+matplotlib
+seaborn
