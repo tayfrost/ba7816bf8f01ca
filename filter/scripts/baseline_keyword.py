@@ -1,0 +1,168 @@
+"""
+Keyword-based baseline classifier for mental health risk detection.
+Uses regex patterns based on clinical criteria (MBI, DSM-5) to classify messages.
+This serves as one of many comparison baselines for the BERT dual-head model.
+"""
+
+import sys
+from pathlib import Path
+import json
+import re
+
+import torch
+import numpy as np
+
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    accuracy_score,
+    precision_recall_fscore_support
+)
+
+# Add parent directory to path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from services.dataset_loader import CATEGORY_MAP
+
+# Medically grounded keyword patterns based on MBI and DSM-5 criteria for each category
+# 0: neutral, 1: humor_sarcasm, 2: stress, 3: burnout,
+# 4: depression, 5: harassment, 6: suicidal_ideation
+KEYWORD_PATTERNS = {
+    6: r"\b(kill myself|end it all|suicide|suicidal|farewell|better off dead|no reason to live|done with life)\b",
+    5: r"\b(idiot|stupid|fire you|shut up|hate you|worthless|useless|incompetent|harass|abuse|toxic)\b",
+    4: r"\b(hopeless|empty|worthless|sad|depressed|depression|no joy|unhappy|miserable|crying)\b",
+    3: r"\b(exhausted|burnt out|burnout|cynical|no point|overwhelmed|drained|can't do this|finished)\b",
+    2: r"\b(stress|stressed|pressure|deadline|busy|too much|anxious|anxiety|worried|overload)\b",
+    1: r"\b(lol|haha|jk|just kidding|sarcasm|sarcastic|lmao|rofl|joke|funny)\b"
+}
+
+def classify_message(text: str) -> int:
+    """
+    Classifies a message based on keyword matching.
+    Priority is given to higher-risk categories (Suicidal > Harassment > Depression > etc.)
+    """
+    text = text.lower()
+
+    # Check patterns in order of priority (Risk categories first)
+    for category in [6, 5, 4, 3, 2, 1]:
+        if re.search(KEYWORD_PATTERNS[category], text):
+            return category
+
+    return 0  # Default to Neutral
+
+def main():
+    """Main function to evaluate the keyword baseline on the test set."""
+    print("=" * 80)
+    print("SentiBERT Keyword Baseline Evaluation")
+    print("=" * 80)
+
+    # Paths
+    script_dir = Path(__file__).parent
+    dataset_path = script_dir.parent.parent / "datasets" / "sentinelai_dataset_v0.2.json"
+    output_dir = script_dir.parent / "evaluation"
+    output_dir.mkdir(exist_ok=True)
+
+    # Use raw text instead of tokenised tensors.
+    with open(dataset_path, 'r', encoding='utf-8') as f:
+        full_data = json.load(f)
+
+    dataset_dir = dataset_path.parent
+    v01_path = dataset_dir / "sentinelai_dataset_v0.1.json"
+    with open(v01_path, 'r', encoding='utf-8') as f:
+        data_v01 = json.load(f)
+
+    # Reproduce the exact mixed dataset used in training/eval, 2000 pair injection
+    torch.manual_seed(42)
+    v02_indices = torch.randperm(len(full_data))[:2000].tolist()
+    mixed_data = data_v01.copy()
+    mixed_data.extend([full_data[i] for i in v02_indices])
+
+    # Reproduce the shuffle and split from eval
+    torch.manual_seed(42)
+    indices = torch.randperm(len(mixed_data)).tolist()
+    shuffled_data = [mixed_data[i] for i in indices]
+
+    # Take the test split
+    test_start = int(len(shuffled_data) * 0.9)
+    test_data = shuffled_data[test_start:]
+
+    print(f"Processing {len(test_data)} test samples...")
+
+    y_pred = []
+    y_true = []
+
+    # Reverse CATEGORY_MAP for metrics
+    inv_category_map = {v: k for k, v in CATEGORY_MAP.items()}
+
+    for item in test_data:
+        message = item["message"]
+        true_label_str = item["category"]
+        true_label = CATEGORY_MAP[true_label_str]
+
+        pred_label = classify_message(message)
+
+        y_true.append(true_label)
+        y_pred.append(pred_label)
+
+    # Calculate metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred)
+    report = classification_report(
+        y_true,
+        y_pred,
+        target_names=[inv_category_map[i] for i in range(7)],
+        output_dict=True,
+        zero_division=0
+    )
+
+    # Calculate macro/weighted averages manually to match evaluate_model structure
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        y_true, y_pred, labels=list(range(7)), zero_division=0
+    )
+
+    macro_avg = {
+        "precision": float(np.mean(precision)),
+        "recall": float(np.mean(recall)),
+        "f1_score": float(np.mean(f1))
+    }
+
+    print("\n" + "=" * 80)
+    print("KEYWORD BASELINE RESULTS")
+    print("=" * 80)
+    print(f"Overall Accuracy: {accuracy:.4f}")
+    print(f"Macro F1: {macro_avg['f1_score']:.4f}\n")
+    print("Per-Class Metrics:")
+    print(f"{'Category':<20} {'Precision':<10} {'Recall':<10} {'F1-Score':<10}")
+    print("-" * 55)
+
+    per_class_results = {}
+    for i in range(7):
+        cat = inv_category_map[i]
+        metrics = report[cat]
+        per_class_results[cat] = {
+            "precision": float(metrics['precision']),
+            "recall": float(metrics['recall']),
+            "f1_score": float(metrics['f1-score']),
+            "support": int(metrics['support'])
+        }
+        print(f"{cat:<20} {metrics['precision']:<10.4f} {metrics['recall']:<10.4f} {metrics['f1-score']:<10.4f}")
+
+    # Save results in a structure similar to evaluate_model.py
+    results = {
+        "category_classification": {
+            "accuracy": float(accuracy),
+            "macro_avg": macro_avg,
+            "per_class": per_class_results,
+            "confusion_matrix": cm.tolist()
+        }
+    }
+
+    output_path = output_dir / "baseline_keyword_results.json"
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(results, f, indent=2)
+
+    print(f"\nResults saved to: {output_path}")
+    print("=" * 80)
+
+if __name__ == "__main__":
+    main()
