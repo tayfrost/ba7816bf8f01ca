@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 import json
 import re
+from typing import Any, Dict, cast
 
 import torch
 import numpy as np
@@ -22,18 +23,42 @@ from sklearn.metrics import (
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.dataset_loader import CATEGORY_MAP
+from services.dataset_loader import CATEGORY_MAP  # pylint: disable=wrong-import-position
 
-# Medically grounded keyword patterns based on MBI and DSM-5 criteria for each category
+# Medically grounded keywords by category based on MBI, DSM-5, and clinical expertise.
 # 0: neutral, 1: humor_sarcasm, 2: stress, 3: burnout,
 # 4: depression, 5: harassment, 6: suicidal_ideation
+KEYWORDS = {
+    6: [
+        "kill myself", "end it all", "suicide", "suicidal", "farewell",
+        "better off dead", "no reason to live", "done with life",
+    ],
+    5: [
+        "idiot", "stupid", "fire you", "shut up", "hate you", "worthless",
+        "useless", "incompetent", "harass", "abuse", "toxic",
+    ],
+    4: [
+        "hopeless", "empty", "worthless", "sad", "depressed", "depression",
+        "no joy", "unhappy", "miserable", "crying",
+    ],
+    3: [
+        "exhausted", "burnt out", "burnout", "cynical", "no point",
+        "overwhelmed", "drained", "can't do this", "finished",
+    ],
+    2: [
+        "stress", "stressed", "pressure", "deadline", "busy", "too much",
+        "anxious", "anxiety", "worried", "overload",
+    ],
+    1: [
+        "lol", "haha", "jk", "just kidding", "sarcasm", "sarcastic",
+        "lmao", "rofl", "joke", "funny",
+    ],
+}
+
+# Build regex patterns from the keyword lists (keeps individual source lines short)
 KEYWORD_PATTERNS = {
-    6: r"\b(kill myself|end it all|suicide|suicidal|farewell|better off dead|no reason to live|done with life)\b",
-    5: r"\b(idiot|stupid|fire you|shut up|hate you|worthless|useless|incompetent|harass|abuse|toxic)\b",
-    4: r"\b(hopeless|empty|worthless|sad|depressed|depression|no joy|unhappy|miserable|crying)\b",
-    3: r"\b(exhausted|burnt out|burnout|cynical|no point|overwhelmed|drained|can't do this|finished)\b",
-    2: r"\b(stress|stressed|pressure|deadline|busy|too much|anxious|anxiety|worried|overload)\b",
-    1: r"\b(lol|haha|jk|just kidding|sarcasm|sarcastic|lmao|rofl|joke|funny)\b"
+    k: r"\b(" + "|".join(map(re.escape, v)) + r")\b"
+    for k, v in KEYWORDS.items()
 }
 
 def classify_message(text: str) -> int:
@@ -107,12 +132,15 @@ def main():
     # Calculate metrics
     accuracy = accuracy_score(y_true, y_pred)
     cm = confusion_matrix(y_true, y_pred)
-    report = classification_report(
-        y_true,
-        y_pred,
-        target_names=[inv_category_map[i] for i in range(7)],
-        output_dict=True,
-        zero_division=0
+    report = cast(
+        Dict[str, Any],
+        classification_report(
+            y_true,
+            y_pred,
+            target_names=[inv_category_map[i] for i in range(7)],
+            output_dict=True,
+            zero_division=0,
+        ),
     )
 
     # Calculate macro/weighted averages manually to match evaluate_model structure
@@ -138,14 +166,17 @@ def main():
     per_class_results = {}
     for i in range(7):
         cat = inv_category_map[i]
-        metrics = report[cat]
+        metrics: Dict[str, Any] = report[cat]
         per_class_results[cat] = {
-            "precision": float(metrics['precision']),
-            "recall": float(metrics['recall']),
-            "f1_score": float(metrics['f1-score']),
-            "support": int(metrics['support'])
+            "precision": float(metrics["precision"]),
+            "recall": float(metrics["recall"]),
+            "f1_score": float(metrics["f1-score"]),
+            "support": int(metrics["support"])
         }
-        print(f"{cat:<20} {metrics['precision']:<10.4f} {metrics['recall']:<10.4f} {metrics['f1-score']:<10.4f}")
+        prec = float(metrics["precision"])
+        rec = float(metrics["recall"])
+        f1s = float(metrics["f1-score"])
+        print(f"{cat:<20} {prec:<10.4f} {rec:<10.4f} {f1s:<10.4f}")
 
     # Save results in a structure similar to evaluate_model.py
     results = {
