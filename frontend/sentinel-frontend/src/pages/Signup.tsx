@@ -35,9 +35,10 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen pb-20 bg-transparent">
+    <div className="min-h-screen pb-20 bg-transparent font-sans">
       <Stepper currentPath="/signup" />
 
+      {/* Hero Section */}
       <div className="flex flex-col items-center mt-16 mb-12">
         <img
           src="/logo-icon.png"
@@ -53,9 +54,15 @@ export default function Signup() {
 
       <AuthCard>
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-brand-deep text-center mb-8">
-            Sign Up for an Account
-          </h2>
+
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-serif font-black text-brand-deep leading-tight">
+              Create Your Account
+            </h2>
+            <p className="text-xs uppercase tracking-[0.2em] text-brand-deep/50 font-bold mt-2">
+              Wellness | Protection | Support
+            </p>
+          </div>
 
           <Input
             label="Company Name"
@@ -79,10 +86,23 @@ export default function Signup() {
             onChange={(e) => setAdminEmail(e.target.value)}
           />
 
-          <div className="pt-4">
+          <div className="pt-4 space-y-6">
             <Button variant="primary" onClick={handleContinue}>
               Continue
             </Button>
+
+            {/* Login Link Section */}
+            <div className="text-center pt-2 border-t border-brand-deep/5">
+              <p className="text-sm text-brand-deep/60">
+                Already have an account?{" "}
+                <button 
+                  onClick={() => navigate("/login")}
+                  className="text-brand-deep font-bold hover:underline underline-offset-4"
+                >
+                  Log In
+                </button>
+              </p>
+            </div>
           </div>
         </div>
       </AuthCard>
