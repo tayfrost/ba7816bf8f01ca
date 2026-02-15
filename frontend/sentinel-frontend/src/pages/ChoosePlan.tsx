@@ -14,34 +14,30 @@ export default function ChoosePlan() {
   }
 
   return (
-
-    <div className="min-h-screen flex flex-col justify-center gap-y-8 bg-transparent font-sans py-10 overflow-hidden">
+ 
+    <div className="h-screen w-full flex flex-col bg-transparent font-sans overflow-y-auto scroll-smooth">
       <LandingHeader />
 
-
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center mt-24 mb-12 shrink-0">
         <img 
           src="/logo-icon.png" 
           alt="SentinelAI Logo" 
-          className="h-32 md:h-48 w-auto mb-2" 
+          className="h-32 md:h-48 w-auto mb-2 drop-shadow-2xl" 
         />
-
         <img 
           src="/logo-text.png" 
           alt="SentinelAI" 
           className="h-10 md:h-20 w-auto opacity-90" 
         />
         
-    
         <div className="mt-12">
           <Stepper currentPath="/plan" />
         </div>
       </div>
 
       {/* Plan Cards Section */}
-      <div className="max-w-7xl mx-auto px-6 w-full">
+      <div className="max-w-7xl mx-auto px-6 w-full shrink-0">
         <div className="flex flex-wrap justify-center gap-6 md:gap-8 scale-95 md:scale-100 origin-top mt-7">
-          
           <div onClick={() => selectPlan("free")} className="w-full max-w-[320px] cursor-pointer">
             <SubscriptionCard 
               title="Free" 
@@ -68,11 +64,54 @@ export default function ChoosePlan() {
               features={["Everything in Monthly", "2 Months Free", "Network Audit"]}
             />
           </div>
-
         </div>
       </div>
 
-      <div className="h-4" />
+ 
+      <div id="features" className="max-w-5xl mx-auto px-6 w-full mt-32 mb-32 shrink-0">
+        <div className="bg-white/10 backdrop-blur-3xl border border-white/20 rounded-[3rem] p-12 shadow-2xl">
+          <h2 className="text-3xl font-serif font-black text-brand-deep mb-12 text-center uppercase tracking-widest">
+            Platform Capabilities
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+            {/* Column 1: Intelligence taken from Trello Board) */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold text-brand-deep/60 tracking-widest uppercase pb-2 border-b border-brand-deep/10">
+                Intelligence
+              </h3>
+              <ul className="space-y-4 text-brand-deep font-medium">
+                <li className="flex items-start gap-2"><span>•</span> BERT Classifier (Risk Categories)</li>
+                <li className="flex items-start gap-2"><span>•</span> Agent: Harassment & Self-Harm</li>
+                <li className="flex items-start gap-2"><span>•</span> Agent: Burnout & Distress Detection</li>
+                <li className="flex items-start gap-2"><span>•</span> Embedding Relevance Filtering</li>
+              </ul>
+            </div>
+
+            {/* Column 2: Infrastructure taken from Trello Board*/}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold text-brand-deep/60 tracking-widest uppercase pb-2 border-b border-brand-deep/10">
+                Infrastructure
+              </h3>
+              <ul className="space-y-4 text-brand-deep font-medium">
+                <li className="flex items-start gap-2"><span>•</span> Frictionless Slack & Email Integration</li>
+                <li className="flex items-start gap-2"><span>•</span> Slack Webhook Listener Architecture</li>
+                <li className="flex items-start gap-2"><span>•</span> Vector Database (pgvector) Setup</li>
+                <li className="flex items-start gap-2"><span>•</span> Secure Payment Backend</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-16 pt-8 border-t border-brand-deep/5 text-center">
+            <p className="text-brand-deep/40 text-sm font-medium tracking-wide">
+              PROPRIETARY SENTINEL-AI ARCHITECTURE • 2026
+            </p>
+          </div>
+        </div>
+      </div>
+
+
+      <div className="h-20 shrink-0" />
     </div>
   );
 }
