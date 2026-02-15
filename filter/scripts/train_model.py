@@ -11,17 +11,16 @@ from pathlib import Path
 import sys
 from typing import Dict
 
-sys.path.append(str(Path(__file__).parent.parent))
-
-from models.dual_head_classifier import DualHeadBERTClassifier
-from services.dataset_loader import load_dataset
-
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup
 from peft import LoraConfig, get_peft_model, TaskType
 
+sys.path.append(str(Path(__file__).parent.parent))
+
+from models.dual_head_classifier import DualHeadBERTClassifier
+from services.dataset_loader import load_dataset
 
 # Hyperparameters
 CONFIG = {
