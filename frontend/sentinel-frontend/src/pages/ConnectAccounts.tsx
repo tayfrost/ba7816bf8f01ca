@@ -41,6 +41,11 @@ export default function ConnectAccounts() {
         Add Slack/Gmail/Outlook so SentinelAI can monitor early burnout signals using consent-based,
         company-approved data sources.
       </p>
+      
+      <p style={{ fontSize: 14, opacity: 0.7, marginBottom: 24 }}>
+        Only consent-based, company-approved data sources are analysed. HR decisions remain human-in-the-loop.
+      </p>
+
 
       <div style={{ display: "grid", gap: 14 }}>
         {providers.map((p) => (
