@@ -5,7 +5,7 @@ Loads and preprocesses the synthetic mental health dataset for BERT training.
 Handles tokenization, label encoding, and PyTorch dataset creation.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 import json
 from pathlib import Path
 
@@ -13,7 +13,6 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
 
 import torch
-
 
 # Category to index mapping
 CATEGORY_MAP = {
@@ -164,7 +163,7 @@ def load_dataset(
     return train_loader, val_loader, test_loader, tokenizer
 
 
-def get_class_distribution(dataset_path: str) -> Dict[str, int]:
+def get_class_distribution(dataset_path: str) -> Dict[str, Union[Dict[str, int], int]]:
     """
     Get class distribution for the dataset.
     
@@ -174,7 +173,7 @@ def get_class_distribution(dataset_path: str) -> Dict[str, int]:
     Returns:
         Dict with category and severity distributions
     """
-    with open(dataset_path, 'r') as f:
+    with open(dataset_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     category_dist = {}

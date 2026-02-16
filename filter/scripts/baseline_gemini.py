@@ -38,7 +38,7 @@ from sklearn.metrics import (
     precision_recall_fscore_support
 )
 
-# New Google GenAI SDK
+# Google GenAI SDK
 from google import genai
 from google.genai import types
 
@@ -52,7 +52,7 @@ VALID_CATEGORIES = list(CATEGORY_MAP.keys())
 
 def classify_message_with_gemini(client: genai.Client, text: str) -> str:
     """
-    Sends a message to Gemini Flash Lite for zero-shot classification.
+    Sends a message to Gemini 2.5 Flash Lite for zero-shot classification.
     Returns the predicted category string. Includes retry logic.
     """
     prompt = f"""

@@ -13,8 +13,6 @@ ARTIFACTS UPLOADED:
 - Training logs and README/model card
 """
 
-# pylint: disable=broad-exception-caught
-
 import os
 from pathlib import Path
 from huggingface_hub import HfApi, create_repo
@@ -65,7 +63,7 @@ def main():
     try:
         url = create_repo(repo_id, token=hf_token, exist_ok=True, private=False)
         print(f"Repository ready: {url}")
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         print(f"Repo creation failed: {e}")
         return
 
@@ -109,7 +107,7 @@ def main():
         print(f"SUCCESS! Model hosted at: https://huggingface.co/{repo_id}")
         print("=" * 80)
 
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         print(f"\nUpload failed: {e}")
 
 if __name__ == "__main__":

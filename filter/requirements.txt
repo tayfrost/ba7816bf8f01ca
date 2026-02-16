@@ -1,12 +1,11 @@
-fastapi
-uvicorn
 torch
 transformers
 peft
-datasets
-accelerate
 scikit-learn
 numpy
-pandas
 matplotlib
 seaborn
+huggingface_hub
+tqdm
+google-genai
+nlpaug

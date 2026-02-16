@@ -5,6 +5,8 @@ Trains the BERT model with LoRA fine-tuning on the mental health dataset.
 Logs training metrics to JSON for experiment tracking.
 """
 
+# pylint: disable=wrong-import-position
+
 import json
 from datetime import datetime
 from pathlib import Path
@@ -157,7 +159,7 @@ def main():
     # Load dataset
     print("\nLoading dataset...")
     dataset_path = Path(__file__).parent.parent.parent / "datasets" / "sentinelai_dataset_v0.2.json"
-    train_loader, val_loader, test_loader, tokenizer = load_dataset(
+    train_loader, val_loader, test_loader, _ = load_dataset(
         str(dataset_path),
         model_name=CONFIG["model_name"],
         max_length=CONFIG["max_length"],
@@ -277,7 +279,7 @@ def main():
 
     # Save training log
     log_path = model_dir / "training_log.json"
-    with open(log_path, 'w') as f:
+    with open(log_path, 'w', encoding='utf-8') as f:
         json.dump(training_log, f, indent=2)
     print(f"Training log saved to: {log_path}")
 

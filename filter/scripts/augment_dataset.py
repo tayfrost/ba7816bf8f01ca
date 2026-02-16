@@ -5,6 +5,8 @@ Uses nlpaug to paraphrase messages and increase lexical diversity (TTR).
 Generates 2 paraphrased versions per original message while preserving labels.
 """
 
+# pylint: disable=line-too-long
+
 import json
 import random
 from pathlib import Path
@@ -23,7 +25,7 @@ CONFIG = {
 
 def load_dataset(path: str) -> List[Dict]:
     """Load dataset from JSON file."""
-    with open(path, 'r') as f: # pylint: disable=unspecified-encoding
+    with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
@@ -155,7 +157,7 @@ def main():
 
     # Save augmented dataset
     output_path = Path(__file__).parent / CONFIG["output_path"]
-    with open(output_path, 'w') as f: # pylint: disable=unspecified-encoding
+    with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(augmented_data, f, indent=2)
 
     print(f"\n✓ Augmented dataset saved to: {output_path}")

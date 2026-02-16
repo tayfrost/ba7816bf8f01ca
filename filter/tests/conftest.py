@@ -82,7 +82,7 @@ def real_model(trained_model_path):
     device = torch.device("cpu") # Test on CPU for stability
     model = DualHeadBERTClassifier(model_name="bert-base-uncased")
 
-    lora_config = LoraConfig(
+    lora_config = LoraConfig( # type: ignore[reportCallIssue]
         r=8,
         lora_alpha=16,
         target_modules=["query", "value"],

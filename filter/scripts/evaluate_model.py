@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 import json
 
+from typing import Dict, TypedDict, Sized, cast # pylint: disable=deprecated-class
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -17,7 +19,7 @@ import seaborn as sns
 from sklearn.metrics import (
     confusion_matrix,
     precision_recall_fscore_support
-)  # pylint: disable=unused-import
+)
 
 from peft import LoraConfig, get_peft_model, TaskType
 
@@ -130,7 +132,24 @@ def evaluate_model(
     }
 
 
-def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, labels: list) -> dict:
+# TypedDicts for clearer static typing (no runtime change)
+class PerClassMetrics(TypedDict):
+    """"Metrics for a single class."""
+    precision: float
+    recall: float
+    f1_score: float
+    support: int
+
+
+class ClassificationMetrics(TypedDict):
+    """Overall and per-class metrics for classification."""
+    accuracy: float
+    per_class: Dict[str, PerClassMetrics]
+    macro_avg: Dict[str, float]
+    weighted_avg: Dict[str, float]
+
+
+def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, labels: list) -> ClassificationMetrics: # pylint: disable=line-too-long
     """
     Calculate per-class and overall metrics.
     
@@ -146,6 +165,12 @@ def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, labels: list) -> d
     precision, recall, f1, support = precision_recall_fscore_support(
         y_true, y_pred, labels=list(range(len(labels))), zero_division=0
     )
+
+    # ensure indexable numpy arrays for static type-checkers (no runtime change)
+    precision = np.asarray(precision)
+    recall = np.asarray(recall)
+    f1 = np.asarray(f1)
+    support = np.asarray(support)
 
     # Overall accuracy
     accuracy = np.mean(y_true == y_pred)
@@ -206,7 +231,7 @@ def main():
         dataset_path=str(dataset_path),
         mix_datasets=True  # Use same 7k mixed dataset as training
     )
-    print(f"Test set: {len(test_loader.dataset)} examples\n")
+    print(f"Test set: {len(cast(Sized, test_loader.dataset))} examples\n")
 
     # Initialise model
     print("Loading trained model...")
@@ -249,13 +274,13 @@ def main():
 
     # Calculate metrics
     print("Calculating metrics...")
-    category_metrics = calculate_metrics(
+    category_metrics: ClassificationMetrics = calculate_metrics(
         results["category_labels"],
         results["category_preds"],
         category_labels
     )
 
-    severity_metrics = calculate_metrics(
+    severity_metrics: ClassificationMetrics = calculate_metrics(
         results["severity_labels"],
         results["severity_preds"],
         severity_labels
