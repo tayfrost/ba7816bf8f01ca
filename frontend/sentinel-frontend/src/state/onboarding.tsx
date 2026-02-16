@@ -88,7 +88,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         setPlanState(null);
         setPaymentSuccessState(false);
         setAccountsConnectedState(false);
-        savePersisted({ signup: null, plan: null, paymentSuccess: false, accountsConnected: false });
+
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch {
+        // ignore
+        }
       },
     }),
     [signup, plan, paymentSuccess, accountsConnected]
