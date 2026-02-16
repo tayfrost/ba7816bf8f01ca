@@ -175,7 +175,7 @@ Full training metrics available in `training_log.json`:
 
 ## Repository
 
-Full implementation: [SentinelAI Repository](https://github.kcl.ac.uk/k24000626/SentinelAI)
+Full implementation available in the project repository (Private).
 
 Branch: `feature/filter`
 
