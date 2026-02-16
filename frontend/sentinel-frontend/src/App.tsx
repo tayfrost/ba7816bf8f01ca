@@ -3,6 +3,7 @@ import Signup from "./pages/Signup";
 import ChoosePlan from "./pages/ChoosePlan";
 import Payment from "./pages/Payment";
 import Usage from "./pages/Usage";
+import ConnectAccounts from "./pages/ConnectAccounts";
 import RequireOnboarding from "./guards/RequireOnboarding";
 
 export default function App() {
@@ -13,6 +14,15 @@ export default function App() {
       <Route path="/plan" element={<ChoosePlan />} />
       <Route path="/payment" element={<Payment />} />
       
+      <Route
+        path="/connect-accounts"
+        element={
+          <RequireOnboarding>
+            <ConnectAccounts />
+          </RequireOnboarding>
+        }
+      />
+
       <Route
         path="/usage"
         element={
