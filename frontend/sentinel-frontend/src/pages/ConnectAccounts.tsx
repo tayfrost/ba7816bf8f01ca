@@ -19,7 +19,7 @@ function providerDesc(p: Provider) {
 
 export default function ConnectAccounts() {
   const nav = useNavigate();
-  const { accountsConnected, setAccountsConnected } = useOnboarding();
+  const { integrations, setIntegrationConnected } = useOnboarding();
 
   const providers = useMemo<Provider[]>(() => ["slack", "gmail", "outlook"], []);
 
@@ -27,7 +27,7 @@ export default function ConnectAccounts() {
     // For now we mock a successful connect to unblock demo.
     // Backend can later replace this with OAuth start endpoint.
     console.log("connect provider:", provider);
-    setAccountsConnected(true);
+    setIntegrationConnected(provider, true);
   };
 
   const continueToDashboard = () => {
@@ -41,7 +41,7 @@ export default function ConnectAccounts() {
         Add Slack/Gmail/Outlook so SentinelAI can monitor early burnout signals using consent-based,
         company-approved data sources.
       </p>
-      
+
       <p style={{ fontSize: 14, opacity: 0.7, marginBottom: 24 }}>
         Only consent-based, company-approved data sources are analysed. HR decisions remain human-in-the-loop.
       </p>
@@ -66,12 +66,22 @@ export default function ConnectAccounts() {
             </div>
 
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <span style={{ opacity: 0.75 }}>
-                {accountsConnected ? "Connected" : "Not connected"}
-              </span>
-              <Button onClick={() => connectMock(p)}>
-                {accountsConnected ? "Reconnect" : "Connect"}
-              </Button>
+              {(() => {
+                const integration = integrations.find(i => i.provider === p);
+                const isConnected = integration?.connected;
+
+                return (
+                  <>
+                  <span style={{ opacity: 0.75 }}>
+                    {isConnected ? "Connected" : "Not connected"}
+                  </span>
+
+                  <Button onClick={() => connectMock(p)}>
+                    {isConnected ? "Reconnect" : "Connect"}
+                  </Button>
+                  </>
+                );
+              })()}
             </div>
           </div>
         ))}
@@ -81,7 +91,10 @@ export default function ConnectAccounts() {
         <Button onClick={continueToDashboard} variant="secondary">
           Skip for now
         </Button>
-        <Button onClick={continueToDashboard} disabled={!accountsConnected}>
+        <Button
+          onClick={continueToDashboard} 
+          disabled={!integrations.some(i => i.connected)}
+        >
           Continue
         </Button>
       </div>
