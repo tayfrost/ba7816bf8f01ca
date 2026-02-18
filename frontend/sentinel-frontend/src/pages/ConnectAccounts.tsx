@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { useOnboarding } from "../state/onboarding";
+import { startIntegration } from "../api/integrations";
 
 type Provider = "slack" | "gmail" | "outlook";
 
@@ -23,11 +24,19 @@ export default function ConnectAccounts() {
 
   const providers = useMemo<Provider[]>(() => ["slack", "gmail", "outlook"], []);
 
-  const connectMock = (provider: Provider) => {
+  const connectMock = async (provider: Provider) => {
     // For now we mock a successful connect to unblock demo.
     // Backend can later replace this with OAuth start endpoint.
     console.log("connect provider:", provider);
-    setIntegrationConnected(provider, true);
+    try {
+      const { url } = await startIntegration(provider);
+      window.location.href = url; // OAuth redirect (backend will provide)
+      return;
+    } catch (e) {
+        // Backend may be offline during frontend work -> fallback for demo
+        setIntegrationConnected(provider, true);
+      }
+    }
   };
 
   const continueToDashboard = () => {
