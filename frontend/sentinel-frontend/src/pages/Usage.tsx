@@ -2,7 +2,8 @@ import Stepper from "../components/Stepper";
 import { useMemo, useState } from "react";
 import { useOnboarding } from "../state/onboarding";
 import { countConnected, getConnectedProviders } from "../state/integrationRules";
-import { computeRange, RangePreset } from "../state/timeRange";
+import { computeRange } from "../state/timeRange";
+import type { RangePreset } from "../state/timeRange";
 import { makeAllSeries } from "../state/metricsMock";
 import SimpleLineChart from "../components/SimpleLineChart";
 
