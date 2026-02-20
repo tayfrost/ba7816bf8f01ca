@@ -28,6 +28,7 @@ export default function ConnectAccounts() {
     // For now we mock a successful connect to unblock demo.
     // Backend can later replace this with OAuth start endpoint.
     console.log("connect provider:", provider);
+
     try {
       const { url } = await startIntegration(provider);
       window.location.href = url; // OAuth redirect (backend will provide)
@@ -35,7 +36,6 @@ export default function ConnectAccounts() {
     } catch (e) {
         // Backend may be offline during frontend work -> fallback for demo
         setIntegrationConnected(provider, true);
-      }
     }
   };
 
