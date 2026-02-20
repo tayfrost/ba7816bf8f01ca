@@ -1,7 +1,9 @@
 import Stepper from "../components/Stepper";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useOnboarding } from "../state/onboarding";
 import { countConnected, getConnectedProviders } from "../state/integrationRules";
+import { computeRange, RangePreset } from "../state/timeRange";
+import { makeAllSeries } from "../state/metricsMock";
 
 type AlertSeverity = "low" | "medium" | "high";
 
@@ -30,6 +32,17 @@ function generateMockAlerts(providers: string[]): MockAlert[] {
 
 export default function Usage() {
   const { signup, plan, integrations, reset } = useOnboarding();
+
+  const [preset, setPreset] = useState<RangePreset>("week");
+  const [customStart, setCustomStart] = useState("2026-01-01");
+  const [customEnd, setCustomEnd] = useState("2026-02-20");
+
+  const range = useMemo(() => {
+    if (preset === "custom") return computeRange("custom", { start: customStart, end: customEnd });
+    return computeRange(preset);
+  }, [preset, customStart, customEnd]);
+
+  const metricSeries = useMemo(() => makeAllSeries(range), [range]);
 
   const connectedCount = useMemo(
     () => countConnected(integrations),
@@ -66,11 +79,85 @@ export default function Usage() {
         </section>
 
         <section style={{ marginTop: 32 }}>
+          <h2>Time range</h2>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+            <button onClick={() => setPreset("week")}>Week</button>
+            <button onClick={() => setPreset("month")}>Month</button>
+            <button onClick={() => setPreset("year")}>Year</button>
+            <button onClick={() => setPreset("all")}>All Time</button>
+            <button onClick={() => setPreset("custom")}>Custom</button>
+          </div>
+
+          {preset === "custom" && (
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <label>
+                Start:{" "}
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                />
+              </label>
+              <label>
+                End:{" "}
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                />
+              </label>
+            </div>
+          )}
+
+          <p style={{ marginTop: 10, opacity: 0.8 }}>
+            Showing: <strong>{range.start}</strong> → <strong>{range.end}</strong>
+          </p>
+        </section>
+
+        <section style={{ marginTop: 32 }}>
           <h2>Risk Overview (Mock)</h2>
           <p><strong>Current Risk Score:</strong> {riskScore}%</p>
           <p>
             Risk score is derived from connected data sources and behavioural signals.
           </p>
+        </section>
+
+        <section style={{ marginTop: 32 }}>
+          <h2>Graphs (one line per chart)</h2>
+
+          {metricSeries.map((s) => {
+            const first = s.points[0];
+            const last = s.points[s.points.length - 1];
+
+            return (
+              <div
+                key={s.key}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 12,
+                  padding: 14,
+                  marginTop: 12,
+                }}
+              >
+                <div style={{ fontWeight: 700 }}>{s.label}</div>
+                <div style={{ opacity: 0.8, marginTop: 6 }}>
+                  Start: {first?.value ?? "-"} | Latest: {last?.value ?? "-"}
+                </div>
+
+                <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
+                  Last 7 points:
+                  <ul>
+                    {s.points.slice(-7).map((p) => (
+                      <li key={p.date}>
+                        {p.date}: {p.value}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            );
+          })}
         </section>
 
         <section style={{ marginTop: 32 }}>
