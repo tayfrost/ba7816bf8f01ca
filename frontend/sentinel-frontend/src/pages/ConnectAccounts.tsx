@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../components/Button";
+import Button from "../components/Button";
 import { useOnboarding } from "../state/onboarding";
 import { startIntegration } from "../api/integrations";
 
