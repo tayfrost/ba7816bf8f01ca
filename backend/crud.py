@@ -10,9 +10,57 @@ engine = create_engine("postgresql+psycopg://postgres:postgres@localhost:5432/se
 Session = sessionmaker(bind=engine)
 
 
-# ~~ utility functions
+# ~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def get_company_ids_by_owner_email(email: str, session=None) -> list[int]:
+    session = session or Session()
+    stmt = (
+        select(model.SaasCompanyRole.company_id)
+        .join(model.SaasUserData, model.SaasUserData.user_id == model.SaasCompanyRole.user_id)
+        .where(model.SaasUserData.email == email)
+        .where(model.SaasCompanyRole.role == "admin")     # admin
+        .where(model.SaasCompanyRole.status == "active")
+    )
+    return session.execute(stmt.distinct()).scalars().all()
+
+def get_company_ids_by_email(
+    email: str,
+    *,
+    only_active_role: bool = True,
+    include_deleted_companies: bool = False,
+    session: optional[SASession] = None,
+) -> list[int]:
+    """
+    Returns all company_ids a user belongs to via saas_company_roles.
+    """
+    email = (email or "").strip()
+    if not email:
+        return []
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        stmt = (
+            select(model.Company.company_id)
+            .join(model.SaasCompanyRole, model.SaasCompanyRole.company_id == model.Company.company_id)
+            .join(model.SaasUserData, model.SaasUserData.user_id == model.SaasCompanyRole.user_id)
+            .where(model.SaasUserData.email == email)
+        )
+
+        if only_active_role:
+            stmt = stmt.where(model.SaasCompanyRole.status == "active")
+        if not include_deleted_companies:
+            stmt = stmt.where(model.Company.deleted_at.is_(None))
+
+        return session.execute(stmt.distinct()).scalars().all()
+    finally:
+        if own_session:
+            session.close()
 
 def get_companyid_by_email(email:str) -> optional[int]:
+    "RETURNS compnay ID via Email wuerying on saas_user_data table"
     try:
         session =Session()
         company_id = (
