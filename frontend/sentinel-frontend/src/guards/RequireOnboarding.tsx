@@ -1,6 +1,7 @@
-import React from "react"; 
+import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useOnboarding } from "../state/onboarding";
+import { hasAnyIntegrationConnected } from "../state/integrationRules";
 
 export default function RequireOnboarding({ children }: { children: React.ReactNode }) {
   const { signup, plan, paymentSuccess, integrations } = useOnboarding();
@@ -8,13 +9,13 @@ export default function RequireOnboarding({ children }: { children: React.ReactN
 
   if (!signup) return <Navigate to="/signup" replace />;
   if (!plan) return <Navigate to="/plan" replace />;
-  
-  // fix: ensures free users don't get stuck at payment
+
+  // Only paid plans must complete payment
   if (plan === "paid" && !paymentSuccess) return <Navigate to="/payment" replace />;
 
-  // fix: prevents crash if integrations is undefined
-  const anyConnected = (integrations ?? []).some((i: any) => i.connected);
+  const anyConnected = hasAnyIntegrationConnected(integrations);
 
+  // allow visiting connect page itself even when nothing is connected
   if (!anyConnected && location.pathname !== "/connect-accounts") {
     return <Navigate to="/connect-accounts" replace />;
   }
