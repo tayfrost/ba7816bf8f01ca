@@ -1,4 +1,4 @@
-import { Integration } from "./onboarding";
+import type { Integration } from "./onboarding";
 
 export function hasAnyIntegrationConnected(integrations: Integration[]): boolean {
   return integrations.some(i => i.connected);
