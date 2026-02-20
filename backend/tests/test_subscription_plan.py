@@ -13,10 +13,10 @@ def db_session():
     transaction = connection.begin()
     session = crud.Session(bind=connection)
 
-    # Start a SAVEPOINT. session.commit() will end the SAVEPOINT, not the outer transaction.
+    # Start a SAVEPOINT. session.commit() will ends the SAVEPOINT
     session.begin_nested()
 
-    # If the SAVEPOINT ends, restart it automatically (so multiple commits work).
+    # If the SAVEPOINT ends, restart it automatically.
     @event.listens_for(session, "after_transaction_end")
     def restart_savepoint(sess, trans):
         if trans.nested and not trans._parent.nested:
@@ -40,12 +40,10 @@ def db_session():
         ("Valid", -1, 5, "GBP"),     # negative cost
         ("Valid", 0, 0, "GBP"),      # max_employees <= 0
         ("Valid", 0, 5, "GB"),       # currency not length 3
-        ("Valid", 0, 5, None),       # currency invalid (will become "GBP"? no, you pass None explicitly -> becomes "GBP")
+        ("Valid", 0, 5, None),       # currency invalid (will become "GBP")
     ],
 )
 def test_create_sub_plan_validation_errors(db_session, p_name, cost, max_emp, currency):
-    # Note: In your CRUD, currency=None becomes "GBP" (default), so that case wouldn't raise ValueError.
-    # We'll special-case it below.
     if currency is None:
         pytest.skip("currency=None becomes default 'GBP' in create_sub_plan; not a validation error.")
     with pytest.raises(ValueError):
@@ -92,7 +90,6 @@ def test_create_duplicate_name_raises_runtimeerror(db_session):
     with pytest.raises(RuntimeError) as exc:
         crud.create_sub_plan("Business", 6000, 60, "GBP", session=db_session)
 
-    # your code raises RuntimeError("... already exists ...") before DB insert
     assert "already exists" in str(exc.value)
 
 

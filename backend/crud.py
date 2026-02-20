@@ -12,16 +12,22 @@ Session = sessionmaker(bind=engine)
 
 # ~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def get_company_ids_by_owner_email(email: str, session=None) -> list[int]:
-    session = session or Session()
-    stmt = (
-        select(model.SaasCompanyRole.company_id)
-        .join(model.SaasUserData, model.SaasUserData.user_id == model.SaasCompanyRole.user_id)
-        .where(model.SaasUserData.email == email)
-        .where(model.SaasCompanyRole.role == "admin")     # admin
-        .where(model.SaasCompanyRole.status == "active")
-    )
-    return session.execute(stmt.distinct()).scalars().all()
+def get_company_ids_by_admin_email(email: str, session: optional[SASession] = None) -> list[int]:
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = (
+            select(model.SaasCompanyRole.company_id)
+            .join(model.SaasUserData, model.SaasUserData.user_id == model.SaasCompanyRole.user_id)
+            .where(model.SaasUserData.email == email)
+            .where(model.SaasCompanyRole.role == "admin")
+            .where(model.SaasCompanyRole.status == "active")
+        )
+        return session.execute(stmt.distinct()).scalars().all()
+    finally:
+        if own_session:
+            session.close()
 
 def get_company_ids_by_email(
     email: str,
@@ -58,24 +64,6 @@ def get_company_ids_by_email(
     finally:
         if own_session:
             session.close()
-
-def get_companyid_by_email(email:str) -> optional[int]:
-    "RETURNS compnay ID via Email wuerying on saas_user_data table"
-    try:
-        session =Session()
-        company_id = (
-            session.query(model.SaasUserData.company_id)
-            .filter(model.SaasUserData.email == email)
-            .first()
-        )
-        if company_id:
-            return company_id[0]
-        else:
-            return None
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
-
 
 # ~~~~~~~~~~~~~~~~~ subscription plan ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def create_sub_plan(
@@ -127,6 +115,8 @@ def create_sub_plan(
             max_employees=int(max_employ),
         )
         session.add(plan)
+        
+        session.flush() 
 
         session.commit()
 

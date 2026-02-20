@@ -125,7 +125,7 @@ class Workspace(Base):
     access_token: Mapped[str] = mapped_column(Text, nullable=False)
 
     company: Mapped["Company"] = relationship(back_populates="workspaces")
-    slack_trackers: Mapped[list["SlackUser"]] = relationship(back_populates="workspace")
+    slack_users: Mapped[list["SlackUser"]] = relationship(back_populates="workspace")
 
     def __repr__(self) -> str:
         return (
@@ -142,7 +142,7 @@ class SlackUser(Base):
     __table_args__ = (
         CheckConstraint("char_length(trim(name)) > 1", name="ck_slack_user_name_len"),
         CheckConstraint("char_length(trim(surname)) > 1", name="ck_slack_user_surname_len"),
-        CheckConstraint("status IN ('active','inactive','deleted')", name="ck_slack_user_status"),
+        CheckConstraint("status IN ('active','inactive','removed')", name="ck_slack_user_status"),
         UniqueConstraint("team_id", "slack_user_id", name="uq_slack_users_team_user"),
     )
 
