@@ -4,6 +4,8 @@ from sqlalchemy import event
 
 from sqlalchemy.exc import IntegrityError
 import inspect
+import pytest
+from backend import crud
 
 @pytest.fixture()
 def db_session():
@@ -31,8 +33,7 @@ def _make_plan(session, name="StarterPlan"):
     return crud.create_sub_plan(name, 0, 5, "GBP", session=session)
 
 
-import pytest
-from backend import crud
+
 
 # --- Create & Read Tests ---
 

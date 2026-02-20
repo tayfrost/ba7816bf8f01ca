@@ -713,7 +713,7 @@ def hard_delete_user(
         if own_session:
             session.close()
 # ~~~~~~~~~~~~~~~~ saas company role ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##Potential delete
+#######  CONSIDER LOCKING ROWS FOR CONCURRENCY ###########
 def generic_upsert_company_role(
     company_id: int,
     user_id: int,
@@ -784,18 +784,17 @@ def generic_upsert_company_role(
         if own_session:
             session.close()
 
-def set_company_biller(company_id: int, user_id: int, *, session: optional[SASession] = None) -> None:
+#------- update ----------------
+def set_company_biller(company_id: int, user_id: int, *, session: optional[SASession] = None) -> model.SaasCompanyRole:
     """
     Makes user_id the active biller for company_id.
-    Order matters:
-      1) ensure new biller is active
-      2) demote previous active biller(s)
-    triggers:
-      - uq_one_active_biller_per_company
-      - prevent_last_active_biller_removal trigger
+    Safe ordering:
+      1) ensure new biller is active (insert/update)
+      2) flush so DB sees an active biller exists
+      3) demote previous active biller(s)
     """
-    own_session = session is None
-    if own_session:
+    own = session is None
+    if own:
         session = Session()
 
     try:
@@ -803,8 +802,17 @@ def set_company_biller(company_id: int, user_id: int, *, session: optional[SASes
             raise ValueError(f"company_id={company_id} not found.")
         if not session.get(model.SaasUserData, int(user_id)):
             raise ValueError(f"user_id={user_id} not found.")
+        
+        #demoting first
+        session.execute(
+            update(model.SaasCompanyRole)
+            .where(model.SaasCompanyRole.company_id == int(company_id))
+            .where(model.SaasCompanyRole.role == "biller")
+            .where(model.SaasCompanyRole.status == "active")
+            .where(model.SaasCompanyRole.user_id != int(user_id))
+            .values(status="inactive")
+        )
 
-        # (company_id,user_id,'biller') exists + set active
         row = session.execute(
             select(model.SaasCompanyRole).where(
                 model.SaasCompanyRole.company_id == int(company_id),
@@ -826,17 +834,9 @@ def set_company_biller(company_id: int, user_id: int, *, session: optional[SASes
 
         session.flush() 
 
-        #  Demote any other active biller
-        session.execute(
-            update(model.SaasCompanyRole)
-            .where(model.SaasCompanyRole.company_id == int(company_id))
-            .where(model.SaasCompanyRole.role == "biller")
-            .where(model.SaasCompanyRole.status == "active")
-            .where(model.SaasCompanyRole.user_id != int(user_id))
-            .values(status="inactive")
-        )
-
         session.commit()
+        session.refresh(row)
+        return row
 
     except (ValueError, RuntimeError):
         session.rollback()
@@ -848,40 +848,31 @@ def set_company_biller(company_id: int, user_id: int, *, session: optional[SASes
         session.rollback()
         raise
     finally:
-        if own_session:
+        if own:
             session.close()
-#------- update ----------------
-def set_company_admin(
-    company_id: int,
-    user_id: int,
-    *,
-    session: optional[SASession] = None,
-) -> None:
-    """
-    Makes user_id the ONLY active admin for company_id.
-    ensuring partial uniqueness.
-    """
-    own_session = session is None
-    if own_session:
+
+def set_company_admin(company_id: int, user_id: int, *, session: optional[SASession] = None) -> model.SaasCompanyRole:
+    own = session is None
+    if own:
         session = Session()
 
     try:
-        
         if not session.get(model.Company, int(company_id)):
             raise ValueError(f"company_id={company_id} not found.")
         if not session.get(model.SaasUserData, int(user_id)):
             raise ValueError(f"user_id={user_id} not found.")
 
-        # deactivate existing active admin(s) to switch admins
+        # demote any currently-active admin 
         session.execute(
             update(model.SaasCompanyRole)
             .where(model.SaasCompanyRole.company_id == int(company_id))
             .where(model.SaasCompanyRole.role == "admin")
             .where(model.SaasCompanyRole.status == "active")
+            .where(model.SaasCompanyRole.user_id != int(user_id))
             .values(status="inactive")
         )
 
-        # upsert admin row for this user, incase user was deactivated before
+        # upsert this user admin row as active
         row = session.execute(
             select(model.SaasCompanyRole).where(
                 model.SaasCompanyRole.company_id == int(company_id),
@@ -890,7 +881,6 @@ def set_company_admin(
             )
         ).scalar_one_or_none()
 
-        # creating new role, in case where user wasnt admin before hand
         if row is None:
             row = model.SaasCompanyRole(
                 company_id=int(company_id),
@@ -903,9 +893,9 @@ def set_company_admin(
             row.status = "active"
 
         session.commit()
+        session.refresh(row)
+        return row
 
-    except ValueError:
-        raise
     except IntegrityError as e:
         session.rollback()
         raise RuntimeError(f"DB rejected set_company_admin: {e.orig}") from e
@@ -913,7 +903,136 @@ def set_company_admin(
         session.rollback()
         raise
     finally:
-        if own_session:
+        if own:
+            session.close()
+
+#  ----- get user roles --------------
+def get_company_roles(company_id: int, *, session: optional[SASession] = None) -> list[model.SaasCompanyRole]:
+    """Return all role rows for a company."""
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        rows = session.execute(
+            select(model.SaasCompanyRole)
+            .where(model.SaasCompanyRole.company_id == int(company_id))
+            .order_by(model.SaasCompanyRole.role, model.SaasCompanyRole.user_id)
+        ).scalars().all()
+        return list(rows)
+    finally:
+        if own:
+            session.close()
+
+def get_user_roles_in_company(company_id: int, user_id: int, *, session: optional[SASession] = None) -> list[model.SaasCompanyRole]:
+    """Return all roles for a user within a company."""
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        rows = session.execute(
+            select(model.SaasCompanyRole).where(
+                model.SaasCompanyRole.company_id == int(company_id),
+                model.SaasCompanyRole.user_id == int(user_id),
+            )
+        ).scalars().all()
+        return list(rows)
+    finally:
+        if own:
+            session.close()
+
+def has_role(company_id: int, user_id: int, role: str, *, status: optional[str] = None, session: optional[SASession] = None) -> bool:
+    """Check if a role row exists, optionally filtered by status."""
+    role = (role or "").strip()
+    if role not in VALID_ROLES:
+        raise ValueError(f"role must be one of {sorted(VALID_ROLES)}")
+
+    if status is not None:
+        status = (status or "").strip()
+        if status not in VALID_ROLE_STATUS:
+            raise ValueError(f"status must be one of {sorted(VALID_ROLE_STATUS)}")
+
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        stmt = select(model.SaasCompanyRole.company_id).where(
+            model.SaasCompanyRole.company_id == int(company_id),
+            model.SaasCompanyRole.user_id == int(user_id),
+            model.SaasCompanyRole.role == role,
+        )
+        if status is not None:
+            stmt = stmt.where(model.SaasCompanyRole.status == status)
+
+        return session.execute(stmt).first() is not None
+    finally:
+        if own:
+            session.close()
+
+def get_active_admin(company_id: int, *, session: optional[SASession] = None) -> optional[model.SaasCompanyRole]:
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        return session.execute(
+            select(model.SaasCompanyRole).where(
+                model.SaasCompanyRole.company_id == int(company_id),
+                model.SaasCompanyRole.role == "admin",
+                model.SaasCompanyRole.status == "active",
+            )
+        ).scalar_one_or_none()
+    finally:
+        if own:
+            session.close()
+
+def get_active_biller(company_id: int, *, session: optional[SASession] = None) -> optional[model.SaasCompanyRole]:
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        return session.execute(
+            select(model.SaasCompanyRole).where(
+                model.SaasCompanyRole.company_id == int(company_id),
+                model.SaasCompanyRole.role == "biller",
+                model.SaasCompanyRole.status == "active",
+            )
+        ).scalar_one_or_none()
+    finally:
+        if own:
+            session.close()
+
+# ------soft delete ----------------
+def remove_role(company_id: int, user_id: int, role: str, *, session: optional[SASession] = None) -> None:
+    """
+    Generic soft-remove: sets status='removed'.
+    Disallows admin/biller because triggers will often block removals.
+    """
+    role = (role or "").strip()
+    if role not in VALID_ROLES:
+        raise ValueError(f"role must be one of {sorted(VALID_ROLES)}")
+    if role in {"admin", "biller"}:
+        raise ValueError("Use transfer/rotate logic (set_company_admin/biller) before removing admin/biller.")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        session.execute(
+            update(model.SaasCompanyRole)
+            .where(model.SaasCompanyRole.company_id == int(company_id))
+            .where(model.SaasCompanyRole.user_id == int(user_id))
+            .where(model.SaasCompanyRole.role == role)
+            .values(status="removed")
+        )
+        session.commit()
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected remove_role: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
             session.close()
 
 
