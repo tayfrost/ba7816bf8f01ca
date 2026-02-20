@@ -3,9 +3,7 @@ from typing import Optional
 from sqlalchemy import ForeignKey
 from sqlalchemy import BigInteger, Text, CHAR, String, CheckConstraint, DateTime,func, text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
 
@@ -54,7 +52,6 @@ class Company(Base):
 
     plan: Mapped["SubscriptionPlan"] = relationship(back_populates="companies")
     company_roles: Mapped[list["SaasCompanyRole"]] = relationship(back_populates="company")
-    slack_trackers: Mapped[list["SlackTracker"]] = relationship(back_populates="company")
     workspaces: Mapped[list["Workspace"]] = relationship(back_populates="company")
 
     def __repr__(self) -> str:
@@ -115,53 +112,61 @@ class SaasCompanyRole(Base):
 
 class Workspace(Base):
     __tablename__ = "slack_workspaces"
-    
+
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    company_id: Mapped[int] = mapped_column(BigInteger,ForeignKey("companies.company_id", ondelete="RESTRICT"),
-                                            nullable=False)
-    slack_team_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    company_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("companies.company_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
+    team_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+
+    access_token: Mapped[str] = mapped_column(Text, nullable=False)
 
     company: Mapped["Company"] = relationship(back_populates="workspaces")
-    slack_trackers: Mapped[list["SlackTracker"]] = relationship(back_populates="workspace")
+    slack_trackers: Mapped[list["SlackUser"]] = relationship(back_populates="workspace")
 
     def __repr__(self) -> str:
         return (
             "Workspace("
             f"id={self.id!r}, "
             f"company_id={self.company_id!r}, "
-            f"slack_team_id={self.slack_team_id!r}"
+            f"team_id={self.team_id!r}"
             ")"
         )
-
-class SlackTracker(Base):
-    __tablename__ = "slack_tracker"
+   
+class SlackUser(Base):
+    __tablename__ = "slack_users"
 
     __table_args__ = (
-        CheckConstraint("char_length(trim(name)) > 1", name="ck_tracker_name_len"),
-        CheckConstraint("char_length(trim(surname)) > 1", name="ck_tracker_surname_len"),
-        CheckConstraint("status IN ('active','inactive','removed')", name="ck_tracker_status"),
-        UniqueConstraint("slack_team_id", "slack_user_id", name="uq_tracker_team_user")
+        CheckConstraint("char_length(trim(name)) > 1", name="ck_slack_user_name_len"),
+        CheckConstraint("char_length(trim(surname)) > 1", name="ck_slack_user_surname_len"),
+        CheckConstraint("status IN ('active','inactive','deleted')", name="ck_slack_user_status"),
+        UniqueConstraint("team_id", "slack_user_id", name="uq_slack_users_team_user"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    company_id: Mapped[int] = mapped_column(BigInteger,ForeignKey("companies.company_id", ondelete="RESTRICT"),
-                                            nullable=False)
-    slack_team_id: Mapped[str] = mapped_column(Text, ForeignKey("slack_workspaces.slack_team_id", ondelete="RESTRICT"),
-                                               nullable=False)
-    slack_user_id: Mapped[str] = mapped_column(Text, nullable = False)
-    name: Mapped[str] = mapped_column(Text, nullable = False)
-    surname: Mapped[str] = mapped_column(Text, nullable = False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),nullable=False, server_default=func.now())
+
+    team_id: Mapped[str] = mapped_column(
+        Text,
+        ForeignKey("slack_workspaces.team_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
+    slack_user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    surname: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     status: Mapped[str] = mapped_column(Text, nullable=False)
 
-    company: Mapped["Company"] = relationship(back_populates="slack_trackers")
-    workspace: Mapped["Workspace"] = relationship(back_populates="slack_trackers")
+    workspace: Mapped["Workspace"] = relationship(back_populates="slack_users")
 
     def __repr__(self) -> str:
         return (
-            "SlackTracker("
+            "SlackUser("
             f"id={self.id!r}, "
-            f"slack_team_id={self.slack_team_id!r}, "
+            f"team_id={self.team_id!r}, "
             f"slack_user_id={self.slack_user_id!r}, "
             f"status={self.status!r}"
             ")"
