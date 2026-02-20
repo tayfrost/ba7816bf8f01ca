@@ -35,3 +35,5 @@ build/
 
 #database configs
 *.db
+# Big models
+*.pt
