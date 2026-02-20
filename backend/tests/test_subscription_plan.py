@@ -43,6 +43,7 @@ def db_session():
         ("Valid", 0, 5, None),       # currency invalid (will become "GBP")
     ],
 )
+
 def test_create_sub_plan_validation_errors(db_session, p_name, cost, max_emp, currency):
     if currency is None:
         pytest.skip("currency=None becomes default 'GBP' in create_sub_plan; not a validation error.")
