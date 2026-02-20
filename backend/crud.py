@@ -12,6 +12,7 @@ Session = sessionmaker(bind=engine)
 
 VALID_ROLES = {"admin", "viewer", "biller"}
 VALID_ROLE_STATUS = {"active", "inactive", "removed"}
+VALID_SLACK_USER_STATUS = {"active", "inactive", "removed"}
 
 
 # ~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1276,9 +1277,385 @@ def delete_workspace_by_team_id(team_id: str, *, session: optional[SASession] = 
             session.close()
 
 
-# ~~~~~~~~~~~~~~~ slack tracker ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~ slack users ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# ~~~~~~~~~~~~~~~
+def create_slack_user(
+    team_id: str,
+    slack_user_id: str,
+    name: str,
+    surname: str,
+    status: str = "active",
+    *,
+    session: optional[SASession] = None,
+) -> model.SlackUser:
+    """
+    Insert a slack user row.
 
+    DB constraints:
+      - (team_id, slack_user_id) must be unique
+      - team_id must exist in slack_workspaces (FK, RESTRICT)
+      - name/surname length > 1 (after trim)
+      - status in ('active','inactive','removed')
+    """
+    team_id = (team_id or "").strip()
+    slack_user_id = (slack_user_id or "").strip()
+    name = (name or "").strip()
+    surname = (surname or "").strip()
+    status = (status or "").strip()
 
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not slack_user_id:
+        raise ValueError("slack_user_id is required")
+    if len(name) <= 1:
+        raise ValueError("name must be > 1 char")
+    if len(surname) <= 1:
+        raise ValueError("surname must be > 1 char")
+    if status not in VALID_SLACK_USER_STATUS:
+        raise ValueError(f"status must be one of {sorted(VALID_SLACK_USER_STATUS)}")
 
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        # ensure workspace 
+        ws = session.execute(select(model.Workspace).where(model.Workspace.team_id == team_id)).scalar_one_or_none()
+        if ws is None:
+            raise ValueError(f"workspace team_id={team_id} not found.")
+
+        row = model.SlackUser(
+            team_id=team_id,
+            slack_user_id=slack_user_id,
+            name=name,
+            surname=surname,
+            status=status,
+        )
+        session.add(row)
+        session.flush()
+        session.commit()
+        session.refresh(row)
+        return row
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected create_slack_user: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
+
+def get_slack_user_by_id(slack_user_db_id: int, *, session: optional[SASession] = None) -> optional[model.SlackUser]:
+    """returns slack user by id """
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        return session.get(model.SlackUser, int(slack_user_db_id))
+    finally:
+        if own:
+            session.close()
+
+def get_slack_user_by_team_and_slack_id(
+    team_id: str,
+    slack_user_id: str,
+    *,
+    session: optional[SASession] = None,
+) -> optional[model.SlackUser]:
+    """returns slack user by team and slack id """
+    team_id = (team_id or "").strip()
+    slack_user_id = (slack_user_id or "").strip()
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not slack_user_id:
+        raise ValueError("slack_user_id is required")
+
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        return session.execute(
+            select(model.SlackUser).where(
+                model.SlackUser.team_id == team_id,
+                model.SlackUser.slack_user_id == slack_user_id,
+            )
+        ).scalar_one_or_none()
+    finally:
+        if own:
+            session.close()
+
+def list_slack_users_for_workspace(
+    team_id: str,
+    *,
+    status: optional[str] = None,
+    session: optional[SASession] = None,
+) -> list[model.SlackUser]:
+    """List all users withibn a workspace"""
+    team_id = (team_id or "").strip()
+    if not team_id:
+        raise ValueError("team_id is required")
+    if status is not None:
+        status = (status or "").strip()
+        if status not in VALID_SLACK_USER_STATUS:
+            raise ValueError(f"status must be one of {sorted(VALID_SLACK_USER_STATUS)}")
+
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        stmt = (
+            select(model.SlackUser)
+            .where(model.SlackUser.team_id == team_id)
+            .order_by(model.SlackUser.id)
+        )
+        if status is not None:
+            stmt = stmt.where(model.SlackUser.status == status)
+
+        rows = session.execute(stmt).scalars().all()
+        return list(rows)
+    finally:
+        if own:
+            session.close()
+
+def update_slack_user_profile(
+    team_id: str,
+    slack_user_id: str,
+    *,
+    name: optional[str] = None,
+    surname: optional[str] = None,
+    session: optional[SASession] = None,
+) -> model.SlackUser:
+    """
+    Update name/surname for a slack user 
+    """
+    team_id = (team_id or "").strip()
+    slack_user_id = (slack_user_id or "").strip()
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not slack_user_id:
+        raise ValueError("slack_user_id is required")
+
+    if name is None and surname is None:
+        raise ValueError("Provide at least one of name or surname to update.")
+
+    if name is not None:
+        name = (name or "").strip()
+        if len(name) <= 1:
+            raise ValueError("name must be > 1 char")
+    if surname is not None:
+        surname = (surname or "").strip()
+        if len(surname) <= 1:
+            raise ValueError("surname must be > 1 char")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        row = session.execute(
+            select(model.SlackUser).where(
+                model.SlackUser.team_id == team_id,
+                model.SlackUser.slack_user_id == slack_user_id,
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            raise ValueError(f"slack user not found team_id={team_id} slack_user_id={slack_user_id}")
+
+        if name is not None:
+            row.name = name
+        if surname is not None:
+            row.surname = surname
+
+        session.commit()
+        session.refresh(row)
+        return row
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected update_slack_user_profile: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
+
+def set_slack_user_status(
+    team_id: str,
+    slack_user_id: str,
+    status: str,
+    *,
+    session: optional[SASession] = None,
+) -> model.SlackUser:
+    """
+    Set status to active/inactive/removed (soft delete = removed).
+    """
+    team_id = (team_id or "").strip()
+    slack_user_id = (slack_user_id or "").strip()
+    status = (status or "").strip()
+
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not slack_user_id:
+        raise ValueError("slack_user_id is required")
+    if status not in VALID_SLACK_USER_STATUS:
+        raise ValueError(f"status must be one of {sorted(VALID_SLACK_USER_STATUS)}")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        row = session.execute(
+            select(model.SlackUser).where(
+                model.SlackUser.team_id == team_id,
+                model.SlackUser.slack_user_id == slack_user_id,
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            raise ValueError(f"slack user not found team_id={team_id} slack_user_id={slack_user_id}")
+
+        row.status = status
+        session.commit()
+        session.refresh(row)
+        return row
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected set_slack_user_status: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
+
+def upsert_slack_user(
+    team_id: str,
+    slack_user_id: str,
+    name: str,
+    surname: str,
+    status: str = "active",
+    *,
+    session: optional[SASession] = None,
+) -> model.SlackUser:
+    """
+    Insert if missing (team_id, slack_user_id), else update name/surname/status.
+    Useful when syncing from Slack API.
+    """
+    team_id = (team_id or "").strip()
+    slack_user_id = (slack_user_id or "").strip()
+    name = (name or "").strip()
+    surname = (surname or "").strip()
+    status = (status or "").strip()
+
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not slack_user_id:
+        raise ValueError("slack_user_id is required")
+    if len(name) <= 1:
+        raise ValueError("name must be > 1 char")
+    if len(surname) <= 1:
+        raise ValueError("surname must be > 1 char")
+    if status not in VALID_SLACK_USER_STATUS:
+        raise ValueError(f"status must be one of {sorted(VALID_SLACK_USER_STATUS)}")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        # ensure workspace exists
+        ws = session.execute(select(model.Workspace).where(model.Workspace.team_id == team_id)).scalar_one_or_none()
+        if ws is None:
+            raise ValueError(f"workspace team_id={team_id} not found.")
+
+        row = session.execute(
+            select(model.SlackUser).where(
+                model.SlackUser.team_id == team_id,
+                model.SlackUser.slack_user_id == slack_user_id,
+            )
+        ).scalar_one_or_none()
+
+        if row is None:
+            row = model.SlackUser(
+                team_id=team_id,
+                slack_user_id=slack_user_id,
+                name=name,
+                surname=surname,
+                status=status,
+            )
+            session.add(row)
+            session.flush()
+        else:
+            row.name = name
+            row.surname = surname
+            row.status = status
+
+        session.commit()
+        session.refresh(row)
+        return row
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected upsert_slack_user: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
+
+def hard_delete_slack_user(
+    team_id: str,
+    slack_user_id: str,
+    *,
+    session: optional[SASession] = None,
+) -> None:
+    """
+    Hard delete a slack user row by natural key.
+    """
+    team_id = (team_id or "").strip()
+    slack_user_id = (slack_user_id or "").strip()
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not slack_user_id:
+        raise ValueError("slack_user_id is required")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        result = session.execute(
+            delete(model.SlackUser).where(
+                model.SlackUser.team_id == team_id,
+                model.SlackUser.slack_user_id == slack_user_id,
+            )
+        )
+        if result.rowcount == 0:
+            raise ValueError(f"slack user not found team_id={team_id} slack_user_id={slack_user_id}")
+
+        session.commit()
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected delete_slack_user: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
