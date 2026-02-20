@@ -242,7 +242,6 @@ def update_sub_plan(
         if own_session:
             session.close()
    
-
 # ------ delete ---------------
 def delete_sub_plan(plan_id: int, session: optional[SASession] = None) -> bool:
     """
@@ -558,7 +557,6 @@ def get_user_by_email(email: str, *, session: optional[SASession] = None) -> opt
         if own_session:
             session.close()
 
-#------- update ----------------
 def update_user(
     user_id: int,
     *,
@@ -712,8 +710,12 @@ def hard_delete_user(
     finally:
         if own_session:
             session.close()
+
+
 # ~~~~~~~~~~~~~~~~ saas company role ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #######  CONSIDER LOCKING ROWS FOR CONCURRENCY ###########
+
+
 def generic_upsert_company_role(
     company_id: int,
     user_id: int,
@@ -1038,8 +1040,242 @@ def remove_role(company_id: int, user_id: int, role: str, *, session: optional[S
 
 # ~~~~~~~~~~~~~~~~ slack workspace ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def create_workspace(company_id, comapny_id):
-    pass
+def create_workspace(
+    company_id: int,
+    team_id: str,
+    access_token: str,
+    *,
+    session: optional[SASession] = None,
+) -> model.Workspace:
+    """
+    Register a Slack workspace for a company.
+
+    Constraints:
+      - company_id must exist
+      - team_id is unique
+      - access_token required
+    """
+    team_id = (team_id or "").strip()
+    access_token = (access_token or "").strip()
+
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not access_token:
+        raise ValueError("access_token is required")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        if not session.get(model.Company, int(company_id)):
+            raise ValueError(f"company_id={company_id} not found.")
+
+        row = model.Workspace(
+            company_id=int(company_id),
+            team_id=team_id,
+            access_token=access_token,
+        )
+        session.add(row)
+        session.flush() 
+        session.commit()
+        session.refresh(row)
+        return row
+
+    except ValueError:
+        session.rollback()
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        # could be a duplicate team_id, or FK failure
+        raise RuntimeError(f"DB rejected create_workspace: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
+
+def get_workspace_by_id(workspace_id: int, *, session: optional[SASession] = None) -> optional[model.Workspace]:
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        return session.get(model.Workspace, int(workspace_id))
+    finally:
+        if own:
+            session.close()
+
+def get_workspace_by_team_id(team_id: str, *, session: optional[SASession] = None) -> optional[model.Workspace]:
+    team_id = (team_id or "").strip()
+    if not team_id:
+        raise ValueError("team_id is required")
+
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        return session.execute(
+            select(model.Workspace).where(model.Workspace.team_id == team_id)
+        ).scalar_one_or_none()
+    finally:
+        if own:
+            session.close()
+
+def list_workspaces_for_company(company_id: int, *, session: optional[SASession] = None) -> list[model.Workspace]:
+    own = session is None
+    if own:
+        session = Session()
+    try:
+        rows = session.execute(
+            select(model.Workspace)
+            .where(model.Workspace.company_id == int(company_id))
+            .order_by(model.Workspace.id)
+        ).scalars().all()
+        return list(rows)
+    finally:
+        if own:
+            session.close()
+
+def update_workspace_access_token(
+    team_id: str,
+    new_access_token: str,
+    *,
+    session: optional[SASession] = None,
+) -> model.Workspace:
+    """
+    Rotate/update a workspace access token by team_id.
+    Returns updated row. Raises ValueError if not found.
+    """
+    team_id = (team_id or "").strip()
+    new_access_token = (new_access_token or "").strip()
+
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not new_access_token:
+        raise ValueError("new_access_token is required")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        ws = session.execute(
+            select(model.Workspace).where(model.Workspace.team_id == team_id)
+        ).scalar_one_or_none()
+        if ws is None:
+            raise ValueError(f"workspace team_id={team_id} not found.")
+
+        ws.access_token = new_access_token
+        session.commit()
+        session.refresh(ws)
+        return ws
+
+    except ValueError:
+        session.rollback()
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected update_workspace_access_token: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
+
+def upsert_workspace_by_team_id(
+    company_id: int,
+    team_id: str,
+    access_token: str,
+    *,
+    session: optional[SASession] = None,
+) -> model.Workspace:
+    """
+    If workspace exists (by team_id), update company_id + access_token.
+    Else create it.
+    """
+    team_id = (team_id or "").strip()
+    access_token = (access_token or "").strip()
+
+    if not team_id:
+        raise ValueError("team_id is required")
+    if not access_token:
+        raise ValueError("access_token is required")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        if not session.get(model.Company, int(company_id)):
+            raise ValueError(f"company_id={company_id} not found.")
+
+        ws = session.execute(
+            select(model.Workspace).where(model.Workspace.team_id == team_id)
+        ).scalar_one_or_none()
+
+        if ws is None:
+            ws = model.Workspace(company_id=int(company_id), team_id=team_id, access_token=access_token)
+            session.add(ws)
+            session.flush()
+        else:
+            ws.company_id = int(company_id)
+            ws.access_token = access_token
+
+        session.commit()
+        session.refresh(ws)
+        return ws
+
+    except ValueError:
+        session.rollback()
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected upsert_workspace_by_team_id: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
+
+def delete_workspace_by_team_id(team_id: str, *, session: optional[SASession] = None) -> None:
+    """
+    Hard delete a workspace row.
+    Note: may be blocked by FK constraints (e.g. slack_users rows referencing team_id).
+    """
+    team_id = (team_id or "").strip()
+    if not team_id:
+        raise ValueError("team_id is required")
+
+    own = session is None
+    if own:
+        session = Session()
+
+    try:
+        result = session.execute(
+            delete(model.Workspace).where(model.Workspace.team_id == team_id)
+        )
+        if result.rowcount == 0:
+            raise ValueError(f"workspace team_id={team_id} not found.")
+
+        session.commit()
+
+    except ValueError:
+        session.rollback()
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected delete_workspace_by_team_id (FK constraint?): {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own:
+            session.close()
+
+
 # ~~~~~~~~~~~~~~~ slack tracker ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # ~~~~~~~~~~~~~~~
