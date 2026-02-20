@@ -10,6 +10,9 @@ from sqlalchemy.exc import IntegrityError
 engine = create_engine("postgresql+psycopg://postgres:postgres@localhost:5432/sentinelai", echo=True)
 Session = sessionmaker(bind=engine)
 
+VALID_ROLES = {"admin", "viewer", "biller"}
+VALID_ROLE_STATUS = {"active", "inactive", "removed"}
+
 
 # ~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -140,8 +143,7 @@ def create_sub_plan(
         if own_session:
             session.close()
 
-
-# ---------------- read all ----------------
+# ------ read all -------------
 def read_all(session: optional[SASession] = None) -> list[model.SubscriptionPlan]:
     """Return all plans ordered by plan_cost_pennies then max_employees."""
     own_session = session is None
@@ -160,8 +162,7 @@ def read_all(session: optional[SASession] = None) -> list[model.SubscriptionPlan
         if own_session:
             session.close()
 
-
-# ---------------- get by name ----------------
+# ------ get by name ----------
 def get_sub_plan_by_name(p_name: str, session: optional[SASession] = None) -> optional[model.SubscriptionPlan]:
     """Get a plan by name. Returns None if not found."""
     p_name = (p_name or "").strip()
@@ -178,8 +179,7 @@ def get_sub_plan_by_name(p_name: str, session: optional[SASession] = None) -> op
         if own_session:
             session.close()
 
-
-# ---------------- update ----------------
+# ------ update ---------------
 def update_sub_plan(
     plan_id: int,
     *,
@@ -243,7 +243,7 @@ def update_sub_plan(
             session.close()
    
 
-# ---------------- delete ----------------
+# ------ delete ---------------
 def delete_sub_plan(plan_id: int, session: optional[SASession] = None) -> bool:
     """
     Delete a plan by id.
@@ -347,7 +347,7 @@ def create_company_by_plan_name(
         if own_session:
             session.close()
 
-# ---------------- get by company ----------------
+# ------ get by company --------
 def get_company_by_id(
     company_id: int,
     *,
@@ -390,7 +390,7 @@ def list_companies(
         if own_session:
             session.close()
 
-# ------------------update -------------------
+#------- update ----------------
 def update_company(
     company_id: int,
     *,
@@ -445,7 +445,7 @@ def update_company(
         if own_session:
             session.close()
 
-# ----------------- delete -------------
+# ------ delete ----------------
 def soft_delete_company(company_id: int, *, session: optional[SASession] = None) -> bool:
     """App delete = soft delete (sets deleted_at). for auditing purposes"""
     own_session = session is None
@@ -465,31 +465,63 @@ def soft_delete_company(company_id: int, *, session: optional[SASession] = None)
     finally:
         if own_session:
             session.close()
-    
-def hard_delete_company(company_id: int, *, session: optional[SASession] = None) -> bool:
-    """
-    Hard delete: DELETE FROM companies.
-    Returns True if deleted, False if not found.
 
-    NOTE: Will fail if other tables reference this company,
-    e.g. saas_company_roles, slack_workspaces.
+# ~~~~~~~~~~~~~~~~ saas user data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def create_saas_user(
+    name: str,
+    surname: str,
+    email: str,
+    password_hash: str,
+    *,
+    session: optional[SASession] = None,
+) -> model.SaasUserData:
     """
+    Create a SaaS user (unique by email).
+    """
+    name = (name or "").strip()
+    surname = (surname or "").strip()
+    email = (email or "").strip()
+    password_hash = password_hash or ""
+
+    if len(name) < 2:
+        raise ValueError("name must be at least 2 characters.")
+    if len(surname) < 2:
+        raise ValueError("surname must be at least 2 characters.")
+    if len(email) < 4 or "@" not in email or email.startswith("@") or email.endswith("@"):
+        raise ValueError("email must look like a valid email.")
+    if not password_hash:
+        raise ValueError("password_hash must not be empty.")
+
     own_session = session is None
     if own_session:
         session = Session()
 
     try:
-        company = session.get(model.Company, int(company_id))
-        if not company:
-            return False
+        existing = session.execute(
+            select(model.SaasUserData).where(model.SaasUserData.email == email)
+        ).scalar_one_or_none()
+        if existing:
+            raise RuntimeError(f"User with email '{email}' already exists (user_id={existing.user_id}).")
 
-        session.delete(company)
+        user = model.SaasUserData(
+            name=name,
+            surname=surname,
+            email=email,
+            password_hash=password_hash,
+        )
+        session.add(user)
+        session.flush()
+
         session.commit()
-        return True
+        session.refresh(user)
+        return user
 
+    except (ValueError, RuntimeError):
+        raise
     except IntegrityError as e:
         session.rollback()
-        raise RuntimeError(f"DB rejected hard_delete_company (company referenced elsewhere): {e.orig}") from e
+        raise RuntimeError(f"DB rejected create_saas_user: {e.orig}") from e
     except Exception:
         session.rollback()
         raise
@@ -497,14 +529,394 @@ def hard_delete_company(company_id: int, *, session: optional[SASession] = None)
         if own_session:
             session.close()
 
-# ~~~~~~~~~~~~~~~~ saas user data ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  ----- get user --------------
+def get_user_by_id(user_id: int, *, session: optional[SASession] = None) -> optional[model.SaasUserData]:
+    """returns user row via the user id """
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        return session.get(model.SaasUserData, int(user_id))
+    finally:
+        if own_session:
+            session.close()
 
-def create_saas_data(name, surname, email, hashed_pass):
-    pass
+def get_user_by_email(email: str, *, session: optional[SASession] = None) -> optional[model.SaasUserData]:
+    """returns user row or nothing, via email"""
+    email = (email or "").strip()
+    if not email:
+        return None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        return session.execute(
+            select(model.SaasUserData).where(model.SaasUserData.email == email)
+        ).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+#------- update ----------------
+def update_user(
+    user_id: int,
+    *,
+    name: str | None = None,
+    surname: str | None = None,
+    email: str | None = None,
+    password_hash: str | None = None,
+    session: optional[SASession] = None,
+) -> optional[model.SaasUserData]:
+    """
+    Update user fields. Returns updated user or None if not found.
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        user = session.get(model.SaasUserData, int(user_id))
+        if not user:
+            return None
+
+        if name is not None:
+            name = name.strip()
+            if len(name) < 2:
+                raise ValueError("name must be at least 2 characters.")
+            user.name = name
+
+        if surname is not None:
+            surname = surname.strip()
+            if len(surname) < 2:
+                raise ValueError("surname must be at least 2 characters.")
+            user.surname = surname
+
+        if email is not None:
+            email = email.strip()
+            if len(email) < 4 or "@" not in email or email.startswith("@") or email.endswith("@"):
+                raise ValueError("email must look like a valid email.")
+            
+            existing = session.execute(
+                select(model.SaasUserData.user_id).where(
+                    model.SaasUserData.email == email,
+                    model.SaasUserData.user_id != int(user_id),
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                raise RuntimeError(f"email '{email}' is already in use by another user.")
+
+            user.email = email
+
+        if password_hash is not None:
+            if not password_hash:
+                raise ValueError("password_hash must not be empty.")
+            user.password_hash = password_hash
+
+        session.commit()
+        session.refresh(user)
+        return user
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected update_user: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
+#------ delete -----------------
+def hard_delete_user(
+    user_id: int,
+    *,
+    require_no_roles: bool = True,
+    session: optional[SASession] = None,
+) -> bool:
+    """
+    Hard delete user from saas_user_data.
+
+    Safety rules:
+      - If user has any ACTIVE biller role anywhere -> refuse
+      - If user has any ACTIVE admin role anywhere -> refuse
+      - If require_no_roles=True: refuse if ANY role rows exist (even inactive/removed)
+        (because FK RESTRICT will also block if roles exist)
+
+    Returns:
+      True if deleted, False if not found.
+
+    Raises:
+      RuntimeError if deletion is not allowed due to billing/admin/roles.
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        user = session.get(model.SaasUserData, int(user_id))
+        if not user:
+            return False
+
+        # Blocking if active biller anywhere
+        active_biller = session.execute(
+            select(model.SaasCompanyRole.company_id).where(
+                model.SaasCompanyRole.user_id == int(user_id),
+                model.SaasCompanyRole.role == "biller",
+                model.SaasCompanyRole.status == "active",
+            ).limit(1)
+        ).scalar_one_or_none()
+        if active_biller is not None:
+            raise RuntimeError("Cannot delete user: user is an ACTIVE biller for at least one company.")
+
+        # Blocking if active admin anywhere
+        active_admin = session.execute(
+            select(model.SaasCompanyRole.company_id).where(
+                model.SaasCompanyRole.user_id == int(user_id),
+                model.SaasCompanyRole.role == "admin",
+                model.SaasCompanyRole.status == "active",
+            ).limit(1)
+        ).scalar_one_or_none()
+        if active_admin is not None:
+            raise RuntimeError("Cannot delete user: user is an ACTIVE admin for at least one company.")
+
+        # If its later decided stricly no role rows at all
+        if require_no_roles:
+            any_roles = session.execute(
+                select(model.SaasCompanyRole.company_id).where(
+                    model.SaasCompanyRole.user_id == int(user_id)
+                ).limit(1)
+            ).scalar_one_or_none()
+            if any_roles is not None:
+                raise RuntimeError(
+                    "Cannot delete user: user still has company role rows "
+                    "Remove memberships first (set roles to 'removed'), then delete."
+                )
+
+        session.delete(user)
+        session.commit()
+        return True
+
+    except RuntimeError:
+        session.rollback()
+        raise
+    except IntegrityError as e:
+        session.rollback()
+
+        raise RuntimeError(f"DB rejected hard_delete_user (user still referenced): {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
 # ~~~~~~~~~~~~~~~~ saas company role ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##Potential delete
+def generic_upsert_company_role(
+    company_id: int,
+    user_id: int,
+    role: str,
+    status: str = "active",
+    *,
+    session: optional[SASession] = None,
+) -> model.SaasCompanyRole:
+    """
+    Upsert a NON-CRITICAL role row (e.g. viewer).
+    Use set_company_admin / set_company_biller for admin/biller roles.
+    """
+    role = (role or "").strip()
+    status = (status or "").strip()
 
-def create_saas_roles(role, status, company_id, company_name):
-    pass
+    if role not in VALID_ROLES:
+        raise ValueError(f"role must be one of {sorted(VALID_ROLES)}")
+    if role in {"admin", "biller"}:
+        raise ValueError("Use set_company_admin / set_company_biller for admin/biller roles.")
+    if status not in VALID_ROLE_STATUS:
+        raise ValueError(f"status must be one of {sorted(VALID_ROLE_STATUS)}")
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        if not session.get(model.Company, int(company_id)):
+            raise ValueError(f"company_id={company_id} not found.")
+        if not session.get(model.SaasUserData, int(user_id)):
+            raise ValueError(f"user_id={user_id} not found.")
+
+        existing = session.execute(
+            select(model.SaasCompanyRole).where(
+                model.SaasCompanyRole.company_id == int(company_id),
+                model.SaasCompanyRole.user_id == int(user_id),
+                model.SaasCompanyRole.role == role,
+            )
+        ).scalar_one_or_none()
+
+        if existing:
+            existing.status = status
+            session.commit()
+            session.refresh(existing)
+            return existing
+
+        row = model.SaasCompanyRole(
+            company_id=int(company_id),
+            user_id=int(user_id),
+            role=role,
+            status=status,
+        )
+        session.add(row)
+        session.flush()
+        session.commit()
+        session.refresh(row)
+        return row
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected upsert_company_role: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
+def set_company_biller(company_id: int, user_id: int, *, session: optional[SASession] = None) -> None:
+    """
+    Makes user_id the active biller for company_id.
+    Order matters:
+      1) ensure new biller is active
+      2) demote previous active biller(s)
+    triggers:
+      - uq_one_active_biller_per_company
+      - prevent_last_active_biller_removal trigger
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        if not session.get(model.Company, int(company_id)):
+            raise ValueError(f"company_id={company_id} not found.")
+        if not session.get(model.SaasUserData, int(user_id)):
+            raise ValueError(f"user_id={user_id} not found.")
+
+        # (company_id,user_id,'biller') exists + set active
+        row = session.execute(
+            select(model.SaasCompanyRole).where(
+                model.SaasCompanyRole.company_id == int(company_id),
+                model.SaasCompanyRole.user_id == int(user_id),
+                model.SaasCompanyRole.role == "biller",
+            )
+        ).scalar_one_or_none()
+
+        if row is None:
+            row = model.SaasCompanyRole(
+                company_id=int(company_id),
+                user_id=int(user_id),
+                role="biller",
+                status="active",
+            )
+            session.add(row)
+        else:
+            row.status = "active"
+
+        session.flush() 
+
+        #  Demote any other active biller
+        session.execute(
+            update(model.SaasCompanyRole)
+            .where(model.SaasCompanyRole.company_id == int(company_id))
+            .where(model.SaasCompanyRole.role == "biller")
+            .where(model.SaasCompanyRole.status == "active")
+            .where(model.SaasCompanyRole.user_id != int(user_id))
+            .values(status="inactive")
+        )
+
+        session.commit()
+
+    except (ValueError, RuntimeError):
+        session.rollback()
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected set_company_biller: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+#------- update ----------------
+def set_company_admin(
+    company_id: int,
+    user_id: int,
+    *,
+    session: optional[SASession] = None,
+) -> None:
+    """
+    Makes user_id the ONLY active admin for company_id.
+    ensuring partial uniqueness.
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        
+        if not session.get(model.Company, int(company_id)):
+            raise ValueError(f"company_id={company_id} not found.")
+        if not session.get(model.SaasUserData, int(user_id)):
+            raise ValueError(f"user_id={user_id} not found.")
+
+        # deactivate existing active admin(s) to switch admins
+        session.execute(
+            update(model.SaasCompanyRole)
+            .where(model.SaasCompanyRole.company_id == int(company_id))
+            .where(model.SaasCompanyRole.role == "admin")
+            .where(model.SaasCompanyRole.status == "active")
+            .values(status="inactive")
+        )
+
+        # upsert admin row for this user, incase user was deactivated before
+        row = session.execute(
+            select(model.SaasCompanyRole).where(
+                model.SaasCompanyRole.company_id == int(company_id),
+                model.SaasCompanyRole.user_id == int(user_id),
+                model.SaasCompanyRole.role == "admin",
+            )
+        ).scalar_one_or_none()
+
+        # creating new role, in case where user wasnt admin before hand
+        if row is None:
+            row = model.SaasCompanyRole(
+                company_id=int(company_id),
+                user_id=int(user_id),
+                role="admin",
+                status="active",
+            )
+            session.add(row)
+        else:
+            row.status = "active"
+
+        session.commit()
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected set_company_admin: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
+
 # ~~~~~~~~~~~~~~~~ slack workspace ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def create_workspace(company_id, comapny_id):
