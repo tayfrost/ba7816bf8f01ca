@@ -80,8 +80,6 @@ def create_sub_plan(
         )
         session.add(plan)
 
-        # If you want the caller to manage transactions in tests, you can make commit optional.
-        # But for now we'll keep commit always:
         session.commit()
 
         session.refresh(plan)
@@ -91,7 +89,6 @@ def create_sub_plan(
         raise
 
     except RuntimeError:
-        # no DB changes made; don't rollback
         raise
 
     except IntegrityError as e:
@@ -192,7 +189,6 @@ def update_sub_plan(
         session.refresh(plan)
         return plan
     except ValueError:
-    # validation error: we didn't write to DB, don't rollback
         raise
 
     except IntegrityError as e:
