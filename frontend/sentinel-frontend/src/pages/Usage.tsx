@@ -4,6 +4,7 @@ import { useOnboarding } from "../state/onboarding";
 import { countConnected, getConnectedProviders } from "../state/integrationRules";
 import { computeRange, RangePreset } from "../state/timeRange";
 import { makeAllSeries } from "../state/metricsMock";
+import SimpleLineChart from "../components/SimpleLineChart";
 
 type AlertSeverity = "low" | "medium" | "high";
 
@@ -145,15 +146,8 @@ export default function Usage() {
                   Start: {first?.value ?? "-"} | Latest: {last?.value ?? "-"}
                 </div>
 
-                <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
-                  Last 7 points:
-                  <ul>
-                    {s.points.slice(-7).map((p) => (
-                      <li key={p.date}>
-                        {p.date}: {p.value}
-                      </li>
-                    ))}
-                  </ul>
+                <div style={{ marginTop: 12 }}>
+                  <SimpleLineChart points={s.points} />
                 </div>
               </div>
             );
