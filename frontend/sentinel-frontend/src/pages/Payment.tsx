@@ -11,7 +11,8 @@ export default function Payment() {
   const navigate = useNavigate();
   const { setPaymentSuccess } = useOnboarding();
 
-  function handlePay() {
+  function handlePay(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
     setPaymentSuccess(true);
     navigate("/usage");
   }
