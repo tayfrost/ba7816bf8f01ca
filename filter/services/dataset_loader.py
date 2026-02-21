@@ -5,49 +5,39 @@ Loads and preprocesses the synthetic mental health dataset for BERT training.
 Handles tokenization, label encoding, and PyTorch dataset creation.
 """
 
-from typing import Dict, List, Tuple, Union
 import json
+import sys
 from pathlib import Path
-
-from torch.utils.data import Dataset, DataLoader
-from transformers import AutoTokenizer
+from typing import Dict, List, Tuple, Union
 
 import torch
+from torch.utils.data import DataLoader, Dataset
+from transformers import AutoTokenizer
+
+# Add parent directory to path to allow importing config
+sys.path.append(str(Path(__file__).parent.parent))
+
+import config
 
 # Category to index mapping
-CATEGORY_MAP = {
-    "neutral": 0,
-    "humor_sarcasm": 1,
-    "stress": 2,
-    "burnout": 3,
-    "depression": 4,
-    "harassment": 5,
-    "suicidal_ideation": 6
-}
-
-# Severity stage to index mapping
-SEVERITY_MAP = {
-    "none": 0,
-    "early": 1,
-    "middle": 2,
-    "late": 3
-}
-
-# Risk categories (for binary routing logic)
-RISK_CATEGORIES = {"stress", "burnout", "depression", "harassment", "suicidal_ideation"}
+CATEGORY_MAP = config.CATEGORY_MAP
+SEVERITY_MAP = config.SEVERITY_MAP
+RISK_CATEGORIES = config.RISK_CATEGORIES
 
 
 class MentalHealthDataset(Dataset):
     """
     PyTorch Dataset for mental health risk detection.
-    
+
     Args:
         data (List[Dict]): List of dataset examples
         tokenizer: HuggingFace tokenizer
         max_length (int): Maximum sequence length for tokenization
     """
 
-    def __init__(self, data: List[Dict], tokenizer, max_length: int = 128):
+    def __init__(
+        self, data: List[Dict], tokenizer, max_length: int = config.MAX_LENGTH
+    ):
         self.data = data
         self.tokenizer = tokenizer
         self.max_length = max_length
@@ -64,7 +54,7 @@ class MentalHealthDataset(Dataset):
             max_length=self.max_length,
             padding="max_length",
             truncation=True,
-            return_tensors="pt"
+            return_tensors="pt",
         )
 
         # Convert labels to indices
@@ -76,22 +66,22 @@ class MentalHealthDataset(Dataset):
             "attention_mask": encoding["attention_mask"].squeeze(0),
             "category_label": torch.tensor(category_label, dtype=torch.long),
             "severity_label": torch.tensor(severity_label, dtype=torch.long),
-            "is_risk": torch.tensor(item["is_risk"], dtype=torch.long)
+            "is_risk": torch.tensor(item["is_risk"], dtype=torch.long),
         }
 
 
 def load_dataset(
     dataset_path: str,
-    model_name: str = "bert-base-uncased",
+    model_name: str = config.MODEL_NAME,
     train_split: float = 0.8,
     val_split: float = 0.1,
-    max_length: int = 128,
-    seed: int = 42,
-    mix_datasets: bool = True
+    max_length: int = config.MAX_LENGTH,
+    seed: int = config.SEED,
+    mix_datasets: bool = True,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, AutoTokenizer]:
     """
     Load and split the mental health dataset.
-    
+
     Args:
         dataset_path (str): Path to dataset JSON file (v0.1 or v0.2)
         model_name (str): Pretrained model name for tokenizer
@@ -100,7 +90,7 @@ def load_dataset(
         max_length (int): Maximum sequence length
         seed (int): Random seed for reproducibility
         mix_datasets (bool): If True, mix v0.1 (5k) + v0.2 (2k random) = 7k total
-    
+
     Returns:
         Tuple of (train_loader, val_loader, test_loader, tokenizer)
     """
@@ -111,10 +101,10 @@ def load_dataset(
         v01_path = dataset_dir / "sentinelai_dataset_v0.1.json"
         v02_path = dataset_dir / "sentinelai_dataset_v0.2.json"
 
-        with open(v01_path, 'r', encoding='utf-8') as f:
+        with open(v01_path, "r", encoding="utf-8") as f:
             data_v01 = json.load(f)
 
-        with open(v02_path, 'r', encoding='utf-8') as f:
+        with open(v02_path, "r", encoding="utf-8") as f:
             data_v02 = json.load(f)
 
         # Keep all v0.1 (natural phrasing)
@@ -125,9 +115,11 @@ def load_dataset(
         v02_indices = torch.randperm(len(data_v02))[:2000].tolist()
         data.extend([data_v02[i] for i in v02_indices])
 
-        print(f"Mixed dataset: {len(data_v01)} v0.1 + {len(v02_indices)} v0.2 = {len(data)} total")
+        print(
+            f"Mixed dataset: {len(data_v01)} v0.1 + {len(v02_indices)} v0.2 = {len(data)} total"
+        )
     else:
-        with open(dataset_path, 'r', encoding='utf-8') as f:
+        with open(dataset_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         print(f"Loaded dataset: {len(data)} examples from {Path(dataset_path).name}")
 
@@ -158,7 +150,9 @@ def load_dataset(
     val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
-    print(f"Dataset loaded: {len(train_data)} train, {len(val_data)} val, {len(test_data)} test")
+    print(
+        f"Dataset loaded: {len(train_data)} train, {len(val_data)} val, {len(test_data)} test"
+    )
 
     return train_loader, val_loader, test_loader, tokenizer
 
@@ -166,14 +160,14 @@ def load_dataset(
 def get_class_distribution(dataset_path: str) -> Dict[str, Union[Dict[str, int], int]]:
     """
     Get class distribution for the dataset.
-    
+
     Args:
         dataset_path (str): Path to dataset JSON file
-    
+
     Returns:
         Dict with category and severity distributions
     """
-    with open(dataset_path, 'r', encoding='utf-8') as f:
+    with open(dataset_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     category_dist = {}
@@ -193,5 +187,5 @@ def get_class_distribution(dataset_path: str) -> Dict[str, Union[Dict[str, int],
         "categories": category_dist,
         "severity": severity_dist,
         "risk": risk_dist,
-        "total": len(data)
+        "total": len(data),
     }
