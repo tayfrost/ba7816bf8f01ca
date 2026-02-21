@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
+import LandingHeader from "../components/LandingHeader"; 
 import { useOnboarding } from "../state/onboarding";
 import { startIntegration } from "../api/integrations";
 
@@ -12,6 +13,10 @@ function providerTitle(p: Provider) {
   return "Outlook";
 }
 
+function providerLogo(p: Provider) {
+  return `/logos/${p}.svg`; 
+}
+
 function providerDesc(p: Provider) {
   if (p === "slack") return "Connect a workspace to ingest messages via approved channels.";
   if (p === "gmail") return "Connect mailbox metadata (consent-based) for behavioural signals.";
@@ -21,7 +26,6 @@ function providerDesc(p: Provider) {
 export default function ConnectAccounts() {
   const nav = useNavigate();
   const { integrations, setIntegrationConnected } = useOnboarding();
-
   const providers = useMemo<Provider[]>(() => ["slack", "gmail", "outlook"], []);
 
   const connectMock = async (provider: Provider) => {
@@ -34,8 +38,8 @@ export default function ConnectAccounts() {
       window.location.href = url; // OAuth redirect (backend will provide)
       return;
     } catch (e) {
-        // Backend may be offline during frontend work -> fallback for demo
-        setIntegrationConnected(provider, true);
+      // Backend may be offline during frontend work -> fallback for demo
+      setIntegrationConnected(provider, true);
     }
   };
 
@@ -44,69 +48,97 @@ export default function ConnectAccounts() {
   };
 
   return (
-    <div style={{ maxWidth: 920, margin: "0 auto", padding: 24 }}>
-      <h1 style={{ fontSize: 28, marginBottom: 8 }}>Connect your work accounts</h1>
-      <p style={{ opacity: 0.85, marginBottom: 18 }}>
-        Add Slack/Gmail/Outlook so SentinelAI can monitor early burnout signals using consent-based,
-        company-approved data sources.
-      </p>
+    <div className="min-h-screen flex flex-col font-sans antialiased relative overflow-hidden">
+      
+      <LandingHeader isLoggedIn={true} />
 
-      <p style={{ fontSize: 14, opacity: 0.7, marginBottom: 24 }}>
-        Only consent-based, company-approved data sources are analysed. HR decisions remain human-in-the-loop.
-      </p>
+      <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-6 relative z-10">
+        <div className="max-w-4xl w-full bg-white/10 backdrop-blur-3xl border border-white/40 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.08)] rounded-[48px] p-10 md:p-14">
+          
+          <div className="mb-12 text-center md:text-left">
+            <h1 className="text-4xl md:text-3xl font-serif font-black text-brand-deep mb-4 leading-[1.1]">
+              Connect your work accounts
+            </h1>
+            <p className="text-lg text-brand-deep/85 max-w-2xl font-medium mb-4">
+              Add Slack/Gmail/Outlook so SentinelAI can monitor early burnout signals using consent-based, 
+              company-approved data sources.
+            </p>
+          </div>
 
+          <div className="flex flex-col gap-4 mb-12">
+            {providers.map((p) => {
+              const integration = integrations.find(i => i.provider === p);
+              const isConnected = integration?.connected;
 
-      <div style={{ display: "grid", gap: 14 }}>
-        {providers.map((p) => (
-          <div
-            key={p}
-            style={{
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 14,
-              padding: 16,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>{providerTitle(p)}</div>
-              <div style={{ opacity: 0.8, marginTop: 4 }}>{providerDesc(p)}</div>
+              return (
+                <div
+                  key={p}
+                  className="group relative flex flex-col md:flex-row items-center justify-between p-6 md:p-8 rounded-[32px] bg-white/30 border border-white/50 shadow-sm transition-all duration-500 hover:shadow-xl hover:bg-white/60 hover:-translate-y-1"
+                >
+                  <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+                    <div className="w-14 h-14 flex items-center justify-center p-3 rounded-2xl bg-white/50 border border-white transition-transform group-hover:scale-105">
+                      <img src={providerLogo(p)} alt={p} className="w-full h-full object-contain" />
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center justify-center md:justify-start gap-3 mb-1">
+                        <h3 className="text-xl font-bold text-brand-deep tracking-tight">
+                          {providerTitle(p)}
+                        </h3>
+                        {isConnected && (
+                           <span className="text-[9px] font-black uppercase tracking-widest text-green-700 bg-green-100/80 px-2 py-0.5 rounded-md">
+                             Connected
+                           </span>
+                        )}
+                      </div>
+                      <p className="text-[15px] text-brand-deep/80 font-medium leading-relaxed max-w-md">
+                        {providerDesc(p)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 md:mt-0 flex flex-row items-center gap-6">
+                
+                    <Button 
+                      onClick={() => connectMock(p)}
+                      className="min-w-[120px] px-6 py-2.5 text-xs font-bold"
+                      variant={isConnected ? "secondary" : "primary"}
+                    >
+                      {isConnected ? "Reconnect" : "Connect"}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="bg-brand-deep/[0.02] border border-brand-deep/5 rounded-[32px] py-6 px-10 flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3 flex-grow">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+              <p className="text-[10px] text-brand-deep/70 font-bold uppercase tracking-widest leading-relaxed max-w-2xl">
+                Only consent-based, company-approved data sources are analysed. HR decisions remain human-in-the-loop.
+              </p>
             </div>
-
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              {(() => {
-                const integration = integrations.find(i => i.provider === p);
-                const isConnected = integration?.connected;
-
-                return (
-                  <>
-                  <span style={{ opacity: 0.75 }}>
-                    {isConnected ? "Connected" : "Not connected"}
-                  </span>
-
-                  <Button onClick={() => connectMock(p)}>
-                    {isConnected ? "Reconnect" : "Connect"}
-                  </Button>
-                  </>
-                );
-              })()}
+            
+            <div className="flex flex-row items-center gap-4 shrink-0">
+              <Button 
+                onClick={continueToDashboard} 
+                variant="secondary"
+                className="whitespace-nowrap px-6 py-3 text-sm font-bold opacity-70 hover:opacity-100 transition-all"
+              >
+                Skip for now
+              </Button>
+              <Button 
+                onClick={continueToDashboard} 
+                disabled={!integrations.some(i => i.connected)}
+                className="whitespace-nowrap px-8 py-3 text-sm font-black shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] hover:shadow-none transition-all"
+              >
+                Continue
+              </Button>
             </div>
           </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
-        <Button onClick={continueToDashboard} variant="secondary">
-          Skip for now
-        </Button>
-        <Button
-          onClick={continueToDashboard} 
-          disabled={!integrations.some(i => i.connected)}
-        >
-          Continue
-        </Button>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
