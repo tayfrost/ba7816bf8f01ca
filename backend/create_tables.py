@@ -57,10 +57,10 @@ CREATE TABLE IF NOT EXISTS slack_tracker(
     status TEXT NOT NULL CHECK (status IN ('active','inactive','removed')),
     UNIQUE (slack_team_id, slack_user_id)
 );
+
 """
 
 def main():
-    # autocommit is helpful for CREATE EXTENSION
     with psycopg.connect(DB_URL) as conn:
         conn.autocommit = True
         with conn.cursor() as cur:

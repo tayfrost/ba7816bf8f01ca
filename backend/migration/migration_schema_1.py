@@ -5,7 +5,7 @@ DB_URL = "postgresql://postgres:postgres@localhost:5432/sentinelai"
 MIGRATION = """
 BEGIN;
 
--- 1) slack_workspaces: rename slack_team_id -> team_id
+-- slack_workspaces: rename slack_team_id -> team_id
 DO $$
 BEGIN
   IF EXISTS (
@@ -23,7 +23,7 @@ ALTER TABLE slack_workspaces
   ALTER COLUMN access_token SET NOT NULL;
 
 
--- 3) Rename slack_tracker table -> slack_users
+-- Rename slack_tracker table -> slack_users
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='slack_tracker')
@@ -33,7 +33,7 @@ BEGIN
   END IF;
 END $$;
 
--- 4) Drop old constraints that might reference old names
+-- Drop old constraints that might reference old names
 ALTER TABLE slack_users
   DROP CONSTRAINT IF EXISTS slack_tracker_slack_team_id_fkey;
 ALTER TABLE slack_users
@@ -45,7 +45,7 @@ ALTER TABLE slack_users
 ALTER TABLE slack_users
   DROP CONSTRAINT IF EXISTS slack_users_company_id_fkey;
 
--- 5) slack_users: rename slack_team_id -> team_id
+-- slack_users: rename slack_team_id -> team_id
 DO $$
 BEGIN
   IF EXISTS (
@@ -56,11 +56,11 @@ BEGIN
   END IF;
 END $$;
 
--- 6) slack_users: drop company_id
+-- slack_users: drop company_id
 ALTER TABLE slack_users
   DROP COLUMN IF EXISTS company_id;
 
--- 7) Fix UNIQUE(team_id, slack_user_id)
+-- Fix UNIQUE(team_id, slack_user_id)
 ALTER TABLE slack_users
   DROP CONSTRAINT IF EXISTS uq_tracker_team_user;
 ALTER TABLE slack_users
@@ -71,7 +71,7 @@ ALTER TABLE slack_users
 ALTER TABLE slack_users
   ADD CONSTRAINT uq_slack_users_team_user UNIQUE (team_id, slack_user_id);
 
--- 8) Recreate FK(team_id) -> slack_workspaces(team_id)
+-- Recreate FK(team_id) -> slack_workspaces(team_id)
 ALTER TABLE slack_users
   ADD CONSTRAINT fk_slack_users_team
   FOREIGN KEY (team_id) REFERENCES slack_workspaces(team_id)

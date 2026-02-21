@@ -13,6 +13,7 @@ Session = sessionmaker(bind=engine)
 VALID_ROLES = {"admin", "viewer", "biller"}
 VALID_ROLE_STATUS = {"active", "inactive", "removed"}
 VALID_SLACK_USER_STATUS = {"active", "inactive", "removed"}
+VALID_CLASS_TYPES = {"depression", "suicide", "anxiety", "n/a"}
 
 
 # ~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -273,6 +274,7 @@ def delete_sub_plan(plan_id: int, session: optional[SASession] = None) -> bool:
     finally:
         if own_session:
             session.close()
+
 # ~~~~~~~~~~~~~~~~ company ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def create_company(
     plan_id: int,
@@ -1659,3 +1661,339 @@ def hard_delete_slack_user(
     finally:
         if own:
             session.close()
+
+
+# ~~~~~~~~~~~~~~~ Flagged Incident ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def create_flagged_incident(
+    *,
+    company_id: int,
+    team_id: str,
+    slack_user_id: str,
+    message_ts: str,
+    channel_id: str,
+    raw_message_text: dict,
+    class_reason: str | None = None,
+    session: optional[SASession] = None,
+) -> model.FlaggedIncident:
+    """
+    Create a flagged incident.
+    Notes:
+      - DB enforces FK(team_id)->slack_workspaces(team_id)
+      - DB enforces composite FK(team_id, slack_user_id)->slack_users(team_id, slack_user_id)
+    """
+    team_id = (team_id or "").strip()
+    slack_user_id = (slack_user_id or "").strip()
+    message_ts = (message_ts or "").strip()
+    channel_id = (channel_id or "").strip()
+
+    if not company_id or int(company_id) <= 0:
+        raise ValueError("company_id must be a positive integer.")
+    if not team_id:
+        raise ValueError("team_id is required.")
+    if not slack_user_id:
+        raise ValueError("slack_user_id is required.")
+    if not message_ts:
+        raise ValueError("message_ts is required.")
+    if not channel_id:
+        raise ValueError("channel_id is required.")
+    if raw_message_text is None or not isinstance(raw_message_text, dict):
+        raise ValueError("raw_message_text must be a dict (JSON serializable).")
+
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        incident = model.FlaggedIncident(
+            company_id=int(company_id),
+            team_id=team_id,
+            slack_user_id=slack_user_id,
+            message_ts=message_ts,
+            channel_id=channel_id,
+            raw_message_text=raw_message_text,
+            class_reason=class_reason,
+        )
+
+        session.add(incident)
+        session.flush()
+        session.commit()
+        session.refresh(incident)
+        return incident
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected create_flagged_incident: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
+def read_all_flagged_incidents(
+    *,
+    company_id: int | None = None,
+    team_id: str | None = None,
+    slack_user_id: str | None = None,
+    limit: int = 200,
+    offset: int = 0,
+    newest_first: bool = True,
+    session: optional[SASession] = None,
+) -> list[model.FlaggedIncident]:
+    """
+    Read incidents with optional filters.
+    Default ordering: newest first.
+    """
+    if limit is None or int(limit) <= 0 or int(limit) > 5000:
+        raise ValueError("limit must be between 1 and 5000.")
+    if offset is None or int(offset) < 0:
+        raise ValueError("offset must be >= 0.")
+
+    team_id = team_id.strip() if team_id else None
+    slack_user_id = slack_user_id.strip() if slack_user_id else None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        stmt = select(model.FlaggedIncident)
+
+        if company_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.company_id == int(company_id))
+        if team_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.team_id == team_id)
+        if slack_user_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.slack_user_id == slack_user_id)
+
+        if newest_first:
+            stmt = stmt.order_by(
+                model.FlaggedIncident.created_at.desc(),
+                model.FlaggedIncident.incident_id.desc())
+        else:
+            stmt = stmt.order_by(
+                model.FlaggedIncident.created_at.asc(),
+                model.FlaggedIncident.incident_id.asc())
+
+        stmt = stmt.limit(int(limit)).offset(int(offset))
+
+        return session.execute(stmt).scalars().all()
+    finally:
+        if own_session:
+            session.close()
+
+#might need to delete it by some other means instead of id 
+def delete_flagged_incident(
+    *,
+    incident_id: int,
+    session: optional[SASession] = None,
+) -> bool:
+    """
+    Hard delete by PK.
+    Returns True if deleted, False if not found.
+    """
+    if incident_id is None or int(incident_id) <= 0:
+        raise ValueError("incident_id must be a positive integer.")
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        incident = session.get(model.FlaggedIncident, int(incident_id))
+        if not incident:
+            return False
+
+        session.delete(incident)
+        session.commit()
+        return True
+
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected delete_flagged_incident: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
+def count_flagged_incidents(
+    *,
+    company_id: int | None = None,
+    team_id: str | None = None,
+    slack_user_id: str | None = None,
+    session: optional[SASession] = None,
+) -> int:
+    """
+    for  UI: "total results".
+    """
+    team_id = team_id.strip() if team_id else None
+    slack_user_id = slack_user_id.strip() if slack_user_id else None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        stmt = select(model.FlaggedIncident.incident_id)
+
+        if company_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.company_id == int(company_id))
+        if team_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.team_id == team_id)
+        if slack_user_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.slack_user_id == slack_user_id)
+
+        ids = session.execute(stmt).scalars().all()
+        return len(ids)
+    finally:
+        if own_session:
+            session.close()
+
+#this can be used for both company analytics and for saas users
+def get_flagged_incidents_by_class_types(
+    *,
+    class_types: set[str] | list[str] | tuple[str, ...],
+    company_id: int | None = None,
+    team_id: str | None = None,
+    slack_user_id: str | None = None,
+    include_unclassified: bool = False,
+    limit: int = 200,
+    offset: int = 0,
+    newest_first: bool = True,
+    session: optional[SASession] = None,
+) -> list[model.FlaggedIncident]:
+    """
+    Fetch incidents filtered by one or more class_reason "types".
+
+    - class_types: e.g. {"depression", "suicide"}
+    - include_unclassified: if True, also includes rows where class_reason IS NULL
+    - Optional filters: company_id, team_id, slack_user_id
+    """
+    if not class_types:
+        raise ValueError("class_types must not be empty.")
+    if limit is None or int(limit) <= 0 or int(limit) > 5000:
+        raise ValueError("limit must be between 1 and 5000.")
+    if offset is None or int(offset) < 0:
+        raise ValueError("offset must be >= 0.")
+
+    # Normalize incoming types
+    normalized = {str(t).strip().lower() for t in class_types if str(t).strip()}
+    if not normalized:
+        raise ValueError("class_types must contain at least one non-empty value.")
+
+    unknown = normalized - VALID_CLASS_TYPES
+    if unknown:
+        raise ValueError(f"Unknown class_types: {sorted(unknown)}. Allowed: {sorted(VALID_CLASS_TYPES)}")
+
+    team_id = team_id.strip() if team_id else None
+    slack_user_id = slack_user_id.strip() if slack_user_id else None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        stmt = select(model.FlaggedIncident)
+
+        # base filters
+        if company_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.company_id == int(company_id))
+        if team_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.team_id == team_id)
+        if slack_user_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.slack_user_id == slack_user_id)
+
+        # type filters
+        type_filter = model.FlaggedIncident.class_reason.in_(list(normalized))
+        if include_unclassified:
+            stmt = stmt.where(
+                model.FlaggedIncident.class_reason.is_(None) | type_filter
+            )
+        else:
+            stmt = stmt.where(type_filter)
+
+        # ordering + pagination
+        stmt = stmt.order_by(
+            model.FlaggedIncident.created_at.desc()
+            if newest_first
+            else model.FlaggedIncident.created_at.asc()
+        ).limit(int(limit)).offset(int(offset))
+
+        return session.execute(stmt).scalars().all()
+
+    finally:
+        if own_session:
+            session.close()
+
+def get_most_recent_incident(
+    *,
+    company_id: int | None = None,
+    team_id: str | None = None,
+    slack_user_id: str | None = None,
+    class_types: set[str] | list[str] | tuple[str, ...] | None = None,
+    include_unclassified: bool = False,
+    session: optional[SASession] = None,
+) -> model.FlaggedIncident | None:
+    """
+    Returns the most recent (by created_at) flagged incident, optionally filtered.
+
+    Filters:
+      - company_id, team_id, slack_user_id
+      - class_types: iterable of class_reason values (e.g. {"suicide","anxiety"})
+      - include_unclassified: if True and class_types provided, also allow class_reason IS NULL
+    """
+    team_id = team_id.strip() if team_id else None
+    slack_user_id = slack_user_id.strip() if slack_user_id else None
+
+    if class_types is not None:
+        normalized = {str(t).strip().lower() for t in class_types if str(t).strip()}
+        if not normalized:
+            raise ValueError("class_types was provided but contained no valid values.")
+        # If you defined VALID_CLASS_TYPES earlier, validate here:
+        unknown = normalized - VALID_CLASS_TYPES
+        if unknown:
+            raise ValueError(f"Unknown class_types: {sorted(unknown)}. Allowed: {sorted(VALID_CLASS_TYPES)}")
+    else:
+        normalized = None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        stmt = select(model.FlaggedIncident)
+
+        if company_id is not None:
+            if int(company_id) <= 0:
+                raise ValueError("company_id must be a positive integer.")
+            stmt = stmt.where(model.FlaggedIncident.company_id == int(company_id))
+
+        if team_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.team_id == team_id)
+
+        if slack_user_id is not None:
+            stmt = stmt.where(model.FlaggedIncident.slack_user_id == slack_user_id)
+
+        if normalized is not None:
+            type_filter = model.FlaggedIncident.class_reason.in_(list(normalized))
+            if include_unclassified:
+                stmt = stmt.where(model.FlaggedIncident.class_reason.is_(None) | type_filter)
+            else:
+                stmt = stmt.where(type_filter)
+
+        stmt = stmt.order_by(
+                model.FlaggedIncident.created_at.desc(),
+                model.FlaggedIncident.incident_id.desc(),
+            ).limit(1)
+
+        return session.execute(stmt).scalars().first()
+
+    finally:
+        if own_session:
+            session.close()
+

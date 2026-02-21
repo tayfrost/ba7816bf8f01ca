@@ -1,10 +1,11 @@
 from typing import List
 from typing import Optional
-from sqlalchemy import ForeignKey
-from sqlalchemy import BigInteger, Text, CHAR, String, CheckConstraint, DateTime,func, text, UniqueConstraint
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, Index
+from sqlalchemy import BigInteger, Text, CHAR, String, CheckConstraint, DateTime,func, text, UniqueConstraint,and_
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class Base(DeclarativeBase):
@@ -53,6 +54,7 @@ class Company(Base):
     plan: Mapped["SubscriptionPlan"] = relationship(back_populates="companies")
     company_roles: Mapped[list["SaasCompanyRole"]] = relationship(back_populates="company")
     workspaces: Mapped[list["Workspace"]] = relationship(back_populates="company")
+    flagged_incidents: Mapped[list["FlaggedIncident"]] = relationship(back_populates="company")
 
     def __repr__(self) -> str:
         return f"Company(company_id={self.company_id!r}, company_name={self.company_name!r}, plan_id={self.plan_id!r})"
@@ -126,6 +128,7 @@ class Workspace(Base):
 
     company: Mapped["Company"] = relationship(back_populates="workspaces")
     slack_users: Mapped[list["SlackUser"]] = relationship(back_populates="workspace")
+    flagged_incidents: Mapped[list["FlaggedIncident"]] = relationship(back_populates="workspace")
 
     def __repr__(self) -> str:
         return (
@@ -161,6 +164,13 @@ class SlackUser(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False)
 
     workspace: Mapped["Workspace"] = relationship(back_populates="slack_users")
+    flagged_incidents: Mapped[list["FlaggedIncident"]] = relationship("FlaggedIncident",
+                primaryjoin=lambda: and_(
+                    SlackUser.team_id == FlaggedIncident.team_id,
+                    SlackUser.slack_user_id == FlaggedIncident.slack_user_id),
+                back_populates="slack_user",
+                foreign_keys=lambda: [FlaggedIncident.team_id, FlaggedIncident.slack_user_id],
+                overlaps="workspace,flagged_incidents")
 
     def __repr__(self) -> str:
         return (
@@ -169,5 +179,56 @@ class SlackUser(Base):
             f"team_id={self.team_id!r}, "
             f"slack_user_id={self.slack_user_id!r}, "
             f"status={self.status!r}"
+            ")"
+        )
+    
+class FlaggedIncident(Base):
+    __tablename__ = "flagged_incidents"
+    __table_args__ = (
+        ForeignKeyConstraint(["team_id", "slack_user_id"],["slack_users.team_id", "slack_users.slack_user_id"],
+            name="fk_flagged_incidents_tracker",
+            ondelete="RESTRICT",),
+        Index("idx_flagged_incidents_company_created_at", "company_id", "created_at"),
+        Index("idx_flagged_incidents_team_user_created_at", "team_id", "slack_user_id", "created_at"),
+    )
+
+    incident_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    company_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("companies.company_id", ondelete="RESTRICT"),
+                                             nullable=False,)
+    team_id: Mapped[str] = mapped_column(Text, ForeignKey("slack_workspaces.team_id", ondelete="RESTRICT"),
+        nullable=False,)
+    slack_user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    message_ts: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False,
+        server_default=func.now(),)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_message_text: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    class_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    
+    company: Mapped["Company"] = relationship(back_populates="flagged_incidents", foreign_keys=[company_id])
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="flagged_incidents",
+            foreign_keys=[team_id],
+            overlaps="slack_user,flagged_incidents")
+
+    slack_user: Mapped["SlackUser"] = relationship("SlackUser",
+                primaryjoin=lambda: and_(
+                    FlaggedIncident.team_id == SlackUser.team_id,
+                    FlaggedIncident.slack_user_id == SlackUser.slack_user_id),
+                back_populates="flagged_incidents",
+                foreign_keys=lambda: [FlaggedIncident.team_id, FlaggedIncident.slack_user_id],
+                overlaps="workspace,flagged_incidents")
+    
+    
+    def __repr__(self) -> str:
+        return (
+            "FlaggedIncident("
+            f"incident_id={self.incident_id!r}, "
+            f"company_id={self.company_id!r}, "
+            f"team_id={self.team_id!r}, "
+            f"slack_user_id={self.slack_user_id!r}, "
+            f"channel_id={self.channel_id!r}, "
+            f"created_at={self.created_at!r}"
             ")"
         )
