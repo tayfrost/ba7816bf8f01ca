@@ -4,62 +4,112 @@ Uses regex patterns based on clinical criteria (MBI, DSM-5) to classify messages
 This serves as one of many comparison baselines for the BERT dual-head model.
 """
 
-import sys
-from pathlib import Path
+# pylint: disable=wrong-import-position
+
 import json
 import re
+import sys
+from pathlib import Path
 from typing import Any, Dict, cast
 
-import torch
 import numpy as np
-
+import torch
 from sklearn.metrics import (
+    accuracy_score,
     classification_report,
     confusion_matrix,
-    accuracy_score,
-    precision_recall_fscore_support
+    precision_recall_fscore_support,
 )
 
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.dataset_loader import CATEGORY_MAP  # pylint: disable=wrong-import-position
+import config
+from services.dataset_loader import (
+    CATEGORY_MAP,
+)
 
 # Medically grounded keywords by category based on MBI, DSM-5, and clinical expertise.
 # 0: neutral, 1: humor_sarcasm, 2: stress, 3: burnout,
 # 4: depression, 5: harassment, 6: suicidal_ideation
 KEYWORDS = {
     6: [
-        "kill myself", "end it all", "suicide", "suicidal", "farewell",
-        "better off dead", "no reason to live", "done with life",
+        "kill myself",
+        "end it all",
+        "suicide",
+        "suicidal",
+        "farewell",
+        "better off dead",
+        "no reason to live",
+        "done with life",
     ],
     5: [
-        "idiot", "stupid", "fire you", "shut up", "hate you", "worthless",
-        "useless", "incompetent", "harass", "abuse", "toxic",
+        "idiot",
+        "stupid",
+        "fire you",
+        "shut up",
+        "hate you",
+        "worthless",
+        "useless",
+        "incompetent",
+        "harass",
+        "abuse",
+        "toxic",
     ],
     4: [
-        "hopeless", "empty", "worthless", "sad", "depressed", "depression",
-        "no joy", "unhappy", "miserable", "crying",
+        "hopeless",
+        "empty",
+        "worthless",
+        "sad",
+        "depressed",
+        "depression",
+        "no joy",
+        "unhappy",
+        "miserable",
+        "crying",
     ],
     3: [
-        "exhausted", "burnt out", "burnout", "cynical", "no point",
-        "overwhelmed", "drained", "can't do this", "finished",
+        "exhausted",
+        "burnt out",
+        "burnout",
+        "cynical",
+        "no point",
+        "overwhelmed",
+        "drained",
+        "can't do this",
+        "finished",
     ],
     2: [
-        "stress", "stressed", "pressure", "deadline", "busy", "too much",
-        "anxious", "anxiety", "worried", "overload",
+        "stress",
+        "stressed",
+        "pressure",
+        "deadline",
+        "busy",
+        "too much",
+        "anxious",
+        "anxiety",
+        "worried",
+        "overload",
     ],
     1: [
-        "lol", "haha", "jk", "just kidding", "sarcasm", "sarcastic",
-        "lmao", "rofl", "joke", "funny",
+        "lol",
+        "haha",
+        "jk",
+        "just kidding",
+        "sarcasm",
+        "sarcastic",
+        "lmao",
+        "rofl",
+        "joke",
+        "funny",
     ],
 }
 
 # Build regex patterns from the keyword lists (keeps individual source lines short)
 KEYWORD_PATTERNS = {
-    k: r"\b(" + "|".join(map(re.escape, v)) + r")\b"
-    for k, v in KEYWORDS.items()
+    k: r"\b(" + "|".join(map(re.escape, v)) + r")\b" for k, v in KEYWORDS.items()
 }
+
 
 def classify_message(text: str) -> int:
     """
@@ -75,6 +125,7 @@ def classify_message(text: str) -> int:
 
     return 0  # Default to Neutral
 
+
 def main():
     """Main function to evaluate the keyword baseline on the test set."""
     print("=" * 80)
@@ -82,28 +133,26 @@ def main():
     print("=" * 80)
 
     # Paths
-    script_dir = Path(__file__).parent
-    dataset_path = script_dir.parent.parent / "datasets" / "sentinelai_dataset_v0.2.json"
-    output_dir = script_dir.parent / "evaluation"
+    dataset_path = config.DATASETS_DIR / "sentinelai_dataset_v0.2.json"
+    output_dir = config.EVAL_DIR
     output_dir.mkdir(exist_ok=True)
 
     # Use raw text instead of tokenised tensors.
-    with open(dataset_path, 'r', encoding='utf-8') as f:
+    with open(dataset_path, "r", encoding="utf-8") as f:
         full_data = json.load(f)
 
-    dataset_dir = dataset_path.parent
-    v01_path = dataset_dir / "sentinelai_dataset_v0.1.json"
-    with open(v01_path, 'r', encoding='utf-8') as f:
+    v01_path = config.DATASETS_DIR / "sentinelai_dataset_v0.1.json"
+    with open(v01_path, "r", encoding="utf-8") as f:
         data_v01 = json.load(f)
 
     # Reproduce the exact mixed dataset used in training/eval, 2000 pair injection
-    torch.manual_seed(42)
+    torch.manual_seed(config.SEED)
     v02_indices = torch.randperm(len(full_data))[:2000].tolist()
     mixed_data = data_v01.copy()
     mixed_data.extend([full_data[i] for i in v02_indices])
 
     # Reproduce the shuffle and split from eval
-    torch.manual_seed(42)
+    torch.manual_seed(config.DATASET_SEED)
     indices = torch.randperm(len(mixed_data)).tolist()
     shuffled_data = [mixed_data[i] for i in indices]
 
@@ -151,7 +200,7 @@ def main():
     macro_avg = {
         "precision": float(np.mean(precision)),
         "recall": float(np.mean(recall)),
-        "f1_score": float(np.mean(f1))
+        "f1_score": float(np.mean(f1)),
     }
 
     print("\n" + "=" * 80)
@@ -171,7 +220,7 @@ def main():
             "precision": float(metrics["precision"]),
             "recall": float(metrics["recall"]),
             "f1_score": float(metrics["f1-score"]),
-            "support": int(metrics["support"])
+            "support": int(metrics["support"]),
         }
         prec = float(metrics["precision"])
         rec = float(metrics["recall"])
@@ -184,16 +233,17 @@ def main():
             "accuracy": float(accuracy),
             "macro_avg": macro_avg,
             "per_class": per_class_results,
-            "confusion_matrix": cm.tolist()
+            "confusion_matrix": cm.tolist(),
         }
     }
 
     output_path = output_dir / "baseline_keyword_results.json"
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print(f"\nResults saved to: {output_path}")
     print("=" * 80)
+
 
 if __name__ == "__main__":
     main()

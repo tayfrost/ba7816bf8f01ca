@@ -13,9 +13,19 @@ ARTIFACTS UPLOADED:
 - Training logs and README/model card
 """
 
+# pylint: disable=wrong-import-position
+
 import os
+import sys
 from pathlib import Path
+
 from huggingface_hub import HfApi, create_repo
+
+# Add parent directory to path
+sys.path.append(str(Path(__file__).parent.parent))
+
+import config
+
 
 def main():
     """Main function to handle the upload process."""
@@ -35,21 +45,22 @@ def main():
     if not hf_username:
         hf_username = input("Enter HuggingFace Username (or set HF_USERNAME): ").strip()
 
-    repo_name = "sentinelai-bert-filter"
-    repo_id = f"{hf_username}/{repo_name}"
+    repo_id = config.HF_REPO_ID
+    if hf_username not in repo_id:
+        # Fallback if user wants to upload to their own fork/repo
+        repo_id = f"{hf_username}/sentinelai-bert-filter"
 
     print(f"Target Repo: {repo_id}")
 
     # 3. Paths
-    script_dir = Path(__file__).parent
-    models_dir = script_dir.parent / "models"
+    models_dir = config.MODELS_DIR
 
     # Artifacts to upload
     artifacts = [
-        models_dir / "lora_adapters", # Folder
-        models_dir / "dual_head_classifier.pt", # File
-        models_dir / "training_log.json", # File
-        models_dir / "README.md", # File (Model Card)
+        models_dir / config.ADAPTERS_DIRNAME,  # Folder
+        models_dir / config.CHECKPOINT_FILENAME,  # File
+        models_dir / "training_log.json",  # File
+        models_dir / "README.md",  # File (Model Card)
     ]
 
     # Verify paths
@@ -63,7 +74,7 @@ def main():
     try:
         url = create_repo(repo_id, token=hf_token, exist_ok=True, private=False)
         print(f"Repository ready: {url}")
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Repo creation failed: {e}")
         return
 
@@ -76,7 +87,7 @@ def main():
         api.upload_folder(
             folder_path=str(models_dir / "lora_adapters"),
             repo_id=repo_id,
-            path_in_repo="lora_adapters"
+            path_in_repo="lora_adapters",
         )
 
         # Upload Full Checkpoint
@@ -84,7 +95,7 @@ def main():
         api.upload_file(
             path_or_fileobj=str(models_dir / "dual_head_classifier.pt"),
             path_in_repo="dual_head_classifier.pt",
-            repo_id=repo_id
+            repo_id=repo_id,
         )
 
         # Upload Log
@@ -92,7 +103,7 @@ def main():
         api.upload_file(
             path_or_fileobj=str(models_dir / "training_log.json"),
             path_in_repo="training_log.json",
-            repo_id=repo_id
+            repo_id=repo_id,
         )
 
         # Upload README (Model Card) to root
@@ -100,15 +111,16 @@ def main():
         api.upload_file(
             path_or_fileobj=str(models_dir / "README.md"),
             path_in_repo="README.md",
-            repo_id=repo_id
+            repo_id=repo_id,
         )
 
         print("\n" + "=" * 80)
         print(f"SUCCESS! Model hosted at: https://huggingface.co/{repo_id}")
         print("=" * 80)
 
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"\nUpload failed: {e}")
+
 
 if __name__ == "__main__":
     main()

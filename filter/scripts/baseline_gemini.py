@@ -11,44 +11,43 @@ REQUIREMENTS:
 - Set GEMINI_API_KEY environment variable
 
 METHODOLOGY:
-- Uses the exact same 700-sample test set (split seed=42) as BERT and Keyword baselines.
+- Uses the exact same 700-sample test set (split seed=config.DATASET_SEED) as BERT and Keyword baselines.
 - Zero-shot prompting with strict category constraints.
 - Reproduces the exact JSON output format for direct comparison.
 """
 
 # pylint: disable=wrong-import-position
 
-import sys
-import os
 import json
+import os
+import sys
 import time
-
+from pathlib import Path
 from typing import Any, Dict, cast
 
-from pathlib import Path
-from tqdm import tqdm
-
-import torch
 import numpy as np
-
-from sklearn.metrics import (
-    classification_report,
-    confusion_matrix,
-    accuracy_score,
-    precision_recall_fscore_support
-)
+import torch
 
 # Google GenAI SDK
 from google import genai
 from google.genai import types
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    precision_recall_fscore_support,
+)
+from tqdm import tqdm
 
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
+import config
 from services.dataset_loader import CATEGORY_MAP
 
 # Valid categories for prompting
 VALID_CATEGORIES = list(CATEGORY_MAP.keys())
+
 
 def classify_message_with_gemini(client: genai.Client, text: str) -> str:
     """
@@ -58,7 +57,7 @@ def classify_message_with_gemini(client: genai.Client, text: str) -> str:
     prompt = f"""
     You are an expert mental health classifier for workplace communications.
     Classify the following message into exactly one of these categories:
-    {', '.join(VALID_CATEGORIES)}
+    {", ".join(VALID_CATEGORIES)}
 
     Message: "{text}"
 
@@ -71,13 +70,11 @@ def classify_message_with_gemini(client: genai.Client, text: str) -> str:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model="gemini-flash-lite-latest", # Use latest stable alias
+                model="gemini-flash-lite-latest",  # Use latest stable alias
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0.0,
-                    candidate_count=1,
-                    max_output_tokens=10
-                )
+                    temperature=0.0, candidate_count=1, max_output_tokens=10
+                ),
             )
             prediction = (response.text or "").strip().lower()
 
@@ -86,21 +83,22 @@ def classify_message_with_gemini(client: genai.Client, text: str) -> str:
                     return cat
             return "neutral"
 
-        except Exception as e: # pylint: disable=broad-exception-caught
+        except Exception as e:  # pylint: disable=broad-exception-caught
             error_str = str(e)
             if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
                 if attempt < max_retries - 1:
-                    sleep_time = base_delay * (2 ** attempt)
+                    sleep_time = base_delay * (2**attempt)
                     time.sleep(sleep_time)
                     continue
 
-            print(f"API Error (Attempt {attempt+1}): {e}")
+            print(f"API Error (Attempt {attempt + 1}): {e}")
             if attempt == max_retries - 1:
                 print(f"FAILED sample: {text[:50]}...")
                 return "api_error"
             time.sleep(1)
 
     return "hallucination_error"
+
 
 def main():
     """Main function to run the Gemini baseline evaluation."""
@@ -117,30 +115,28 @@ def main():
     client = genai.Client(api_key=api_key)
 
     # Paths
-    script_dir = Path(__file__).parent
-    dataset_path = script_dir.parent.parent / "datasets" / "sentinelai_dataset_v0.2.json"
-    output_dir = script_dir.parent / "evaluation"
+    dataset_path = config.DATASETS_DIR / "sentinelai_dataset_v0.2.json"
+    output_dir = config.EVAL_DIR
     output_dir.mkdir(exist_ok=True)
 
     # Load raw data (Exact same logic as baseline_keyword.py for 1:1 alignment)
     print(f"Loading test dataset from {dataset_path.name}...")
 
-    with open(dataset_path, 'r', encoding='utf-8') as f:
+    with open(dataset_path, "r", encoding="utf-8") as f:
         full_data = json.load(f)
 
-    dataset_dir = dataset_path.parent
-    v01_path = dataset_dir / "sentinelai_dataset_v0.1.json"
-    with open(v01_path, 'r', encoding='utf-8') as f:
+    v01_path = config.DATASETS_DIR / "sentinelai_dataset_v0.1.json"
+    with open(v01_path, "r", encoding="utf-8") as f:
         data_v01 = json.load(f)
 
     # Reproduce the exact mixed dataset used in training/eval
-    torch.manual_seed(42)
+    torch.manual_seed(config.SEED)
     v02_indices = torch.randperm(len(full_data))[:2000].tolist()
     mixed_data = data_v01.copy()
     mixed_data.extend([full_data[i] for i in v02_indices])
 
     # Reproduce the shuffle and split
-    torch.manual_seed(42)
+    torch.manual_seed(config.DATASET_SEED)
     indices = torch.randperm(len(mixed_data)).tolist()
     shuffled_data = [mixed_data[i] for i in indices]
 
@@ -177,7 +173,9 @@ def main():
             elif pred_label_str == "hallucination_error":
                 print("Sample failed due to hallucination/unrecognised output.")
 
-            pred_label = 0 # Default to neutral for metrics calculation, but tracked in failures
+            pred_label = (
+                0  # Default to neutral for metrics calculation, but tracked in failures
+            )
 
         y_true.append(true_label)
         y_pred.append(pred_label)
@@ -194,7 +192,7 @@ def main():
         y_pred,
         target_names=[inv_category_map[i] for i in range(7)],
         output_dict=True,
-        zero_division=0
+        zero_division=0,
     )
 
     # Calculate macro/weighted averages manually
@@ -205,7 +203,7 @@ def main():
     macro_avg = {
         "precision": float(np.mean(precision)),
         "recall": float(np.mean(recall)),
-        "f1_score": float(np.mean(f1))
+        "f1_score": float(np.mean(f1)),
     }
 
     print("\n" + "=" * 80)
@@ -219,10 +217,10 @@ def main():
         cat = inv_category_map[i]
         metrics = cast(Dict[str, Any], report)[cat]
         per_class_results[cat] = {
-            "precision": float(metrics['precision']),
-            "recall": float(metrics['recall']),
-            "f1_score": float(metrics['f1-score']),
-            "support": int(metrics['support'])
+            "precision": float(metrics["precision"]),
+            "recall": float(metrics["recall"]),
+            "f1_score": float(metrics["f1-score"]),
+            "support": int(metrics["support"]),
         }
 
     # Save results
@@ -231,21 +229,22 @@ def main():
             "accuracy": float(accuracy),
             "macro_avg": macro_avg,
             "per_class": per_class_results,
-            "confusion_matrix": cm.tolist()
+            "confusion_matrix": cm.tolist(),
         },
         "model_info": {
             "name": "gemini-flash-lite-latest",
             "samples": len(test_data),
-            "failures": failures
-        }
+            "failures": failures,
+        },
     }
 
     output_path = output_dir / "baseline_gemini_results.json"
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print(f"\nResults saved to: {output_path}")
     print("=" * 80)
+
 
 if __name__ == "__main__":
     main()

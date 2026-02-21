@@ -6,40 +6,46 @@ Generates 2 paraphrased versions per original message while preserving labels.
 """
 
 # pylint: disable=line-too-long
+# pylint: disable=wrong-import-position
 
 import json
 import random
+import sys
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
+
 import nlpaug.augmenter.word as naw
 from tqdm import tqdm
 
+# Add parent directory to path
+sys.path.append(str(Path(__file__).parent.parent))
+
+import config
+
 # Configuration
 CONFIG = {
-    "input_path": "../../datasets/sentinelai_dataset_v0.1.json",
-    "output_path": "../../datasets/sentinelai_dataset_v0.2_augmented.json",
+    "input_path": config.DATASETS_DIR / "sentinelai_dataset_v0.1.json",
+    "output_path": config.DATASETS_DIR / "sentinelai_dataset_v0.2_augmented.json",
     "paraphrases_per_message": 2,
-    "seed": 42
+    "seed": config.SEED,
 }
 
 
 def load_dataset(path: str) -> List[Dict]:
     """Load dataset from JSON file."""
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def create_augmenters():
     """
     Create nlpaug augmenters for paraphrasing.
-    
+
     Uses contextual word embeddings for synonym replacement.
     """
     # Synonym augmenter using contextual embeddings
     aug_substitute = naw.ContextualWordEmbsAug(
-        model_path='distilbert-base-uncased',
-        action="substitute",
-        aug_p=0.3
+        model_path=config.MODEL_NAME, action="substitute", aug_p=0.3
     )
 
     return aug_substitute
@@ -48,12 +54,12 @@ def create_augmenters():
 def augment_message(message: str, augmenter, num_paraphrases: int = 2) -> List[str]:
     """
     Generate paraphrased versions of a message.
-    
+
     Args:
         message: Original message text
         augmenter: nlpaug augmenter instance
         num_paraphrases: Number of paraphrases to generate
-    
+
     Returns:
         List of paraphrased messages
     """
@@ -66,22 +72,24 @@ def augment_message(message: str, augmenter, num_paraphrases: int = 2) -> List[s
             if isinstance(augmented, list):
                 augmented = augmented[0]
             paraphrases.append(augmented)
-        except Exception as e: # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             print(f"Warning: Augmentation failed for '{message[:50]}...': {e}")
             paraphrases.append(message)
 
     return paraphrases
 
 
-def augment_dataset(data: List[Dict], augmenter, paraphrases_per_message: int) -> List[Dict]:
+def augment_dataset(
+    data: List[Dict], augmenter, paraphrases_per_message: int
+) -> List[Dict]:
     """
     Augment entire dataset with paraphrased messages.
-    
+
     Args:
         data: Original dataset
         augmenter: nlpaug augmenter instance
         paraphrases_per_message: Number of paraphrases per message
-    
+
     Returns:
         Augmented dataset with original + paraphrased messages
     """
@@ -90,7 +98,9 @@ def augment_dataset(data: List[Dict], augmenter, paraphrases_per_message: int) -
     # Keep all original messages
     augmented_data.extend(data)
 
-    print(f"Augmenting {len(data)} messages with {paraphrases_per_message} paraphrases each...")
+    print(
+        f"Augmenting {len(data)} messages with {paraphrases_per_message} paraphrases each..."
+    )
 
     # Generate paraphrases
     for item in tqdm(data, desc="Generating paraphrases"):
@@ -100,7 +110,7 @@ def augment_dataset(data: List[Dict], augmenter, paraphrases_per_message: int) -
         for i, paraphrased_message in enumerate(paraphrases):
             # Create new item with paraphrased message but same labels
             augmented_item = item.copy()
-            augmented_item["id"] = f"{item['id']}_aug{i+1}"
+            augmented_item["id"] = f"{item['id']}_aug{i + 1}"
             augmented_item["message"] = paraphrased_message
             augmented_data.append(augmented_item)
 
@@ -122,9 +132,9 @@ def calculate_ttr_quick(messages: List[str]) -> float:
 
 def main():
     """Main augmentation pipeline."""
-    print("="*80)
+    print("=" * 80)
     print("DATASET AUGMENTATION - Improving Lexical Diversity")
-    print("="*80)
+    print("=" * 80)
 
     # Set random seed
     random.seed(CONFIG["seed"])
@@ -153,22 +163,26 @@ def main():
     augmented_messages = [item["message"] for item in augmented_data]
     augmented_ttr = calculate_ttr_quick(augmented_messages)
     print(f"\nAugmented TTR: {augmented_ttr:.4f}")
-    print(f"TTR improvement: {augmented_ttr - original_ttr:.4f} ({(augmented_ttr/original_ttr - 1)*100:.1f}% increase)")
+    print(
+        f"TTR improvement: {augmented_ttr - original_ttr:.4f} ({(augmented_ttr / original_ttr - 1) * 100:.1f}% increase)"
+    )
 
     # Save augmented dataset
     output_path = Path(__file__).parent / CONFIG["output_path"]
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(augmented_data, f, indent=2)
 
     print(f"\n✓ Augmented dataset saved to: {output_path}")
 
     # Summary
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("AUGMENTATION COMPLETE")
-    print("="*80)
+    print("=" * 80)
     print(f"Original:  {len(data):5d} examples | TTR: {original_ttr:.4f}")
     print(f"Augmented: {len(augmented_data):5d} examples | TTR: {augmented_ttr:.4f}")
-    print(f"\n{'✅ TTR > threshold' if augmented_ttr > 0.3 else '⚠️  TTR still below threshold'}")
+    print(
+        f"\n{'✅ TTR > threshold' if augmented_ttr > 0.3 else '⚠️  TTR still below threshold'}"
+    )
     print("\n🎯 Next: Re-run EDA notebook on v0.2_augmented.json to verify quality")
 
 

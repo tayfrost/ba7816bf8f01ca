@@ -5,18 +5,27 @@ Provides a side-by-side comparison between SentiBERT and the Keyword Baseline.
 """
 
 # pylint: disable=line-too-long
+# pylint: disable=wrong-import-position
 
 import json
+import sys
 from pathlib import Path
 from typing import Dict
+
 import numpy as np
+
+# Add parent directory to path to allow importing config
+sys.path.append(str(Path(__file__).parent.parent))
+
+import config
+
 
 def calculate_binary_metrics(cm: np.ndarray) -> Dict:
     """
     Calculates binary classification metrics from a 7x7 confusion matrix.
     Risk categories: 2, 3, 4, 5, 6 (Stress, Burnout, Depression, Harassment, Suicidal)
     No-Risk categories: 0, 1 (Neutral, Humor)
-    
+
     CM structure: cm[true][pred]
     """
     # Mapping indices
@@ -40,26 +49,28 @@ def calculate_binary_metrics(cm: np.ndarray) -> Dict:
     accuracy = (tp + tn) / (tp + tn + fp + fn)
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    f1 = (
+        2 * (precision * recall) / (precision + recall)
+        if (precision + recall) > 0
+        else 0
+    )
 
     return {
-        "confusion_matrix": [
-            [int(tn), int(fp)],
-            [int(fn), int(tp)]
-        ],
+        "confusion_matrix": [[int(tn), int(fp)], [int(fn), int(tp)]],
         "metrics": {
             "accuracy": float(accuracy),
             "precision": float(precision),
             "recall": float(recall),
-            "f1_score": float(f1)
+            "f1_score": float(f1),
         },
         "counts": {
             "true_negatives": int(tn),
             "false_positives": int(fp),
             "false_negatives": int(fn),
-            "true_positives": int(tp)
-        }
+            "true_positives": int(tp),
+        },
     }
+
 
 def main():
     """Main function to perform binary evaluation and comparison."""
@@ -68,8 +79,7 @@ def main():
     print("=" * 80)
 
     # Paths
-    script_dir = Path(__file__).parent
-    eval_dir = script_dir.parent / "evaluation"
+    eval_dir = config.EVAL_DIR
     bert_path = eval_dir / "evaluation_results.json"
     baseline_path = eval_dir / "baseline_keyword_results.json"
     gemini_path = eval_dir / "baseline_gemini_results.json"
@@ -80,15 +90,15 @@ def main():
         return
 
     # Load results
-    with open(bert_path, 'r', encoding='utf-8') as f:
+    with open(bert_path, "r", encoding="utf-8") as f:
         bert_data = json.load(f)
 
-    with open(baseline_path, 'r', encoding='utf-8') as f:
+    with open(baseline_path, "r", encoding="utf-8") as f:
         baseline_data = json.load(f)
 
     gemini_data = None
     if gemini_path.exists():
-        with open(gemini_path, 'r', encoding='utf-8') as f:
+        with open(gemini_path, "r", encoding="utf-8") as f:
             gemini_data = json.load(f)
 
     # Extract 7x7 confusion matrices
@@ -110,15 +120,21 @@ def main():
         "keyword_baseline": baseline_binary,
         "gemini_baseline": gemini_binary,
         "analysis": {
-            "accuracy_improvement_vs_keyword": bert_binary["metrics"]["accuracy"] - baseline_binary["metrics"]["accuracy"],
-            "recall_improvement_vs_keyword": bert_binary["metrics"]["recall"] - baseline_binary["metrics"]["recall"],
-            "description": "Binary classification: Risk (categories 2-6) vs No-Risk (0-1)"
-        }
+            "accuracy_improvement_vs_keyword": bert_binary["metrics"]["accuracy"]
+            - baseline_binary["metrics"]["accuracy"],
+            "recall_improvement_vs_keyword": bert_binary["metrics"]["recall"]
+            - baseline_binary["metrics"]["recall"],
+            "description": "Binary classification: Risk (categories 2-6) vs No-Risk (0-1)",
+        },
     }
 
     if gemini_binary:
-        comparison["analysis"]["accuracy_improvement_vs_gemini"] = bert_binary["metrics"]["accuracy"] - gemini_binary["metrics"]["accuracy"]
-        comparison["analysis"]["recall_improvement_vs_gemini"] = bert_binary["metrics"]["recall"] - gemini_binary["metrics"]["recall"]
+        comparison["analysis"]["accuracy_improvement_vs_gemini"] = (
+            bert_binary["metrics"]["accuracy"] - gemini_binary["metrics"]["accuracy"]
+        )
+        comparison["analysis"]["recall_improvement_vs_gemini"] = (
+            bert_binary["metrics"]["recall"] - gemini_binary["metrics"]["recall"]
+        )
 
     # Print Report
     print(f"{'Metric':<15} | {'Keyword':<10} | {'Gemini':<10} | {'SentiBERT':<10}")
@@ -132,12 +148,16 @@ def main():
     print("\n" + "=" * 80)
     print("GATEKEEPER PERFORMANCE (RECALL IS KEY)")
     print("=" * 80)
-    print(f"SentiBERT catches {bert_binary['metrics']['recall']*100:.1f}% of risks.")
+    print(f"SentiBERT catches {bert_binary['metrics']['recall'] * 100:.1f}% of risks.")
 
     if gemini_binary:
-        print(f"Gemini Flash catches {gemini_binary['metrics']['recall']*100:.1f}% of risks.")
+        print(
+            f"Gemini Flash catches {gemini_binary['metrics']['recall'] * 100:.1f}% of risks."
+        )
 
-    print(f"Keyword Baseline catches {baseline_binary['metrics']['recall']*100:.1f}% of risks.")
+    print(
+        f"Keyword Baseline catches {baseline_binary['metrics']['recall'] * 100:.1f}% of risks."
+    )
 
     print("\nMissed Risks (False Negatives):")
     print(f"SentiBERT: {bert_binary['counts']['false_negatives']}")
@@ -146,11 +166,12 @@ def main():
     print(f"Keywords:  {baseline_binary['counts']['false_negatives']}")
 
     # Save to file
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(comparison, f, indent=2)
 
     print(f"\nBinary comparison results saved to: {output_path}")
     print("=" * 80)
+
 
 if __name__ == "__main__":
     main()
