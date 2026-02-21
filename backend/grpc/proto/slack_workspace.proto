@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package sentinelai.slack;
+
+service SlackWorkspaceService {
+  rpc CreateSubscriptionPlan (CreateSubscriptionPlanRequest) returns (CreateSubscriptionPlanResponse);
+  rpc CreateCompany          (CreateCompanyRequest)          returns (CreateCompanyResponse);
+  rpc CreateSlackWorkspace   (CreateSlackWorkspaceRequest)   returns (CreateSlackWorkspaceResponse);
+}
+
+message SubscriptionPlan {
+  int64 plan_id = 1;
+  string plan_name = 2;
+  int64 plan_cost_pennies = 3;
+  string currency = 4;
+  int64 max_employees = 5;
+}
+
+message Company {
+  int64 company_id = 1;
+  int64 plan_id = 2;
+  string company_name = 3;
+}
+
+message SlackWorkspace {
+  int64 id = 1;
+  int64 company_id = 2;
+  string team_id = 3;
+  // access_token NOT returned (sensitive)
+}
+
+message CreateSubscriptionPlanRequest {
+  string plan_name = 1;
+  int64 cost_pennies = 2;
+  int64 max_employees = 3;
+  string currency = 4; // optional: blank => "GBP" (server)
+}
+
+message CreateSubscriptionPlanResponse {
+  SubscriptionPlan plan = 1;
+}
+
+message CreateCompanyRequest {
+  int64 plan_id = 1;
+  string company_name = 2;
+}
+
+message CreateCompanyResponse {
+  Company company = 1;
+}
+
+message CreateSlackWorkspaceRequest {
+  int64 company_id = 1;
+  string team_id = 2;
+  string access_token = 3;
+}
+
+message CreateSlackWorkspaceResponse {
+  SlackWorkspace workspace = 1;
+}
