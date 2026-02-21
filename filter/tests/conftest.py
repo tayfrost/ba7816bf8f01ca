@@ -8,19 +8,20 @@ Provides sample data, tokenizers, and real production model loading logic.
 
 # NOTE: Only ignore wrong import position if style is kept like this.
 
+import json
 import sys
 from pathlib import Path
-import json
-import torch
 
 import pytest
+import torch
 from transformers import AutoTokenizer
 
 # Add parent directory to path to allow importing from models and services
 sys.path.append(str(Path(__file__).parent.parent))
 
-from peft import LoraConfig, get_peft_model, TaskType
-from models.dual_head_classifier import DualHeadBERTClassifier
+import config
+from services.model_factory import load_production_model
+
 
 @pytest.fixture
 def sample_data():
@@ -30,26 +31,28 @@ def sample_data():
             "message": "I am so stressed out with work.",
             "category": "stress",
             "stage": "early",
-            "is_risk": 1
+            "is_risk": 1,
         },
         {
             "message": "I am fine and happy.",
             "category": "neutral",
             "stage": "none",
-            "is_risk": 0
+            "is_risk": 0,
         },
         {
             "message": "I want to end it all.",
             "category": "suicidal_ideation",
             "stage": "late",
-            "is_risk": 1
-        }
+            "is_risk": 1,
+        },
     ]
+
 
 @pytest.fixture
 def tokenizer():
     """Returns a BERT tokenizer."""
-    return AutoTokenizer.from_pretrained("bert-base-uncased")
+    return AutoTokenizer.from_pretrained(config.MODEL_NAME)
+
 
 @pytest.fixture
 def mock_dataset_files(tmp_path, sample_data):
@@ -58,42 +61,18 @@ def mock_dataset_files(tmp_path, sample_data):
     v02_path = tmp_path / "sentinelai_dataset_v0.2.json"
 
     # Create v0.1 with 3 items
-    with open(v01_path, 'w', encoding='utf-8') as f:
+    with open(v01_path, "w", encoding="utf-8") as f:
         json.dump(sample_data, f)
 
     # Create v0.2 with 3 items
-    with open(v02_path, 'w', encoding='utf-8') as f:
+    with open(v02_path, "w", encoding="utf-8") as f:
         json.dump(sample_data, f)
 
     return v01_path, v02_path
 
-@pytest.fixture
-def trained_model_path():
-    """Returns the path to the real production model checkpoint."""
-    return Path(__file__).parent.parent / "models" / "dual_head_classifier.pt"
 
 @pytest.fixture
-def real_model(trained_model_path):
-    """Loads the real production model with trained weights. Hard failure if weights are missing."""
-    if not trained_model_path.exists():
-        pytest.fail(f"Production model checkpoint not found at {trained_model_path}. "
-                    "Tests requiring the real model cannot proceed.")
-
-    device = torch.device("cpu") # Test on CPU for stability
-    model = DualHeadBERTClassifier(model_name="bert-base-uncased")
-
-    lora_config = LoraConfig( # type: ignore[reportCallIssue]
-        r=8,
-        lora_alpha=16,
-        target_modules=["query", "value"],
-        lora_dropout=0.1,
-        bias="none",
-        task_type=TaskType.FEATURE_EXTRACTION
-    )
-    model.bert = get_peft_model(model.bert, lora_config)
-
-    checkpoint = torch.load(trained_model_path, map_location=device, weights_only=False)
-    model.load_state_dict(checkpoint["model_state_dict"])
-
-    model.eval()
-    return model
+def real_model():
+    """Loads the real production model with trained weights. Handles auto-download."""
+    device = torch.device("cpu")  # Test on CPU for stability
+    return load_production_model(device=device)
