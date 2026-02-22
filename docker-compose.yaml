@@ -1,6 +1,15 @@
 version: '3.8'
 
 services:
+  filter:
+    build:
+      context: ./filter
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+      - "8001:8000"
+    restart: unless-stopped
+
   webhooks:
     build: ./webhooks
     ports:
