@@ -1,5 +1,6 @@
 tunnel: sentinelai
 credentials-file: /etc/cloudflared/credentials.json
+protocol: http2
 
 ingress:
   - hostname: sentinelai.work
