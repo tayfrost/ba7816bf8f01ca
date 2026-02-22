@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import ChoosePlan from "./pages/ChoosePlan";
 import Payment from "./pages/Payment";
 import Usage from "./pages/Usage";
+import Dashboard from "./pages/Dashboard";
 import ConnectAccounts from "./pages/ConnectAccounts";
 import RequireOnboarding from "./guards/RequireOnboarding";
 
@@ -15,12 +16,21 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/plan" element={<ChoosePlan />} />
       <Route path="/payment" element={<Payment />} />
-      
+
       <Route
         path="/connect-accounts"
         element={
           <RequireOnboarding>
             <ConnectAccounts />
+          </RequireOnboarding>
+        }
+      />
+
+      <Route
+        path="/dashboard"
+        element={
+          <RequireOnboarding>
+            <Dashboard />
           </RequireOnboarding>
         }
       />
@@ -34,7 +44,6 @@ export default function App() {
         }
       />
 
-      
       <Route path="*" element={<Navigate to="/plan" replace />} />
     </Routes>
   );

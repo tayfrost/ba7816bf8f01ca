@@ -14,7 +14,7 @@ export default function Payment() {
   function handlePay(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setPaymentSuccess(true);
-    navigate("/usage");
+    navigate("/dashboard");
   }
 
   return (

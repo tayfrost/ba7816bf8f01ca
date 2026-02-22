@@ -44,7 +44,7 @@ export default function ConnectAccounts() {
   };
 
   const continueToDashboard = () => {
-    nav("/usage", { replace: true });
+    nav("/dashboard", { replace: true });
   };
 
   return (
