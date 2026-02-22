@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 # import config
-# from services.model_factory import load_production_model
+from services.model_factory import load_production_model
 
 
 def init_app():
