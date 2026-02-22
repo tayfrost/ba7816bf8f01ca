@@ -4,8 +4,8 @@ import { useOnboarding } from "../state/onboarding";
 import { countConnected, getConnectedProviders } from "../state/integrationRules";
 import { computeRange } from "../state/timeRange";
 import type { RangePreset } from "../state/timeRange";
-import { makeAllSeries } from "../state/metricsMock";
 import SimpleLineChart from "../components/SimpleLineChart";
+import { useDashboardData } from "../hooks/useDashboardData";
 
 type AlertSeverity = "low" | "medium" | "high";
 
@@ -44,7 +44,7 @@ export default function Dashboard() {
     return computeRange(preset);
   }, [preset, customStart, customEnd]);
 
-  const metricSeries = useMemo(() => makeAllSeries(range), [range]);
+  const { status, error, series: metricSeries } = useDashboardData(range);
 
   const connectedCount = useMemo(() => countConnected(integrations), [integrations]);
 
@@ -76,6 +76,11 @@ export default function Dashboard() {
 
         <section style={{ marginTop: 32 }}>
           <h2>Time range</h2>
+
+          <p style={{ marginTop: 8, opacity: 0.7 }}>
+            Data status: <strong>{status}</strong>
+            {error ? <> — {error}</> : null}
+          </p>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
             <button onClick={() => setPreset("week")}>Week</button>
