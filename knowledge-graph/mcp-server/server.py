@@ -6,12 +6,29 @@ for AI agents to query recommendations given a diagnosis.
 
 import json
 import os
-import sys
+import re
 from mcp.server.fastmcp import FastMCP
 
 PAPERS_PATH = os.environ.get(
     "KG_DATA_PATH",
     os.path.join(os.path.dirname(__file__), "..", "data", "papers.json"),
+)
+
+DISCLAIMER = (
+    "This advice is based on peer-reviewed research and is not a "
+    "substitute for professional mental health support."
+)
+
+MAX_INPUT_LENGTH = 2000
+
+CRISIS_KEYWORDS = re.compile(
+    r"\b("
+    r"suicid|kill\s*my\s*self|end\s*(my|it\s*all)|want\s*to\s*die|"
+    r"self[\s-]*harm|cut\s*my\s*self|hurt\s*my\s*self|don'?t\s*want\s*to\s*live|"
+    r"no\s*reason\s*to\s*live|better\s*off\s*dead|take\s*my\s*(own\s*)?life|"
+    r"overdose|jump\s*off|hang\s*my\s*self"
+    r")\b",
+    re.IGNORECASE,
 )
 
 
@@ -25,17 +42,20 @@ def load_dataset():
     advice_items = []
     for paper in data["papers"]:
         for adv in paper["advice"]:
+            technique_topics = technique_index.get(adv["technique"], {}).get("topics", [])
             advice_items.append({
                 "text": adv["text"],
                 "confidence": adv["confidence"],
                 "technique_id": adv["technique"],
                 "technique_name": technique_index.get(adv["technique"], {}).get("name", adv["technique"]),
+                "technique_description": technique_index.get(adv["technique"], {}).get("description", ""),
                 "paper_id": paper["id"],
                 "paper_title": paper["title"],
                 "paper_doi": paper.get("doi", "N/A"),
                 "paper_year": paper["year"],
                 "paper_citations": paper["citations"],
                 "paper_topics": paper["topics"],
+                "advice_topics": technique_topics if technique_topics else paper["topics"],
             })
     advice_items.sort(key=lambda x: (x["confidence"], x["paper_citations"]), reverse=True)
 
@@ -150,16 +170,32 @@ TOPIC_KEYWORDS = {
     ],
 }
 
+TOPIC_REGEXES = {
+    tid: re.compile(r"\b(" + "|".join(map(re.escape, kws)) + r")\b", re.IGNORECASE)
+    for tid, kws in TOPIC_KEYWORDS.items()
+}
+
 
 def detect_concerns(text: str) -> list[str]:
-    text_lower = text.lower()
-    detected = []
-    for topic_id, keywords in TOPIC_KEYWORDS.items():
-        for kw in keywords:
-            if kw in text_lower:
-                detected.append(topic_id)
-                break
-    return detected if detected else ["workplace_stress"]
+    return [tid for tid, regex in TOPIC_REGEXES.items() if regex.search(text)]
+
+
+def _clamp_results(max_results: int, ceiling: int = 20) -> int:
+    return max(1, min(max_results, ceiling))
+
+
+def _format_recommendation(r: dict) -> dict:
+    return {
+        "advice": r["text"],
+        "confidence": r["confidence"],
+        "technique": r["technique_name"],
+        "technique_id": r["technique_id"],
+        "technique_description": r["technique_description"],
+        "paper_title": r["paper_title"],
+        "paper_id": r["paper_id"],
+        "doi": r["paper_doi"],
+        "citations": r["paper_citations"],
+    }
 
 
 mcp = FastMCP(
@@ -168,9 +204,60 @@ mcp = FastMCP(
         "MCP server for querying the SentinelAI evidence-based mental health knowledge graph. "
         "Contains 92 DOI-verified research papers, 368 advice items, 24 topics, and 37 techniques "
         "for workplace mental health. Use get_recommendation to find the best advice for a "
-        "diagnosis or concern. All advice is backed by peer-reviewed research with DOI citations."
+        "diagnosis or concern. All advice is backed by peer-reviewed research with DOI citations. "
+        "CRITICAL: Always check triage_crisis_risk BEFORE get_recommendation if the user's message "
+        "mentions self-harm, suicide, or severe distress. "
+        "CRITICAL: You MUST include the medical disclaimer in your final response to the user: "
+        "'This advice is based on peer-reviewed research and is not a substitute for professional "
+        "mental health support.'"
     ),
 )
+
+
+@mcp.tool()
+def triage_crisis_risk(text: str) -> dict:
+    """Check if user input contains crisis or self-harm indicators.
+
+    CALL THIS FIRST before get_recommendation if the user's message mentions
+    self-harm, suicide, death, or severe distress. If crisis is detected,
+    the AI agent MUST prioritize the crisis response over any other recommendations.
+
+    Args:
+        text: The user's raw message text to screen for crisis indicators.
+
+    Returns:
+        Dict with crisis_detected flag and, if positive, emergency resources
+        and strict instructions for the AI agent.
+    """
+    text = text[:MAX_INPUT_LENGTH]
+
+    if CRISIS_KEYWORDS.search(text):
+        return {
+            "crisis_detected": True,
+            "severity": "HIGH",
+            "action_required": "IMMEDIATE_ESCALATION",
+            "agent_instructions": (
+                "STOP all other processing. Do NOT recommend breathing exercises or "
+                "general wellness advice. Express empathy, validate their feelings, "
+                "and provide the crisis resources below. Encourage them to reach out "
+                "to a professional immediately."
+            ),
+            "crisis_resources": [
+                {"name": "Samaritans (UK)", "contact": "116 123", "available": "24/7"},
+                {"name": "Crisis Text Line (UK)", "contact": "Text SHOUT to 85258", "available": "24/7"},
+                {"name": "NHS Urgent Mental Health", "contact": "111 (press 2)", "available": "24/7"},
+                {"name": "International Association for Suicide Prevention", "contact": "https://www.iasp.info/resources/Crisis_Centres/"},
+            ],
+            "disclaimer": (
+                "This is an automated screening tool and cannot replace professional "
+                "crisis assessment. Always err on the side of caution."
+            ),
+        }
+
+    return {
+        "crisis_detected": False,
+        "note": "No crisis indicators detected. Proceed with get_recommendation.",
+    }
 
 
 @mcp.tool()
@@ -184,6 +271,9 @@ def get_recommendation(
     workplace concern, detects relevant topics, queries the knowledge graph, and
     returns confidence-ranked advice with DOI-verified citations.
 
+    If this returns 0 results, do NOT guess. Call list_topics to see available
+    categories, then call get_recommendation_by_topic with the closest match.
+
     Args:
         diagnosis: Free-text description of the diagnosis, symptoms, or concern.
                    Examples: "burnout and insomnia", "employee reporting anxiety and panic attacks",
@@ -192,38 +282,46 @@ def get_recommendation(
 
     Returns:
         Dict with detected concerns, ranked advice items (each with text, confidence,
-        source paper, DOI, citation count, and technique), and a disclaimer.
+        source paper, DOI, citation count, technique, and technique description),
+        and a medical disclaimer.
     """
-    max_results = min(max_results, 20)
+    diagnosis = diagnosis[:MAX_INPUT_LENGTH]
+    max_results = _clamp_results(max_results)
     concerns = detect_concerns(diagnosis)
 
-    matching = [a for a in DATASET["advice"] if any(t in a["paper_topics"] for t in concerns)]
-    top = matching[:max_results]
+    if not concerns:
+        return {
+            "detected_concerns": [],
+            "recommendations": [],
+            "total_matching": 0,
+            "returned": 0,
+            "hint": (
+                "No specific mental health topics detected from input. "
+                "Ask the user for more specific symptoms, or call list_topics "
+                "then get_recommendation_by_topic with the closest match. "
+                "If user is in crisis, call triage_crisis_risk immediately."
+            ),
+            "disclaimer": DISCLAIMER,
+        }
+
+    scored = []
+    for a in DATASET["advice"]:
+        overlap = len(set(concerns) & set(a["advice_topics"]))
+        if overlap > 0:
+            scored.append((overlap, a["confidence"], a["paper_citations"], a))
+
+    scored.sort(key=lambda x: (x[0], x[1], x[2]), reverse=True)
+    top = [x[3] for x in scored[:max_results]]
 
     concern_names = [DATASET["topics"].get(c, {}).get("name", c) for c in concerns]
 
     return {
         "detected_concerns": concerns,
         "detected_concern_names": concern_names,
-        "recommendations": [
-            {
-                "advice": r["text"],
-                "confidence": r["confidence"],
-                "technique": r["technique_name"],
-                "technique_id": r["technique_id"],
-                "paper_title": r["paper_title"],
-                "paper_id": r["paper_id"],
-                "doi": r["paper_doi"],
-                "citations": r["paper_citations"],
-            }
-            for r in top
-        ],
-        "total_matching": len(matching),
+        "recommendations": [_format_recommendation(r) for r in top],
+        "total_matching": len(scored),
         "returned": len(top),
-        "disclaimer": (
-            "This advice is based on peer-reviewed research and is not a "
-            "substitute for professional mental health support."
-        ),
+        "disclaimer": DISCLAIMER,
     }
 
 
@@ -243,32 +341,23 @@ def get_recommendation_by_topic(
         max_results: Maximum number of advice items to return (default 5, max 20)
 
     Returns:
-        Dict with the topic info and ranked advice items with citations.
+        Dict with the topic info, ranked advice items with citations, and disclaimer.
     """
-    max_results = min(max_results, 20)
+    max_results = _clamp_results(max_results)
 
     if topic_id not in DATASET["topics"]:
         return {"error": f"Unknown topic_id '{topic_id}'", "valid_topic_ids": list(DATASET["topics"].keys())}
 
     topic_info = DATASET["topics"][topic_id]
-    matching = [a for a in DATASET["advice"] if topic_id in a["paper_topics"]]
+    matching = [a for a in DATASET["advice"] if topic_id in a["advice_topics"]]
     top = matching[:max_results]
 
     return {
         "topic": topic_info,
-        "recommendations": [
-            {
-                "advice": r["text"],
-                "confidence": r["confidence"],
-                "technique": r["technique_name"],
-                "paper_title": r["paper_title"],
-                "doi": r["paper_doi"],
-                "citations": r["paper_citations"],
-            }
-            for r in top
-        ],
+        "recommendations": [_format_recommendation(r) for r in top],
         "total_matching": len(matching),
         "returned": len(top),
+        "disclaimer": DISCLAIMER,
     }
 
 
@@ -288,9 +377,9 @@ def get_recommendation_by_technique(
         max_results: Maximum number of advice items to return (default 5, max 20)
 
     Returns:
-        Dict with technique info and ranked advice items with citations.
+        Dict with technique info, ranked advice items with citations, and disclaimer.
     """
-    max_results = min(max_results, 20)
+    max_results = _clamp_results(max_results)
 
     if technique_id not in DATASET["techniques"]:
         return {
@@ -306,19 +395,10 @@ def get_recommendation_by_technique(
 
     return {
         "technique": {"id": technique_id, "name": technique_info["name"], "addresses_topics": technique_info["topics"]},
-        "recommendations": [
-            {
-                "advice": r["text"],
-                "confidence": r["confidence"],
-                "paper_title": r["paper_title"],
-                "doi": r["paper_doi"],
-                "citations": r["paper_citations"],
-                "topics": r["paper_topics"],
-            }
-            for r in top
-        ],
+        "recommendations": [_format_recommendation(r) for r in top],
         "total_matching": len(matching),
         "returned": len(top),
+        "disclaimer": DISCLAIMER,
     }
 
 
@@ -379,7 +459,7 @@ def search_papers(
     At least one of query, topic_id, or technique_id must be provided.
 
     Args:
-        query: Free-text search (matches against paper title and advice text)
+        query: Free-text search (matches against paper title, advice text, and authors)
         topic_id: Filter by topic ID (e.g. "burnout", "anxiety")
         technique_id: Filter by technique ID (e.g. "cbt_restructuring", "mindful_breathing")
         min_citations: Minimum citation count filter (default 0)
@@ -389,13 +469,13 @@ def search_papers(
         Dict with matching papers (id, title, authors, year, source, doi, citations,
         topics, advice_count) and total count.
     """
-    max_results = min(max_results, 30)
+    max_results = _clamp_results(max_results, ceiling=30)
 
     if not query and not topic_id and not technique_id:
         return {"error": "Provide at least one of: query, topic_id, or technique_id"}
 
     results = []
-    query_lower = query.lower() if query else ""
+    query_lower = query.lower()[:MAX_INPUT_LENGTH] if query else ""
 
     for paper in DATASET["papers"]:
         if paper["citations"] < min_citations:
@@ -478,6 +558,7 @@ def get_paper_details(paper_id: str) -> dict:
                 "text": a["text"],
                 "technique_id": a["technique"],
                 "technique_name": DATASET["techniques"].get(a["technique"], {}).get("name", a["technique"]),
+                "technique_description": DATASET["techniques"].get(a["technique"], {}).get("description", ""),
                 "confidence": a["confidence"],
             }
             for a in paper["advice"]
@@ -525,7 +606,7 @@ def get_stats() -> dict:
 
     topic_counts = {}
     for adv in DATASET["advice"]:
-        for t in adv["paper_topics"]:
+        for t in adv["advice_topics"]:
             topic_counts[t] = topic_counts.get(t, 0) + 1
 
     year_range = [

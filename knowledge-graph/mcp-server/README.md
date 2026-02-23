@@ -4,18 +4,28 @@ MCP server that exposes the SentinelAI evidence-based mental health knowledge gr
 
 **92 DOI-verified papers | 368 advice items | 24 topics | 37 techniques**
 
-## Tools
+## Tools (11)
 
 | Tool | Description |
 |------|-------------|
-| `get_recommendation` | Get ranked advice for a diagnosis/concern (free-text input) |
-| `get_recommendation_by_topic` | Get advice for a specific topic ID |
+| `triage_crisis_risk` | **Safety-critical** -- screen for self-harm/crisis before recommending |
+| `get_recommendation` | **Primary** -- free-text diagnosis → ranked advice with DOI citations |
+| `get_recommendation_by_topic` | Direct lookup by topic ID |
+| `get_recommendation_by_technique` | Query by intervention method (CBT, mindfulness, etc.) |
 | `list_topics` | List all 24 mental health topics |
-| `get_techniques_for_topic` | Get techniques addressing a specific topic |
-| `search_papers` | Search papers by keyword, topic, or technique |
-| `get_paper_details` | Full details of a specific paper with all advice |
 | `list_techniques` | List all 37 evidence-based techniques |
+| `get_techniques_for_topic` | Get techniques addressing a specific topic |
+| `search_papers` | Search papers by keyword, topic, technique, or citations |
+| `get_paper_details` | Full details of a specific paper with all advice |
 | `get_stats` | Knowledge graph statistics |
+
+## Safety Features
+
+- **Crisis triage** -- `triage_crisis_risk` detects self-harm/suicide indicators and returns emergency resources
+- **No silent fallback** -- returns explicit "no match" with guidance instead of guessing
+- **Word-boundary matching** -- regex prevents false positives ("app" won't match "disappointed")
+- **Input length bounding** -- 2000 char limit prevents DOS from oversized inputs
+- **Medical disclaimer** -- included in all recommendation responses and enforced via system instructions
 
 ## Setup
 
@@ -49,21 +59,11 @@ Add to your MCP config:
 }
 ```
 
-### Programmatic (stdio)
+## Agent Usage Priority
 
-```bash
-uv run server.py
-```
-
-The server communicates over stdio using the MCP protocol.
-
-## Example Usage
-
-An AI agent connected to this MCP server can:
-
-1. **Triage a diagnosis** → Call `get_recommendation("patient reports burnout, insomnia, and anxiety")`
-2. **Explore a topic** → Call `list_topics()` then `get_recommendation_by_topic("burnout")`
-3. **Find evidence** → Call `search_papers(query="CBT", min_citations=100)`
-4. **Drill into a paper** → Call `get_paper_details("paper_001")`
-
-All responses include DOI citations, confidence scores, and technique names.
+1. **`triage_crisis_risk`** -- ALWAYS call first if user mentions self-harm or severe distress
+2. **`get_recommendation`** -- primary tool for any user concern (auto-detects topics)
+3. **`get_recommendation_by_topic`** -- when you know the exact topic
+4. **`get_recommendation_by_technique`** -- when recommending a specific intervention
+5. **`list_topics` / `list_techniques`** -- for discovery and browsing
+6. **`search_papers`** -- for research-specific queries
