@@ -4,7 +4,7 @@ MCP server that exposes the SentinelAI evidence-based mental health knowledge gr
 
 **92 DOI-verified papers | 368 advice items | 24 topics | 37 techniques**
 
-## Tools (11)
+## Tools (10)
 
 | Tool | Description |
 |------|-------------|

@@ -23,10 +23,10 @@ MAX_INPUT_LENGTH = 2000
 
 CRISIS_KEYWORDS = re.compile(
     r"\b("
-    r"suicid|kill\s*my\s*self|end\s*(my|it\s*all)|want\s*to\s*die|"
-    r"self[\s-]*harm|cut\s*my\s*self|hurt\s*my\s*self|don'?t\s*want\s*to\s*live|"
-    r"no\s*reason\s*to\s*live|better\s*off\s*dead|take\s*my\s*(own\s*)?life|"
-    r"overdose|jump\s*off|hang\s*my\s*self"
+    r"suicid(?:e|al|ality)|kill\s*my\s*self|end\s*(?:my\s*life|it\s*all)|want\s*to\s*die|"
+    r"self[\s-]*harm(?:ing)?|cut(?:ting)?\s*my\s*self|hurt(?:ing)?\s*my\s*self|don'?t\s*want\s*to\s*live|"
+    r"no\s*reason\s*to\s*live|better\s*off\s*dead|take\s*my\s*(?:own\s*)?life|"
+    r"overdos(?:e|ed|ing)|hang\s*my\s*self"
     r")\b",
     re.IGNORECASE,
 )
@@ -73,24 +73,24 @@ DATASET = load_dataset()
 
 TOPIC_KEYWORDS = {
     "workplace_stress": [
-        "stress", "stressed", "pressure", "overwhelmed", "workload", "deadline",
-        "overwork", "demanding", "hectic", "stressful", "under pressure",
+        "stress",         "stressed", "stressing", "pressure", "overwhelmed", "overwhelming", "workload",
+        "deadline", "deadlines", "overwork", "overworked", "demanding", "hectic", "stressful", "under pressure",
     ],
     "burnout": [
         "burnout", "burned out", "exhausted", "drained", "depleted", "tired of work",
         "no energy", "can't cope", "running on empty", "worn out", "cynical about work",
     ],
     "anxiety": [
-        "anxious", "anxiety", "nervous", "worried", "worry", "panic", "fear",
-        "uneasy", "restless", "dread", "on edge", "apprehensive",
+        "anxious", "anxiety", "nervous", "worried", "worry", "worries", "worrying",
+        "panic", "panicking", "fear", "uneasy", "restless", "dread", "on edge", "apprehensive",
     ],
     "depression": [
-        "depressed", "depression", "sad", "hopeless", "empty", "no motivation",
-        "worthless", "down", "unmotivated", "failure", "lost interest",
+        "depressed", "depressing", "depression", "sad", "sadness", "hopeless", "empty",
+        "no motivation", "worthless", "down", "unmotivated", "failure", "lost interest",
     ],
     "anger_management": [
-        "angry", "anger", "furious", "irritated", "frustrated", "rage", "annoyed",
-        "hostile", "mad", "snap", "lose my temper", "resentful",
+        "angry", "anger", "furious", "irritated", "irritable", "frustrated", "frustrating",
+        "rage", "raging", "annoyed", "hostile", "mad", "snapping", "lose my temper", "resentful",
     ],
     "sleep_issues": [
         "sleep", "insomnia", "can't sleep", "tired", "fatigue", "restless nights",
@@ -137,8 +137,8 @@ TOPIC_KEYWORDS = {
         "too much to do", "overwhelmed with tasks", "time management",
     ],
     "workplace_bullying": [
-        "bullying", "bullied", "bully", "harassment", "harassed", "intimidation",
-        "threatened", "mobbing", "picked on", "targeted", "abused at work",
+        "bullying", "bullied", "bully", "bullies", "harassment", "harassed", "harassing",
+        "intimidation", "intimidated", "threatened", "mobbing", "picked on", "targeted", "abused at work",
     ],
     "digital_interventions": [
         "app", "online program", "digital", "ehealth", "web-based",
@@ -229,8 +229,6 @@ def triage_crisis_risk(text: str) -> dict:
         Dict with crisis_detected flag and, if positive, emergency resources
         and strict instructions for the AI agent.
     """
-    text = text[:MAX_INPUT_LENGTH]
-
     if CRISIS_KEYWORDS.search(text):
         return {
             "crisis_detected": True,
@@ -285,6 +283,10 @@ def get_recommendation(
         source paper, DOI, citation count, technique, and technique description),
         and a medical disclaimer.
     """
+    crisis_check = triage_crisis_risk(diagnosis)
+    if crisis_check.get("crisis_detected"):
+        return crisis_check
+
     diagnosis = diagnosis[:MAX_INPUT_LENGTH]
     max_results = _clamp_results(max_results)
     concerns = detect_concerns(diagnosis)
