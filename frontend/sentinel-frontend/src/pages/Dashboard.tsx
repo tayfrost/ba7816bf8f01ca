@@ -60,7 +60,6 @@ export default function Dashboard() {
       minHeight: "100vh", 
       color: "#ffffff" 
     }}>
-      <Stepper currentPath="/dashboard" />
 
       <div style={{ padding: 24 }}>
         <h1 style={{ color: "#ffffff" }}>Dashboard</h1>
