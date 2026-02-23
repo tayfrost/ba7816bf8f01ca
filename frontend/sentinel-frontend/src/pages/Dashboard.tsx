@@ -55,14 +55,18 @@ export default function Dashboard() {
   const alerts = useMemo(() => generateMockAlerts(connectedProviders), [connectedProviders]);
 
   return (
-    <div>
+    <div style={{ 
+      background: "linear-gradient(to bottom, #1d022b, #1a011d)", 
+      minHeight: "100vh", 
+      color: "#ffffff" 
+    }}>
       <Stepper currentPath="/dashboard" />
 
       <div style={{ padding: 24 }}>
-        <h1>Dashboard</h1>
+        <h1 style={{ color: "#ffffff" }}>Dashboard</h1>
 
         <section style={{ marginTop: 24 }}>
-          <h2>Organisation Summary</h2>
+          <h2 style={{ color: "#ffffff" }}>Organisation Summary</h2>
           <p>
             <strong>Company:</strong> {signup?.companyName}
           </p>
@@ -75,7 +79,7 @@ export default function Dashboard() {
         </section>
 
         <section style={{ marginTop: 32 }}>
-          <h2>Time range</h2>
+          <h2 style={{ color: "#ffffff" }}>Time range</h2>
 
           <p style={{ marginTop: 8, opacity: 0.7 }}>
             Data status: <strong>{status}</strong>
@@ -117,7 +121,7 @@ export default function Dashboard() {
         </section>
 
         <section style={{ marginTop: 32 }}>
-          <h2>Risk Overview (Mock)</h2>
+          <h2 style={{ color: "#ffffff" }}>Risk Overview (Mock)</h2>
           <p>
             <strong>Current Risk Score:</strong> {riskScore}%
           </p>
@@ -125,7 +129,7 @@ export default function Dashboard() {
         </section>
 
         <section style={{ marginTop: 32 }}>
-          <h2>Graphs (one line per chart)</h2>
+          <h2 style={{ color: "#ffffff" }}>Graphs (one line per chart)</h2>
 
           {metricSeries.map((s) => {
             const first = s.points[0];
@@ -141,7 +145,7 @@ export default function Dashboard() {
                   marginTop: 12,
                 }}
               >
-                <div style={{ fontWeight: 700 }}>{s.label}</div>
+                <div style={{ fontWeight: 700, color: "#ffffff" }}>{s.label}</div>
                 <div style={{ opacity: 0.8, marginTop: 6 }}>
                   Start: {first?.value ?? "-"} | Latest: {last?.value ?? "-"}
                 </div>
@@ -155,7 +159,7 @@ export default function Dashboard() {
         </section>
 
         <section style={{ marginTop: 32 }}>
-          <h2>Connected Integrations</h2>
+          <h2 style={{ color: "#ffffff" }}>Connected Integrations</h2>
           {connectedProviders.length === 0 ? (
             <p>No integrations connected yet.</p>
           ) : (
@@ -168,7 +172,7 @@ export default function Dashboard() {
         </section>
 
         <section style={{ marginTop: 32 }}>
-          <h2>Recent Alerts (Mock)</h2>
+          <h2 style={{ color: "#ffffff" }}>Recent Alerts (Mock)</h2>
           {alerts.length === 0 ? (
             <p>No alerts generated yet.</p>
           ) : (
@@ -177,7 +181,7 @@ export default function Dashboard() {
                 <li key={alert.id} style={{ marginBottom: 12 }}>
                   <strong>{alert.provider}</strong> — {alert.severity.toUpperCase()} <br />
                   {alert.message} <br />
-                  <small>{new Date(alert.createdAt).toLocaleString()}</small>
+                  <small style={{ opacity: 0.7 }}>{new Date(alert.createdAt).toLocaleString()}</small>
                 </li>
               ))}
             </ul>
