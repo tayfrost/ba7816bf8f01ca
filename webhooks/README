@@ -87,3 +87,50 @@ In your Slack app settings on api.slack.com:
    - Enable events
    - Request URL: `https://sentinelai.work/slack/events`
    - Subscribe to: `message.channels`
+
+## Testing OAuth Installation (Without Frontend)
+
+To test workspace installation before frontend is ready:
+
+**Method 1: Build Authorization URL**
+
+Construct this URL with your credentials:
+```
+https://slack.com/oauth/v2/authorize?client_id=YOUR_SLACK_CLIENT_ID&scope=channels:history,channels:read,chat:write&redirect_uri=https://sentinelai.work/slack/oauth/callback
+```
+
+Replace `YOUR_SLACK_CLIENT_ID` with your actual client ID from `.env`.
+
+**Important:** The `client_id` is your app's ID (same for all workspaces), not workspace-specific.
+
+**Installing to Multiple Workspaces:**
+
+Slack defaults to your currently active workspace. To test with different workspaces:
+
+- **Option 1:** Switch to the desired workspace in Slack web/desktop first, then use the OAuth link
+- **Option 2:** Force a specific workspace by adding `&team=WORKSPACE_ID` parameter:
+  ```
+  https://slack.com/oauth/v2/authorize?client_id=YOUR_CLIENT_ID&scope=channels:history,channels:read,chat:write&redirect_uri=https://sentinelai.work/slack/oauth/callback&team=T0A9QK6D291
+  ```
+  Replace `T0A9QK6D291` with your workspace ID (starts with `T...`)
+  
+- **Option 3:** Sign out of Slack, sign into the target workspace, then use the OAuth link
+
+**Method 2: Use Slack App Dashboard**
+
+1. Go to api.slack.com/apps → Select your app
+2. Navigate to "Install App" in the sidebar
+3. Click "Install to Workspace" button
+4. Follow the OAuth flow
+
+**Expected Flow:**
+
+1. Visit the authorization URL in browser
+2. Slack shows permission request screen
+3. Click "Allow" 
+4. Slack redirects to `/slack/oauth/callback` with temporary code
+5. Your app exchanges code for access token automatically
+6. Check container logs for: `OAuth successful for team: T...`
+7. Workspace credentials are now stored in database
+
+**Note for Frontend Integration:** The authorization URL format above is what your "Add to Slack" button should link to.
