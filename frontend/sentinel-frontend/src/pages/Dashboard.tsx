@@ -7,6 +7,7 @@ import SimpleLineChart from "../components/SimpleLineChart";
 import { useDashboardData } from "../hooks/useDashboardData";
 
 const BRAND_ORANGE = "var(--color-top)"; 
+const BRAND_DEEP = "var(--color-brand-deep)";
 
 const SidebarLink = ({ label, active = false }: { label: string, active?: boolean }) => (
   <div style={{
@@ -14,13 +15,14 @@ const SidebarLink = ({ label, active = false }: { label: string, active?: boolea
     margin: "8px 0",
     borderRadius: "12px",
     cursor: "pointer",
-    background: active ? `rgba(227, 141, 38, 0.15)` : "transparent",
+    background: active ? `rgba(227, 141, 38, 0.25)` : "transparent",
     color: active ? BRAND_ORANGE : "#ffffffa0",
     fontWeight: "800",
     fontSize: "13px",
     letterSpacing: "1px",
     transition: "all 0.3s ease",
     borderLeft: active ? `4px solid ${BRAND_ORANGE}` : "4px solid transparent",
+    boxShadow: active ? `0 4px 15px rgba(0, 0, 0, 0.3)` : "none",
     textShadow: active ? `0 0 10px rgba(227, 141, 38, 0.3)` : "none"
   }}>
     {label.toUpperCase()}
@@ -34,7 +36,7 @@ export default function Dashboard() {
   const [customStart, setCustomStart] = useState("2026-01-01");
   const [customEnd, setCustomEnd] = useState("2026-02-20");
   
-  const [viewMode, setViewMode] = useState<"bento" | "catalog">("bento");
+  const [viewMode, setViewMode] = useState<"focused" | "grid">("focused");
   const [activeCatalogIndex, setActiveCatalogIndex] = useState(0);
 
   const range = useMemo(() => {
@@ -60,7 +62,7 @@ export default function Dashboard() {
       <aside style={{
         width: "280px",
         height: "100vh",
-        background: "rgba(0, 0, 0, 0.3)",
+        background: "rgba(0, 0, 0, 0.4)",
         backdropFilter: "blur(30px)",
         borderRight: "1px solid rgba(255, 255, 255, 0.05)",
         display: "flex",
@@ -102,27 +104,27 @@ export default function Dashboard() {
           </div>
 
           <div style={{
-            width: "130px",
-            height: "130px",
-            background: "linear-gradient(135deg, rgba(227, 141, 38, 0.2) 0%, rgba(239, 99, 48, 0.05) 100%)",
+            width: "140px",
+            height: "140px",
+            background: `linear-gradient(135deg, rgba(227, 141, 38, 0.3) 0%, ${BRAND_DEEP} 100%)`,
             border: `2px solid ${BRAND_ORANGE}`,
-            borderRadius: "28px",
+            borderRadius: "32px",
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
-            boxShadow: `0 0 40px rgba(227, 141, 38, 0.15)`,
+            boxShadow: `0 0 40px rgba(227, 141, 38, 0.2)`,
             position: "relative",
             overflow: "hidden"
           }}>
-            <div style={{ position: "absolute", top: -20, left: -20, width: 60, height: 60, background: BRAND_ORANGE, filter: "blur(40px)", opacity: 0.3 }} />
-            <span style={{ fontSize: "11px", fontWeight: "900", color: BRAND_ORANGE, letterSpacing: "2px", marginBottom: "4px" }}>RISK</span>
-            <span style={{ fontSize: "42px", fontWeight: "900", color: "#fff" }}>{riskScore}%</span>
+            <div style={{ position: "absolute", top: -20, left: -20, width: 70, height: 70, background: BRAND_ORANGE, filter: "blur(45px)", opacity: 0.4 }} />
+            <span style={{ fontSize: "12px", fontWeight: "900", color: BRAND_ORANGE, letterSpacing: "2px", marginBottom: "4px", zIndex: 1 }}>RISK</span>
+            <span style={{ fontSize: "48px", fontWeight: "900", color: "#fff", zIndex: 1 }}>{riskScore}%</span>
           </div>
         </header>
 
         <section style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: "8px", background: "rgba(0,0,0,0.4)", padding: "6px", borderRadius: "50px", border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", gap: "8px", background: "rgba(0,0,0,0.5)", padding: "6px", borderRadius: "50px", border: "1px solid rgba(255,255,255,0.08)" }}>
             {["week", "month", "year", "all", "custom"].map((p) => (
               <button 
                 key={p} 
@@ -138,7 +140,7 @@ export default function Dashboard() {
                   background: preset === p ? BRAND_ORANGE : "transparent",
                   color: preset === p ? "#1a011d" : "rgba(255,255,255,0.5)",
                   transition: "all 0.3s ease",
-                  boxShadow: preset === p ? `0 0 20px rgba(227, 141, 38, 0.4)` : "none"
+                  boxShadow: preset === p ? `0 0 20px rgba(227, 141, 38, 0.5)` : "none"
                 }}
               >
                 {p}
@@ -147,20 +149,76 @@ export default function Dashboard() {
           </div>
 
           <div style={{ display: "flex", gap: "25px" }}>
-            <button onClick={() => setViewMode("bento")} style={{ background: "none", border: "none", color: viewMode === "bento" ? BRAND_ORANGE : "rgba(255,255,255,0.3)", fontWeight: "900", cursor: "pointer", fontSize: "12px", letterSpacing: "1px" }}>GRID</button>
-            <button onClick={() => setViewMode("catalog")} style={{ background: "none", border: "none", color: viewMode === "catalog" ? BRAND_ORANGE : "rgba(255,255,255,0.3)", fontWeight: "900", cursor: "pointer", fontSize: "12px", letterSpacing: "1px" }}>CATALOG</button>
+            <button onClick={() => setViewMode("focused")} style={{ background: "none", border: "none", color: viewMode === "focused" ? BRAND_ORANGE : "rgba(255,255,255,0.3)", fontWeight: "900", cursor: "pointer", fontSize: "12px", letterSpacing: "1px" }}>FOCUS</button>
+            <button onClick={() => setViewMode("grid")} style={{ background: "none", border: "none", color: viewMode === "grid" ? BRAND_ORANGE : "rgba(255,255,255,0.3)", fontWeight: "900", cursor: "pointer", fontSize: "12px", letterSpacing: "1px" }}>GRID</button>
           </div>
         </section>
 
         {preset === "custom" && (
-          <div style={{ marginBottom: "30px", display: "flex", gap: "20px", background: "rgba(255,255,255,0.02)", padding: "15px 25px", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.05)", width: "fit-content" }}>
+          <div style={{ marginBottom: "30px", display: "flex", gap: "20px", background: "rgba(255,255,255,0.04)", padding: "15px 25px", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.1)", width: "fit-content" }}>
             <label style={{ fontSize: "11px", fontWeight: "900", color: BRAND_ORANGE }}>START <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} style={{ background: "transparent", color: "#fff", border: "none", marginLeft: "10px", fontWeight: "bold", outline: "none" }} /></label>
             <label style={{ fontSize: "11px", fontWeight: "900", color: BRAND_ORANGE }}>END <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} style={{ background: "transparent", color: "#fff", border: "none", marginLeft: "10px", fontWeight: "bold", outline: "none" }} /></label>
           </div>
         )}
 
+        {viewMode === "focused" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
+            <div style={{ 
+              background: "rgba(255, 255, 255, 0.03)", 
+              padding: "50px", 
+              borderRadius: "50px", 
+              border: "1px solid rgba(255,255,255,0.1)",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center"
+            }}>
+              <div style={{ display: "flex", gap: "12px", marginBottom: "40px", flexWrap: "wrap", justifyContent: "center" }}>
+                {metricSeries.map((s, idx) => (
+                  <button 
+                    key={s.key} 
+                    onClick={() => setActiveCatalogIndex(idx)}
+                    style={{
+                      padding: "10px 20px",
+                      borderRadius: "15px",
+                      border: activeCatalogIndex === idx ? `1px solid ${BRAND_ORANGE}` : "1px solid rgba(255,255,255,0.1)",
+                      background: activeCatalogIndex === idx ? `rgba(227, 141, 38, 0.2)` : "rgba(255,255,255,0.02)",
+                      color: activeCatalogIndex === idx ? BRAND_ORANGE : "rgba(255,255,255,0.5)",
+                      fontWeight: "800",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+       
+              <SimpleLineChart points={metricSeries[activeCatalogIndex]?.points || []} width={850} height={400} />
+            </div>
 
-        {viewMode === "bento" ? (
+            <div style={{ display: "flex", gap: "20px", overflowX: "auto", paddingBottom: "20px", marginTop: "20px" }}>
+              {metricSeries.filter((_, i) => i !== activeCatalogIndex).map((s) => (
+                <div key={s.key} style={{
+                  minWidth: "300px",
+                  background: "rgba(255, 255, 255, 0.02)",
+                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                  borderRadius: "24px",
+                  padding: "20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  cursor: "pointer"
+                }} onClick={() => setActiveCatalogIndex(metricSeries.indexOf(s))}>
+                  <h4 style={{ fontSize: "12px", fontWeight: "900", margin: "0 0 15px 0", color: "rgba(255,255,255,0.6)" }}>{s.label}</h4>
+                  <SimpleLineChart points={s.points} width={260} height={100} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+         
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "30px" }}>
             {metricSeries.map((s) => (
               <div key={s.key} style={{
@@ -177,38 +235,6 @@ export default function Dashboard() {
                 <SimpleLineChart points={s.points} width={380} />
               </div>
             ))}
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: "12px", marginBottom: "40px" }}>
-              {metricSeries.map((s, idx) => (
-                <button 
-                  key={s.key} 
-                  onClick={() => setActiveCatalogIndex(idx)}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "15px",
-                    border: activeCatalogIndex === idx ? `1px solid ${BRAND_ORANGE}` : "1px solid rgba(255,255,255,0.1)",
-                    background: activeCatalogIndex === idx ? `rgba(227, 141, 38, 0.1)` : "rgba(255,255,255,0.02)",
-                    color: activeCatalogIndex === idx ? BRAND_ORANGE : "rgba(255,255,255,0.5)",
-                    fontWeight: "800",
-                    cursor: "pointer",
-                    fontSize: "12px"
-                  }}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-            <div style={{ 
-              background: "rgba(255, 255, 255, 0.02)", 
-              padding: "50px", 
-              borderRadius: "50px", 
-              border: "1px solid rgba(255,255,255,0.05)",
-              boxShadow: "0 20px 50px rgba(0,0,0,0.3)"
-            }}>
-              <SimpleLineChart points={metricSeries[activeCatalogIndex]?.points || []} width={750} height={350} />
-            </div>
           </div>
         )}
       </main>
