@@ -1,2 +1,7 @@
-pytest
-nltk
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+protobuf>=4.25.0
+prometheus-client>=0.19.0
+tokenizers
+numpy
+onnxruntime
