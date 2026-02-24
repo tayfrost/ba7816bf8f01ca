@@ -21,4 +21,4 @@ def filter_message(text: str) -> bool:
     
     TODO: Implement gRPC client stub to filter service
     """
-    return False
+    return True  # Temporarily accept all messages for testing
