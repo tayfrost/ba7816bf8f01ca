@@ -2,6 +2,7 @@
 Slack Controller
 
 Handles Slack-related endpoints including OAuth callbacks and event webhooks.
+Controllers handle HTTP request/response concerns and delegate business logic to services.
 """
 
 import json
@@ -11,10 +12,8 @@ import httpx
 from fastapi import APIRouter, Request, HTTPException
 
 from app.services.slack_service import verify_slack_signature
-from app.services.db_service import store_in_db, store_workspace
-from app.services.filter_service import filter_message
-from app.schemas.workspace_schema import WorkspaceCredentials
-from app.schemas.message_schema import MessageEvent
+from app.services.oauth_service import process_oauth_success
+from app.services.message_service import process_message_event
 
 logger = logging.getLogger(__name__)
 
@@ -45,20 +44,11 @@ async def slack_oauth_callback(code: str = None, state: str = None):
         )
         data = response.json()
     
-    if not data.get("ok"):
-        error_msg = data.get("error", "Unknown error")
-        logger.error(f"Slack OAuth error: {error_msg}")
-        raise HTTPException(status_code=400, detail=error_msg)
-    
-    team_id = data["team"]["id"]
-    access_token = data["access_token"]
-    
-    logger.info(f"OAuth successful for team: {team_id}")
-    
-    credentials = WorkspaceCredentials(team_id=team_id, access_token=access_token)
-    store_workspace(credentials)
-    
-    return {"ok": True}
+    try:
+        process_oauth_success(data)
+        return {"ok": True}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/events")
@@ -78,19 +68,6 @@ async def slack_events(request: Request):
         logger.warning("Invalid signature")
         raise HTTPException(status_code=403, detail="Invalid signature")
     
-    if payload.get("type") == "event_callback" and payload.get("event", {}).get("type") == "message":
-        team_id = payload.get("team_id", "")
-        user_id = payload["event"].get("user", "")
-        text = payload["event"].get("text", "")
-        logger.info(f"Processing message from team {team_id}: {text}")
-        
-        if filter_message(text):
-            message_event = MessageEvent(
-                team_id=team_id,
-                user_id=user_id,
-                text=text,
-                timestamp=timestamp
-            )
-            store_in_db(message_event)
+    process_message_event(payload, timestamp)
     
     return {"ok": True}
