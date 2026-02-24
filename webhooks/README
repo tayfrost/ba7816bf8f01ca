@@ -1,25 +1,66 @@
 # Webhooks Service
 
-FastAPI service that receives Slack messages, applies filtering logic, and persists qualifying messages to database.
+FastAPI service that handles Slack app installation, receives Slack messages, applies filtering logic, and persists qualifying messages to database.
 
 ## Purpose
 
-Inbound webhook endpoint for Slack integration. Messages are evaluated against configurable filters. Approved messages are stored for further processing.
+Provides two main functions:
+1. **OAuth Installation Flow** - Allows users to install the SentinelAI app in their Slack workspace
+2. **Event Webhooks** - Receives and processes messages from installed Slack workspaces
+
+## How It Works
+
+### OAuth Installation Flow (`/slack/oauth/callback`)
+
+When a user clicks "Add to Slack" on your website:
+
+1. User is redirected to Slack's OAuth page to authorize the app
+2. After approval, Slack redirects back to `/slack/oauth/callback` with a temporary `code`
+3. The controller exchanges this `code` for a permanent `access_token` by calling Slack's API
+4. The `team_id` (workspace ID) and `access_token` are stored in the database
+5. This token allows the app to interact with that specific workspace going forward
+
+**Environment Variables Required:**
+- `SLACK_CLIENT_ID` - Your Slack app's client ID
+- `SLACK_CLIENT_SECRET` - Your Slack app's client secret  
+- `SLACK_REDIRECT_URI` - The callback URL (e.g., `https://sentinelai.work/slack/oauth/callback`)
+
+### Event Webhook (`/slack/events`)
+
+Once installed, Slack sends events to this endpoint:
+
+1. **URL Verification** - On first setup, Slack sends a challenge to verify the endpoint
+2. **Signature Verification** - All requests are validated using Slack's signature to prevent spoofing
+3. **Message Processing** - When a message event arrives:
+   - Extract `team_id`, `user_id`, `text`, and `timestamp`
+   - Run the message through the filter service (AI-based filtering)
+   - If the filter approves it, store the message in the database via db_service
 
 ## Structure
 
 ```
 app/
-├── controllers/    # API routes
-├── services/       # Business logic
-├── schemas/        # Data models
-└── core/          # Configuration
+├── controllers/    # API routes (OAuth and events endpoints)
+├── services/       # Business logic (Slack signature verification, DB, filtering)
+├── schemas/        # Pydantic data models (WorkspaceCredentials, MessageEvent)
+└── utils/         # Helper functions
 ```
+
+## Dependencies
+
+- **filter service** - AI model for message classification (gRPC client stub, see filter branch)
+- **database service** - Persistent storage for workspaces and messages (gRPC client stub, see database branch)
 
 ## Setup
 
 ```bash
 pip install -r requirements.txt
+
+# Set environment variables
+export SLACK_CLIENT_ID="your_client_id"
+export SLACK_CLIENT_SECRET="your_client_secret"
+export SLACK_REDIRECT_URI="https://sentinelai.work/slack/oauth/callback"
+
 uvicorn app.main:app --reload
 ```
 
@@ -27,5 +68,22 @@ uvicorn app.main:app --reload
 
 ```bash
 docker build -t webhooks .
-docker run -p 8000:8000 webhooks
+docker run -p 8000:8000 \
+  -e SLACK_CLIENT_ID="your_client_id" \
+  -e SLACK_CLIENT_SECRET="your_client_secret" \
+  -e SLACK_REDIRECT_URI="https://sentinelai.work/slack/oauth/callback" \
+  webhooks
 ```
+
+## Slack App Configuration
+
+In your Slack app settings on api.slack.com:
+
+1. **OAuth & Permissions**:
+   - Add redirect URL: `https://sentinelai.work/slack/oauth/callback`
+   - Add bot scopes: `channels:history`, `channels:read`, `chat:write`
+
+2. **Event Subscriptions**:
+   - Enable events
+   - Request URL: `https://sentinelai.work/slack/events`
+   - Subscribe to: `message.channels`

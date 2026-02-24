@@ -11,26 +11,28 @@ Once the database service is ready, this will become a gRPC client stub
 to communicate with the database microservice.
 """
 
+from app.schemas.message_schema import MessageEvent
+from app.schemas.workspace_schema import WorkspaceCredentials
 
-def store_in_db(event_data: dict):
+
+def store_in_db(message_event: MessageEvent):
     """
     Store message/event data in the database.
     
     Args:
-        event_data: Dictionary containing message metadata and content
+        message_event: MessageEvent schema containing message metadata and content
     
     TODO: Implement gRPC client stub to database service
     """
     pass
 
 
-def store_workspace(team_id: str, token: str):
+def store_workspace(credentials: WorkspaceCredentials):
     """
     Store workspace credentials (team ID and access token) in the database.
     
     Args:
-        team_id: Slack team/workspace ID
-        token: OAuth access token for the workspace
+        credentials: WorkspaceCredentials schema with team_id and access_token
     
     TODO: Implement gRPC client stub to database service
     """
