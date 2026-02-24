@@ -3,20 +3,31 @@ Model factory for SentinelAI BERT Filter.
 
 Centralises model instantiation, LoRA application, and weight loading logic.
 Supports automatic checkpoint download from Hugging Face Hub.
+Supports ONNX model loading for inference.
 """
 
 # pylint: disable=wrong-import-position
 
+import os
 import sys
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import torch
-from huggingface_hub import hf_hub_download
+from dotenv import load_dotenv
+from huggingface_hub import HfApi, hf_hub_download
 from peft import LoraConfig, TaskType, get_peft_model
+
+try:
+    import onnxruntime as ort
+except ImportError:
+    ort = None
 
 # Ensure internal imports work regardless of execution context
 sys.path.append(str(Path(__file__).parent.parent))
+
+load_dotenv()
 
 import config
 from models.dual_head_classifier import DualHeadBERTClassifier
@@ -96,3 +107,53 @@ def load_production_model(
     model.eval()
 
     return model
+
+
+def load_model_for_inference(repo_id: str = None, use_gpu: bool = False):
+    """
+    Download and load ONNX model from HF Space for inference.
+    
+    Args:
+        repo_id: HuggingFace model repo ID (uses HF_MODEL env var if None)
+        use_gpu: Whether to use GPU for inference (requires onnxruntime-gpu)
+    
+    Returns:
+        ONNX InferenceSession ready for inference
+    """
+    if ort is None:
+        raise ImportError("onnxruntime not installed. Run: pip install onnxruntime")
+    
+    if repo_id is None:
+        repo_id = os.environ.get("HF_MODEL")
+        if not repo_id:
+            raise ValueError("repo_id not provided and HF_MODEL env var not set")
+    
+    print(f"Downloading ONNX model from {repo_id}...")
+    local_dir = config.MODELS_DIR / "onnx_cache"
+    local_dir.mkdir(parents=True, exist_ok=True)
+    
+    onnx_path = hf_hub_download(
+        repo_id=repo_id,
+        filename="sentinelai_model.onnx",
+        repo_type="model",
+        local_dir=str(local_dir),
+        local_dir_use_symlinks=False,
+    )
+    
+    # Download .data file if exists
+    try:
+        hf_hub_download(
+            repo_id=repo_id,
+            filename="sentinelai_model.onnx.data",
+            repo_type="model",
+            local_dir=str(local_dir),
+            local_dir_use_symlinks=False,
+        )
+    except Exception:
+        pass
+    
+    providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if use_gpu else ["CPUExecutionProvider"]
+    session = ort.InferenceSession(onnx_path, providers=providers)
+    
+    print(f"✓ ONNX model loaded from {onnx_path}")
+    return session
