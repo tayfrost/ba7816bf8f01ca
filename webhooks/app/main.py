@@ -1,3 +1,14 @@
+"""
+Main application file for the Slack webhook server.
+This file defines orchestration logic for handling incoming Slack events.
+
+Ideally, this file will only have registered routes and high-level orchestration logic. The actual business logic
+should be delegated to services in the 'services' module, and data structures should be defined in the 'schemas' module.
+While endpoints should be in controllers folder.
+
+"""
+
+
 import json
 import logging
 import os
@@ -5,8 +16,8 @@ import httpx
 from fastapi import FastAPI, Request, HTTPException
 
 from app.services.slack_service import verify_slack_signature
-from app.utils.message_utils import filter_message, store_in_db
-from app.utils.workspace_utils import store_workspace
+from app.services.db_service import store_in_db, store_workspace
+from app.services.filter_service import filter_message
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
