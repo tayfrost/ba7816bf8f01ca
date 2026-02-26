@@ -88,7 +88,23 @@ def prepare_and_upload_model() -> str:
     onnx_path.parent.mkdir(parents=True, exist_ok=True)
     export_to_onnx(model, onnx_path)
     
-    # 3. Upload to HF Space
+    # 3. Save tokenizer to JSON
+    tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
+    tokenizer_path = config.MODELS_DIR / "tokenizer.json"
+    tokenizer.save_pretrained(str(config.MODELS_DIR / "tokenizer_files"))
+    
+    # Copy only tokenizer.json
+    import shutil
+    src = config.MODELS_DIR / "tokenizer_files" / "tokenizer.json"
+    if src.exists():
+        shutil.copy(src, tokenizer_path)
+        print(f"✓ Tokenizer saved to {tokenizer_path}")
+    else:
+        # Fallback: save full tokenizer
+        tokenizer.save_pretrained(str(config.MODELS_DIR / "tokenizer_files"))
+        print(f"✓ Tokenizer files saved to {config.MODELS_DIR / 'tokenizer_files'}")
+    
+    # 4. Upload to HF Space
     api = HfApi(token=hf_token)
     print(f"Uploading to {target_repo}...")
     
@@ -107,6 +123,17 @@ def prepare_and_upload_model() -> str:
         api.upload_file(
             path_or_fileobj=str(data_path),
             path_in_repo="sentinelai_model.onnx.data",
+            repo_id=target_repo,
+            repo_type="model",
+        )
+    
+    # Upload tokenizer files
+    tokenizer_dir = config.MODELS_DIR / "tokenizer_files"
+    if tokenizer_dir.exists():
+        print(f"Uploading tokenizer files...")
+        api.upload_folder(
+            folder_path=str(tokenizer_dir),
+            path_in_repo="tokenizer",
             repo_id=target_repo,
             repo_type="model",
         )

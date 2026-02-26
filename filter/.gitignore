@@ -1,6 +1,10 @@
 *.onnx
 *.onnx.data
 
+# Tokenizer files
+models/tokenizer_files/
+models/tokenizer.json
+
 # Generated gRPC files
 generated/filter/v1/filter_pb2.py
 generated/filter/v1/filter_pb2_grpc.py

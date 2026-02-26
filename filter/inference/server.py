@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 import numpy as np
 from dotenv import load_dotenv
-from transformers import AutoTokenizer
 
 # Add parent and generated proto files to path
 filter_dir = Path(__file__).parent.parent
@@ -17,7 +16,7 @@ load_dotenv()
 from filter.v1 import filter_pb2
 from filter.v1 import filter_pb2_grpc
 import config
-from services.model_factory import load_model_for_inference
+from services.model_factory import load_onnx_model_and_tokenizer
 
 
 class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
@@ -28,8 +27,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         self.overlap = int(os.environ.get("overlap", 32))
         self.threshold = float(os.environ.get("threshold", 0.5))
         
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.onnx_session = load_model_for_inference()
+        self.onnx_session, self.tokenizer = load_onnx_model_and_tokenizer()
         
         print(f"✓ Model loaded: {self.model_name}")
         print(f"✓ Max length: {self.max_length}, Overlap: {self.overlap}, Threshold: {self.threshold}")

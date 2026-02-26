@@ -11,13 +11,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from transformers import AutoTokenizer
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
 from scripts.prepare_and_upload_onnx import prepare_and_upload_model
-from services.model_factory import load_model_for_inference
+from services.model_factory import load_onnx_model_and_tokenizer
 
 
 def test_conversion_and_upload():
@@ -31,11 +30,10 @@ def test_inference():
     """Test ONNX model download and inference."""
     print("\n=== TEST 2: Download and Inference ===")
     
-    # Load ONNX model
-    session = load_model_for_inference()
+    # Load ONNX model and tokenizer
+    session, tokenizer = load_onnx_model_and_tokenizer()
     
     # Prepare test input
-    tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
     test_text = "I feel so overwhelmed with work lately."
     
     inputs = tokenizer(
