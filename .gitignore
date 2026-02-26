@@ -41,3 +41,6 @@ filter/generated/
 *.pb2.py
 *.pb2_grpc.py
 *.pb2.pyi
+
+#mcp-debug tools
+.mcp-debug-tools/
