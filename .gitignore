@@ -33,5 +33,7 @@ htmlcov/
 dist/
 build/
 
+#database configs
+*.db
 # Big models
 *.pt
