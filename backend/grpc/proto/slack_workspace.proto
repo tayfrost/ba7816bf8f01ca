@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package sentinelai.slack;
+
+service SlackWorkspaceService {
+  rpc CreateSubscriptionPlan (CreateSubscriptionPlanRequest) returns (CreateSubscriptionPlanResponse);
+  rpc CreateCompany          (CreateCompanyRequest)          returns (CreateCompanyResponse);
+  rpc CreateSlackWorkspace   (CreateSlackWorkspaceRequest)   returns (CreateSlackWorkspaceResponse);
+  rpc CreateSlackUser      (CreateSlackUserRequest)      returns (CreateSlackUserResponse);
+  rpc CreateFlaggedIncident(CreateFlaggedIncidentRequest) returns (CreateFlaggedIncidentResponse);
+  rpc GetSlackWorkspaceByTeamId (GetSlackWorkspaceByTeamIdRequest) returns (GetSlackWorkspaceByTeamIdResponse);
+}
+
+message SubscriptionPlan {
+  int64 plan_id = 1;
+  string plan_name = 2;
+  int64 plan_cost_pennies = 3;
+  string currency = 4;
+  int64 max_employees = 5;
+}
+
+message Company {
+  int64 company_id = 1;
+  int64 plan_id = 2;
+  string company_name = 3;
+}
+
+message SlackWorkspace {
+  int64 id = 1;
+  int64 company_id = 2;
+  string team_id = 3;
+  // access_token NOT returned (sensitive)
+}
+
+message CreateSubscriptionPlanRequest {
+  string plan_name = 1;
+  int64 cost_pennies = 2;
+  int64 max_employees = 3;
+  string currency = 4; // optional: blank => "GBP" (server)
+}
+
+message CreateSubscriptionPlanResponse {
+  SubscriptionPlan plan = 1;
+}
+
+message CreateCompanyRequest {
+  int64 plan_id = 1;
+  string company_name = 2;
+}
+
+message CreateCompanyResponse {
+  Company company = 1;
+}
+
+message CreateSlackWorkspaceRequest {
+  int64 company_id = 1;
+  string team_id = 2;
+  string access_token = 3;
+}
+
+message CreateSlackWorkspaceResponse {
+  SlackWorkspace workspace = 1;
+}
+
+message SlackUser {
+  int64 id = 1;
+  string team_id = 2;
+  string slack_user_id = 3;
+  string name = 4;
+  string surname = 5;
+  string status = 6;
+}
+
+message CreateSlackUserRequest {
+  string team_id = 1;
+  string slack_user_id = 2;
+  string name = 3;
+  string surname = 4;
+  string status = 5; //optional
+}
+
+message CreateSlackUserResponse {
+  SlackUser slack_user = 1;
+}
+
+message FlaggedIncident {
+  int64 incident_id = 1;
+  int64 company_id = 2;
+  string team_id = 3;
+  string slack_user_id = 4;
+  string message_ts = 5;
+  string channel_id = 6;
+  string raw_message_text_json = 7; // JSON string
+  string class_reason = 8;          // optional// for now put "n/a"
+  string created_at = 9;            // ISO-8601 string (server)
+}
+
+message CreateFlaggedIncidentRequest {
+  int64 company_id = 1;
+  string team_id = 2;
+  string slack_user_id = 3;
+  string message_ts = 4;
+  string channel_id = 5;
+  string raw_message_text_json = 6; // caller sends JSON string
+  string class_reason = 7;          // optional
+}
+
+message CreateFlaggedIncidentResponse {
+  FlaggedIncident incident = 1;
+}
+
+message GetSlackWorkspaceByTeamIdRequest {
+  string team_id = 1;
+}
+
+message GetSlackWorkspaceByTeamIdResponse {
+  SlackWorkspace workspace = 1; // empty if not found? better: use NOT_FOUND status
+}
