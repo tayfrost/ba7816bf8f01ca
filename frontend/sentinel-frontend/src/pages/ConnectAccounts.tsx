@@ -53,13 +53,13 @@ export default function ConnectAccounts() {
       <LandingHeader isLoggedIn={true} />
 
       <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-6 relative z-10">
-        <div className="max-w-4xl w-full bg-white/10 backdrop-blur-3xl border border-white/40 shadow-[0_32px_120px_-20px_rgba(0,0,0,0.08)] rounded-[48px] p-10 md:p-14">
+        <div className="max-w-4xl w-full bg-white/15 backdrop-blur-3xl p-10 border border-white/30 shadow-xl rounded-[48px] p-10 md:p-14">
           
           <div className="mb-12 text-center md:text-left">
             <h1 className="text-4xl md:text-3xl font-serif font-black text-brand-deep mb-4 leading-[1.1]">
               Connect your work accounts
             </h1>
-            <p className="text-lg text-brand-deep/85 max-w-2xl font-medium mb-4">
+            <p className="text-lg text-brand-deep/90 max-w-2xl font-medium mb-4">
               Add Slack/Gmail/Outlook so SentinelAI can monitor early burnout signals using consent-based, 
               company-approved data sources.
             </p>
