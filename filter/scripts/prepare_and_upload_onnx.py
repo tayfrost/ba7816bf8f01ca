@@ -21,19 +21,6 @@ import config
 from services.model_factory import load_production_model
 
 
-def load_model_from_hf_space(space_name: str) -> torch.nn.Module:
-    """
-    Load PyTorch model from teammate's HF Space.
-    
-    Args:
-        space_name: HF Space name (e.g., "username/space-name")
-    
-    Returns:
-        Loaded PyTorch model
-    """
-    print(f"Loading model from {space_name}...")
-    return load_production_model()
-
 
 def export_to_onnx(model: torch.nn.Module, onnx_path: Path) -> None:
     """
@@ -78,12 +65,9 @@ def export_to_onnx(model: torch.nn.Module, onnx_path: Path) -> None:
     print(f"✓ Exported to {onnx_path}")
 
 
-def prepare_and_upload_model(teammate_space_name: str = None) -> str:
+def prepare_and_upload_model() -> str:
     """
-    Load model from HF Space, convert to ONNX, and upload to target HF Space.
-    
-    Args:
-        teammate_space_name: Source HF Space (optional, uses local model if None)
+    Load model from HF repo, convert to ONNX, and upload to target HF Space.
     
     Returns:
         URL of uploaded model
@@ -97,7 +81,7 @@ def prepare_and_upload_model(teammate_space_name: str = None) -> str:
         raise ValueError("HF_MODEL environment variable not set")
     
     # 1. Load model
-    model = load_model_from_hf_space(teammate_space_name) if teammate_space_name else load_production_model()
+    model = load_production_model()
     
     # 2. Convert to ONNX
     onnx_path = config.MODELS_DIR / "sentinelai_model.onnx"

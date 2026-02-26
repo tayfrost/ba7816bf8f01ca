@@ -16,4 +16,5 @@ message ClassifyResponse {
   string severity = 3;
   float severity_confidence = 4;
   bool is_risk = 5;
+  string all_responses = 6;
 }

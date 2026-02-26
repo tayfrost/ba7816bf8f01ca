@@ -1,4 +1,7 @@
 *.onnx
 *.onnx.data
-*.onnx
-*.onnx.data
+
+# Generated gRPC files
+generated/filter/v1/filter_pb2.py
+generated/filter/v1/filter_pb2_grpc.py
+generated/filter/v1/filter_pb2.pyi

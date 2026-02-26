@@ -35,3 +35,9 @@ build/
 
 # Big models
 *.pt
+
+# Generated proto files
+filter/generated/
+*.pb2.py
+*.pb2_grpc.py
+*.pb2.pyi

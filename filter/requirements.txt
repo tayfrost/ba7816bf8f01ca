@@ -11,3 +11,5 @@ google-genai
 nlpaug
 onnxruntime
 python-dotenv
+grpcio
+grpcio-tools
