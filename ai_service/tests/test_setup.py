@@ -1,3 +1,5 @@
+"""Tests for project setup configuration."""
+
 import os
 from pathlib import Path
 

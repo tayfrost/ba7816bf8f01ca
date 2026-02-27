@@ -1,3 +1,5 @@
+"""Output schema for mental health risk assessment responses."""
+
 from pydantic import BaseModel, Field, field_validator
 
 

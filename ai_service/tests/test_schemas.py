@@ -1,3 +1,5 @@
+"""Tests for agent state and output schemas validation."""
+
 import pytest
 from pydantic import ValidationError
 from schema.agent_state import AgentState

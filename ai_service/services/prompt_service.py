@@ -1,3 +1,5 @@
+"""Service for loading and managing versioned system prompts."""
+
 import os
 from pathlib import Path
 from typing import Optional

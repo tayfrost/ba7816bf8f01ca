@@ -1,3 +1,5 @@
+"""Agent state schema for LangGraph workflow."""
+
 from pydantic import BaseModel, Field
 from typing import Optional
 
