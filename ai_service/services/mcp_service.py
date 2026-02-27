@@ -1,0 +1,43 @@
+"""Service for connecting to and loading tools from MCP servers."""
+
+import os
+from typing import List
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+
+async def load_mcp_tools(session: ClientSession) -> List:
+    """Load tools from an MCP session."""
+    result = await session.list_tools()
+    return result.tools
+
+
+async def load_all_tools() -> List:
+    """Load tools from all configured MCP servers."""
+    tools = []
+    
+    # Load from Neo4j/RAG container if configured
+    neo4j_url = os.getenv("NEO4J_MCP_URL")
+    if neo4j_url:
+        server_params = StdioServerParameters(
+            command="node",
+            args=[neo4j_url]
+        )
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                tools += await load_mcp_tools(session)
+    
+    # Load from additional MCP server if configured
+    another_url = os.getenv("ANOTHER_MCP_URL")
+    if another_url:
+        server_params = StdioServerParameters(
+            command="node",
+            args=[another_url]
+        )
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                tools += await load_mcp_tools(session)
+    
+    return tools
