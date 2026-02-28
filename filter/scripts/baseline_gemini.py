@@ -11,7 +11,8 @@ REQUIREMENTS:
 - Set GEMINI_API_KEY environment variable
 
 METHODOLOGY:
-- Uses the exact same 700-sample test set (split seed=config.DATASET_SEED) as BERT and Keyword baselines.
+- Uses the exact same 700-sample test set (split seed=config.DATASET_SEED)
+  as BERT and Keyword baselines.
 - Zero-shot prompting with strict category constraints.
 - Reproduces the exact JSON output format for direct comparison.
 """
