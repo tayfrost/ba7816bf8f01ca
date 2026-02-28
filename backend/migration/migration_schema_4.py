@@ -5,7 +5,7 @@ DB_URL = "postgresql://postgres:postgres@localhost:5432/sentinelai"
 MIGRATION = """
 BEGIN;
 
--- Drop old row-level triggers (if they exist)
+-- Drop old row-level triggers (if exist)
 DROP TRIGGER IF EXISTS trg_prevent_last_active_admin_removal ON saas_company_roles;
 DROP TRIGGER IF EXISTS trg_prevent_last_active_biller_removal ON saas_company_roles;
 
@@ -20,7 +20,7 @@ DECLARE
   cid bigint;
   remaining int;
 BEGIN
-  -- Only care if we are removing/deactivating/changing away from an ACTIVE admin row
+  -- Only care if removing/deactivating/changing away from an ACTIVE admin row
   IF TG_OP = 'DELETE' THEN
     IF OLD.role <> 'admin' OR OLD.status <> 'active' THEN
       RETURN NULL;
