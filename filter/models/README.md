@@ -87,58 +87,35 @@ Training:
 
 ## Usage
 
-### Loading the Model
+### Loading the Model (Production Pattern)
+
+The repository uses a centralised **Model Factory** to handle architecture initialisation and weight loading. It includes **Auto-Download** logic that pulls the latest checkpoint from Hugging Face Hub if it is not found locally.
 
 ```python
-from pathlib import Path
 import torch
-from peft import PeftModel
-from transformers import AutoModel, AutoTokenizer
-
-# Import custom dual-head classifier
-from models.dual_head_classifier import DualHeadBERTClassifier
-
-# Initialise model
-model = DualHeadBERTClassifier(
-    model_name="bert-base-uncased",
-    num_category_classes=7,
-    num_severity_classes=4
-)
-
-# Load LoRA adapters
-adapter_path = "filter/models/lora_adapters"
-model.bert = PeftModel.from_pretrained(model.bert, adapter_path)
-
-# Load tokenizer
-tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+from services.model_factory import load_production_model
 
 # Inference
-model.eval()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
 
+# This will:
+
+# 1. Initialise DualHeadBERTClassifier
+# 2. Apply LoRA adapters
+# 3. Check for 'dual_head_classifier.pt' locally
+# 4. If missing, download latest from OguzhanKOG/sentinelai-bert-filter
+# 5. Load trained weights and return model in eval mode
+
+model = load_production_model(device=device)
+
+# Model is ready for inference
 message = "I'm completely overwhelmed with work and can't sleep anymore"
-inputs = tokenizer(
-    message,
-    padding="max_length",
-    truncation=True,
-    max_length=128,
-    return_tensors="pt"
-).to(device)
-
-with torch.no_grad():
-    category_logits, severity_logits = model(
-        inputs["input_ids"],
-        inputs["attention_mask"]
-    )
-    
-    category_pred = torch.argmax(category_logits, dim=1).item()
-    severity_pred = torch.argmax(severity_logits, dim=1).item()
-
-# Category mapping: 0=neutral, 1=humor_sarcasm, 2=stress, 3=burnout, 
-#                   4=depression, 5=harassment, 6=suicidal_ideation
-# Severity mapping: 0=none, 1=early, 2=middle, 3=late
+# ... standard tokenization using config.MODEL_NAME ...
 ```
+
+### Configuration
+
+All parameters (LoRA rank, Alpha, Model Backbone, Paths) are centralised in `filter/config.py`. To change the backbone or parameters across the entire service, update this file only.
 
 ## Limitations
 
@@ -175,7 +152,7 @@ Full training metrics available in `training_log.json`:
 
 ## Repository
 
-Full implementation: [SentinelAI Repository](https://github.kcl.ac.uk/k24000626/SentinelAI)
+Full implementation available in the project repository (Private).
 
 Branch: `feature/filter`
 
