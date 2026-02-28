@@ -4,6 +4,36 @@
 
 gRPC-based inference service for the SentiBERT dual-head classifier. Provides fast, typed RPC endpoints for mental health risk classification from workplace messages.
 
+## Optimizations
+
+- **ONNX Runtime**: Converted model to ONNX format, removed torch/transformers from production build
+- **Sliding Window**: Overlap-based chunking with OR/MAX aggregation for long messages
+- **Risk Gating**: Returns highest risk score across all chunks
+
+## Client Stub Generation
+
+Generate client stubs from `.proto` files:
+
+```bash
+# Python
+python -m grpc_tools.protoc -I../../protos --python_out=../generated --grpc_python_out=../generated ../../protos/filter/v1/filter.proto
+
+# Node.js
+grpc_tools_node_protoc --js_out=import_style=commonjs,binary:. --grpc_out=grpc_js:. --proto_path=../../protos ../../protos/filter/v1/filter.proto
+```
+
+## Usage Example
+
+See `tests/test_onnx_workflow.py` for complete inference example:
+
+```python
+from services.model_factory import load_onnx_model_and_tokenizer
+
+session, tokenizer = load_onnx_model_and_tokenizer()
+inputs = tokenizer(text, max_length=128, padding="max_length", truncation=True, return_tensors="np")
+category_logits, severity_logits = session.run(None, {"input_ids": inputs["input_ids"], "attention_mask": inputs["attention_mask"]})
+```
+
 ## Why gRPC?
 
 - **Performance**: Binary protocol with HTTP/2, lower latency than REST
@@ -56,9 +86,10 @@ gRPC-based inference service for the SentiBERT dual-head classifier. Provides fa
 ## Dependencies
 
 - `grpcio` / `grpcio-tools` - gRPC runtime and code generation
-- `torch` + `transformers` + `peft` - Model inference
+- `onnxruntime` - ONNX model inference (replaces torch in production)
+- `transformers` - Tokenizer only
 - `protobuf` - Protocol Buffers
 
 ## Status
 
-🚧 **In Development** - Service scaffolding and implementation in progress.
+✅ **Operational** - ONNX-based inference server with sliding window aggregation.

@@ -9,4 +9,8 @@ huggingface_hub
 tqdm
 google-genai
 nlpaug
+onnxruntime
+python-dotenv
+grpcio
+grpcio-tools
 wandb

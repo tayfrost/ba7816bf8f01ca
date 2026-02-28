@@ -1,176 +1,87 @@
 SentinelAI Filter Inference Service - Implementation Plan
-========================================================
+===============================================================
 
-GOAL: Production-ready gRPC inference service for SentiBERT model
+GOAL: gRPC inference service for SentiBERT with monitoring & optimization
 
----
+─────────────────────────────────────────────────────────────────
 
-PHASE 1: Protocol Definition & Code Generation
------------------------------------------------
-[ ] Define filter.proto with service contract:
-    - ClassifyMessage RPC (single prediction)
-    - ClassifyBatch RPC (batch predictions, optional)
-    
-[ ] Message definitions:
-    - ClassifyRequest: { message: string, metadata?: map }
-    - ClassifyResponse: { 
-        category: string,
-        category_confidence: float,
-        severity: string, 
-        severity_confidence: float,
-        is_risk: bool,
-        risk_score: float
-      }
-    - BatchRequest/BatchResponse for bulk operations
+1. PROTO SCHEMA DEFINITION
+   [ ] Create filter.proto in protos/
+       - ClassifyMessage RPC
+       - ClassifyRequest: { string message }
+       - ClassifyResponse: { 
+           string category, float category_confidence,
+           string severity, float severity_confidence,
+           bool is_risk
+         }
 
-[ ] Generate Python code from proto:
-    - filter_pb2.py (messages)
-    - filter_pb2_grpc.py (service stubs)
+2. COMPILE PROTO FILES
+   [ ] Generate Python code:
+       python -m grpc_tools.protoc -I./protos \
+         --python_out=./generated \
+         --grpc_python_out=./generated \
+         ./protos/filter.proto
+   [ ] Creates: filter_pb2.py, filter_pb2_grpc.py
 
----
+3. IMPLEMENT INFERENCE ENGINE
+   [ ] Create engine.py:
+       - InferenceEngine class
+       - Load model via model_factory.load_production_model()
+       - predict(text) -> (category, severity, scores)
+       - Singleton pattern for model caching
 
-PHASE 2: Core Inference Logic
-------------------------------
-[ ] Create inference/engine.py:
-    - InferenceEngine class
-    - Model loading with model_factory.load_production_model()
-    - Singleton pattern for model caching (load once, reuse)
-    - predict() method: raw text -> (category, severity, scores)
-    - Batch predict support
+4. IMPLEMENT GRPC SERVER
+   [ ] Create server.py:
+       - FilterServiceServicer implements generated stub
+       - ClassifyMessage handler calls engine.predict()
+       - Error handling (INVALID_ARGUMENT, UNAVAILABLE)
+       - Startup: load model, bind port 50051
+   [ ] Test with sample client
+   [ ] Verify predictions match evaluation results
 
-[ ] Implement preprocessing:
-    - Text normalization (if needed)
-    - Tokenization using config.MODEL_NAME tokenizer
-    - Batching logic
+5. TEXT CHUNKING FOR LONG MESSAGES
+   [ ] Implement text splitting in engine.py:
+       - Split messages >128 tokens into chunks
+       - Sliding window or sentence-based splitting
+       - Aggregate predictions (max risk, weighted avg, etc.)
+   [ ] Test with long messages (>200 tokens)
 
-[ ] Implement postprocessing:
-    - Logits -> probabilities (softmax)
-    - Apply risk threshold from config (or ROC-tuned threshold)
-    - Map indices back to category/severity labels
+6. PROMETHEUS METRICS
+   [ ] Add prometheus_client dependency
+   [ ] Instrument metrics:
+       - request_count (Counter)
+       - request_latency_seconds (Histogram with p50/p95/p99)
+       - requests_in_flight (Gauge)
+       - model_inference_seconds (Histogram)
+   [ ] Expose /metrics HTTP endpoint (port 8000)
 
----
+7. MODEL QUANTIZATION & BENCHMARKING
+   [ ] Implement INT8 quantization:
+       - Use torch.quantization.quantize_dynamic
+       - Compare FP32 vs INT8 latency
+   [ ] Benchmark both versions:
+       - Single request latency
+       - Throughput (requests/sec)
+       - Memory usage
+   [ ] Document results and select optimal version
 
-PHASE 3: gRPC Server Implementation
-------------------------------------
-[ ] Create inference/server.py:
-    - FilterServiceServicer class (implements generated interface)
-    - ClassifyMessage handler:
-        * Validate input
-        * Call InferenceEngine.predict()
-        * Map to ClassifyResponse proto
-        * Error handling (malformed input, model errors)
-    
-[ ] Server lifecycle:
-    - Initialization: Load model on startup
-    - Graceful shutdown: Cleanup resources
-    - Health check endpoint (optional)
+─────────────────────────────────────────────────────────────────
 
-[ ] Configuration:
-    - Port selection (e.g., 50051)
-    - TLS/SSL setup (optional for internal microservices)
-    - Max workers / thread pool settings
-
----
-
-PHASE 4: Error Handling & Resilience
--------------------------------------
-[ ] Handle error cases:
-    - Empty/invalid messages -> gRPC INVALID_ARGUMENT
-    - Model loading failures -> gRPC UNAVAILABLE
-    - Inference timeouts -> gRPC DEADLINE_EXCEEDED
-    - CUDA OOM / memory issues -> Fallback to CPU
-
-[ ] Logging:
-    - Request logging (message hash, not full text for privacy)
-    - Inference latency tracking
-    - Error tracking with stack traces
-
-[ ] Monitoring hooks:
-    - Request counter
-    - Latency histogram (p50, p95, p99)
-    - Error rate
-
----
-
-PHASE 5: Testing & Validation
-------------------------------
-[ ] Unit tests (pytest):
-    - Test InferenceEngine with real model
-    - Test prediction correctness on known samples
-    - Test batch processing
-
-[ ] Integration tests:
-    - Start server in test mode
-    - Create gRPC client
-    - Send test requests, validate responses
-    - Test error scenarios
-
-[ ] Performance benchmarking:
-    - Measure single prediction latency
-    - Measure throughput (requests/sec)
-    - Stress test with concurrent requests
-
----
-
-PHASE 6: Deployment Preparation
---------------------------------
-[ ] Docker support:
-    - Dockerfile for inference service
-    - Include model weights or download on startup
-    - Expose gRPC port
-
-[ ] Docker Compose integration:
-    - Add filter-inference service to docker-compose.yaml
-    - Network configuration for microservice access
-    - Health checks
-
-[ ] Documentation:
-    - Usage examples (Python client)
-    - Client examples for other languages (Node.js stub)
-    - API reference from proto
-
-[ ] Client library (optional):
-    - Wrapper class for easy consumption
-    - Connection pooling
-    - Retry logic
-
----
-
-DEPENDENCIES TO ADD
--------------------
+DEPENDENCIES
+------------
 grpcio>=1.60.0
 grpcio-tools>=1.60.0
 protobuf>=4.25.0
+prometheus-client>=0.19.0
 
-(torch, transformers, peft already in requirements.txt)
-
----
-
-FILE STRUCTURE (Planned)
--------------------------
+FILE STRUCTURE
+--------------
 inference/
-├── README.md ✓
-├── plan.txt ✓
-├── protos/
-│   └── filter.proto
+├── protos/filter.proto
 ├── generated/
 │   ├── filter_pb2.py
 │   └── filter_pb2_grpc.py
 ├── engine.py
 ├── server.py
-├── client.py (example)
-├── __init__.py
-└── tests/
-    ├── test_engine.py
-    └── test_server.py
-
----
-
-NEXT STEPS
-----------
-1. Review plan with team
-2. Start with filter.proto definition
-3. Implement InferenceEngine
-4. Build gRPC server wrapper
-5. Test & benchmark
-6. Integrate with backend/webhooks
+├── client.py (test client)
+└── metrics.py (prometheus setup)
