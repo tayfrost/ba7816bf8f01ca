@@ -19,6 +19,8 @@ from peft import get_peft_model
 from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup
 
+import wandb
+
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -181,11 +183,6 @@ def main():
     category_criterion = nn.CrossEntropyLoss()
     severity_criterion = nn.CrossEntropyLoss()
 
-    # Training loop
-    print("\n" + "=" * 80)
-    print("Starting training...")
-    print("=" * 80)
-
     training_log = {
         "experiment_id": f"bert_dual_head_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
         "config": {
@@ -204,6 +201,19 @@ def main():
         "device": str(device),
         "epochs": [],
     }
+
+    # Initialise WandB
+    if config.USE_WANDB:
+        wandb.init(
+            project=config.WANDB_PROJECT,
+            name=f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            config=training_log["config"],
+        )
+
+    # Training loop
+    print("\n" + "=" * 80)
+    print("Starting training...")
+    print("=" * 80)
 
     for epoch in range(config.NUM_EPOCHS):
         print(f"\nEpoch {epoch + 1}/{config.NUM_EPOCHS}")
@@ -228,6 +238,18 @@ def main():
         print(f"Val Category Acc: {val_metrics['category_accuracy']:.4f}")
         print(f"Val Severity Acc: {val_metrics['severity_accuracy']:.4f}")
 
+        # Log to WandB
+        if config.USE_WANDB:
+            wandb.log(
+                {
+                    "epoch": epoch + 1,
+                    "train_loss": train_loss,
+                    "val_loss": val_metrics["loss"],
+                    "val_category_accuracy": val_metrics["category_accuracy"],
+                    "val_severity_accuracy": val_metrics["severity_accuracy"],
+                }
+            )
+
         training_log["epochs"].append(
             {
                 "epoch": epoch + 1,
@@ -250,6 +272,16 @@ def main():
     print(f"Test Loss: {test_metrics['loss']:.4f}")
     print(f"Test Category Acc: {test_metrics['category_accuracy']:.4f}")
     print(f"Test Severity Acc: {test_metrics['severity_accuracy']:.4f}")
+
+    if config.USE_WANDB:
+        wandb.log(
+            {
+                "test_loss": test_metrics["loss"],
+                "test_category_accuracy": test_metrics["category_accuracy"],
+                "test_severity_accuracy": test_metrics["severity_accuracy"],
+            }
+        )
+        wandb.finish()
 
     training_log["final_test_metrics"] = test_metrics
 

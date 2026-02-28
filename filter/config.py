@@ -3,6 +3,7 @@ Configuration constants for the SentinelAI filter service.
 Serves as the SSOT for model parameters and paths.
 """
 
+import os
 from pathlib import Path
 
 # Project Structure
@@ -55,3 +56,7 @@ SEED = 42
 
 # Dataset-specific parameters
 DATASET_SEED = 42
+
+# WandB Configuration
+WANDB_PROJECT = "sentinelai-filter"
+USE_WANDB = os.environ.get("USE_WANDB", "False").lower() == "true"
