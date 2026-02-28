@@ -2,8 +2,8 @@
 
 import os
 from typing import List
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from mcp import ClientSession
+from mcp.client.sse import sse_client
 
 
 async def load_mcp_tools(session: ClientSession) -> List:
@@ -19,11 +19,7 @@ async def load_all_tools() -> List:
     # Load from Neo4j/RAG container if configured
     neo4j_url = os.getenv("NEO4J_MCP_URL")
     if neo4j_url:
-        server_params = StdioServerParameters(
-            command="node",
-            args=[neo4j_url]
-        )
-        async with stdio_client(server_params) as (read, write):
+        async with sse_client(neo4j_url) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 tools += await load_mcp_tools(session)
@@ -31,11 +27,7 @@ async def load_all_tools() -> List:
     # Load from additional MCP server if configured
     another_url = os.getenv("ANOTHER_MCP_URL")
     if another_url:
-        server_params = StdioServerParameters(
-            command="node",
-            args=[another_url]
-        )
-        async with stdio_client(server_params) as (read, write):
+        async with sse_client(another_url) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 tools += await load_mcp_tools(session)

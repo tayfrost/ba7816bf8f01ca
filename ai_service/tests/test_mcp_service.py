@@ -35,8 +35,8 @@ async def test_load_all_tools_with_neo4j():
     """Test load_all_tools with NEO4J_MCP_URL configured."""
     mock_tools = [{"name": "neo4j_tool"}]
     
-    with patch.dict(os.environ, {"NEO4J_MCP_URL": "mcp://neo4j"}):
-        with patch("services.mcp_service.stdio_client") as mock_client:
+    with patch.dict(os.environ, {"NEO4J_MCP_URL": "http://neo4j-mcp:8000"}):
+        with patch("services.mcp_service.sse_client") as mock_client:
             with patch("services.mcp_service.load_mcp_tools", return_value=mock_tools):
                 mock_session = AsyncMock()
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -60,8 +60,8 @@ async def test_load_all_tools_multiple_servers():
     mock_tools_1 = [{"name": "tool1"}]
     mock_tools_2 = [{"name": "tool2"}]
     
-    with patch.dict(os.environ, {"NEO4J_MCP_URL": "mcp://neo4j", "ANOTHER_MCP_URL": "mcp://other"}):
-        with patch("services.mcp_service.stdio_client") as mock_client:
+    with patch.dict(os.environ, {"NEO4J_MCP_URL": "http://neo4j:8000", "ANOTHER_MCP_URL": "http://other:8000"}):
+        with patch("services.mcp_service.sse_client") as mock_client:
             call_count = [0]
             
             async def mock_load_tools(session):
