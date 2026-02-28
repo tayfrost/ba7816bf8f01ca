@@ -13,3 +13,4 @@ onnxruntime
 python-dotenv
 grpcio
 grpcio-tools
+wandb

@@ -5,6 +5,8 @@ Loads and preprocesses the synthetic mental health dataset for BERT training.
 Handles tokenization, label encoding, and PyTorch dataset creation.
 """
 
+# pylint: disable=wrong-import-position
+
 import json
 import sys
 from pathlib import Path
