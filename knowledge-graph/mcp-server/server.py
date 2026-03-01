@@ -119,11 +119,14 @@ def get_dataset() -> dict:
         _DATASET = _load_dataset(data_path)
         logger.info(
             "Dataset loaded: %d papers, %d advice items",
-            len(_get_dataset()["papers"]),
-            len(_get_dataset()["advice"]),
+            len(_DATASET["papers"]),
+            len(_DATASET["advice"]),
         )
     return _DATASET
 
+# Word-boundary regex version of topic keywords (improved over src/agent_integration.py
+# which uses simple substring matching). Kept separate to avoid coupling to Neo4j imports
+# and to provide stricter matching for the MCP server.
 TOPIC_KEYWORDS = {
     "workplace_stress": [
         "stress",         "stressed", "stressing", "pressure", "overwhelmed", "overwhelming", "workload",
@@ -253,8 +256,6 @@ def _format_recommendation(r: dict) -> dict:
 
 mcp = FastMCP(
     "SentinelAI Knowledge Graph",
-    host=MCP_HOST,
-    port=MCP_PORT,
     instructions=(
         "MCP server for querying the SentinelAI evidence-based mental health knowledge graph. "
         "Contains 92 DOI-verified research papers, 368 advice items, 24 topics, and 37 techniques "
@@ -696,4 +697,4 @@ def get_stats() -> dict:
 
 if __name__ == "__main__":
     get_dataset()
-    mcp.run(transport="sse")
+    mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT)

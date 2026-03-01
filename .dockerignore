@@ -5,11 +5,26 @@ __pycache__
 .venv
 venv
 node_modules
-.env
 *.log
-.mcp-debug-tools
+
+# Secrets
+**/.env
+**/.env.*
+
+# Other services (not needed for kg-mcp-server build)
+webhooks/
+filter/
+frontend/
+backend/
+ai_service/
+.mcp-debug-tools/
+
+# Data volumes
+pgvector_data/
+neo4j_data/
+
+# Build artifacts
 knowledge-graph/mcp-server/.venv
 knowledge-graph/mcp-server/__pycache__
 knowledge-graph/mcp-server/uv.lock
-filter/models/lora_adapters/*.bin
-filter/models/lora_adapters/*.safetensors
+knowledge-graph/mcp-server/.venv/
