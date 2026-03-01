@@ -1,6 +1,15 @@
 version: '3.8'
 
 services:
+  filter:
+    build:
+      context: .
+      dockerfile: filter/Dockerfile
+    ports:
+      - "50051:50051"
+      - "8001:8000"
+    restart: unless-stopped
+
   webhooks:
     build: ./webhooks
     ports:
@@ -9,6 +18,18 @@ services:
       - ./webhooks/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@pgvector:5432/sentinelai
+    depends_on:
+      - pgvector
+    restart: unless-stopped
+
+  payments:
+    build: ./payments
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./payments/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
     depends_on:
       - pgvector
     restart: unless-stopped
@@ -63,7 +84,38 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
 
 volumes:
   pgvector_data:
+  prometheus_data:
+  grafana_data:
   neo4j_data:
