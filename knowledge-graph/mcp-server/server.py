@@ -2,17 +2,55 @@
 SentinelAI Knowledge Graph MCP Server
 Exposes the evidence-based mental health knowledge graph as MCP tools
 for AI agents to query recommendations given a diagnosis.
+
+Transport: SSE (Server-Sent Events) — connect at http://<host>:<port>/sse
 """
 
 import json
+import logging
 import os
 import re
 from mcp.server.fastmcp import FastMCP
 
-PAPERS_PATH = os.environ.get(
+logger = logging.getLogger("sentinelai-kg-mcp")
+
+HF_DATASET_REPO = os.environ.get("HF_DATASET_REPO", "")
+HF_DATASET_FILE = os.environ.get("HF_DATASET_FILE", "papers.json")
+
+LOCAL_DATA_PATH = os.environ.get(
     "KG_DATA_PATH",
     os.path.join(os.path.dirname(__file__), "..", "data", "papers.json"),
 )
+
+MCP_HOST = os.environ.get("MCP_HOST", "0.0.0.0")
+MCP_PORT = int(os.environ.get("MCP_PORT", "8001"))
+
+
+def _resolve_data_path() -> str:
+    """Load dataset from HuggingFace Hub if configured, otherwise use local file."""
+    if HF_DATASET_REPO:
+        try:
+            from huggingface_hub import hf_hub_download
+            path = hf_hub_download(
+                repo_id=HF_DATASET_REPO,
+                filename=HF_DATASET_FILE,
+                repo_type="dataset",
+            )
+            logger.info("Loaded dataset from HuggingFace: %s", HF_DATASET_REPO)
+            return path
+        except Exception as exc:
+            logger.warning("HF download failed (%s), falling back to local", exc)
+
+    if os.path.exists(LOCAL_DATA_PATH):
+        logger.info("Using local dataset: %s", LOCAL_DATA_PATH)
+        return LOCAL_DATA_PATH
+
+    raise FileNotFoundError(
+        f"No dataset found. Set HF_DATASET_REPO or ensure {LOCAL_DATA_PATH} exists."
+    )
+
+
+PAPERS_PATH = _resolve_data_path()
 
 DISCLAIMER = (
     "This advice is based on peer-reviewed research and is not a "
@@ -200,6 +238,8 @@ def _format_recommendation(r: dict) -> dict:
 
 mcp = FastMCP(
     "SentinelAI Knowledge Graph",
+    host=MCP_HOST,
+    port=MCP_PORT,
     instructions=(
         "MCP server for querying the SentinelAI evidence-based mental health knowledge graph. "
         "Contains 92 DOI-verified research papers, 368 advice items, 24 topics, and 37 techniques "
@@ -638,4 +678,4 @@ def get_stats() -> dict:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(transport="sse")

@@ -25,5 +25,44 @@ services:
       - pgvector_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  kg-mcp-server:
+    build:
+      context: .
+      dockerfile: knowledge-graph/mcp-server/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8001
+      - KG_DATA_PATH=/app/data/papers.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/sse')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: sentinelai-neo4j
+    profiles: ["dev"]
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/sentinelai2025
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_initial__size: 256m
+      NEO4J_dbms_memory_heap_max__size: 512m
+    volumes:
+      - neo4j_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   pgvector_data:
+  neo4j_data:
