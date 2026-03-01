@@ -37,10 +37,11 @@ services:
       - KG_DATA_PATH=/app/data/papers.json
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/sse')"]
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8001))"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 15s
 
   neo4j:
     image: neo4j:5.15-community

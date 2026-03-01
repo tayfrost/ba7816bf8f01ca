@@ -1,0 +1,15 @@
+.git
+.DS_Store
+__pycache__
+*.pyc
+.venv
+venv
+node_modules
+.env
+*.log
+.mcp-debug-tools
+knowledge-graph/mcp-server/.venv
+knowledge-graph/mcp-server/__pycache__
+knowledge-graph/mcp-server/uv.lock
+filter/models/lora_adapters/*.bin
+filter/models/lora_adapters/*.safetensors
