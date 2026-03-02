@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useOnboarding } from "../state/onboarding";
-import { countConnected, getConnectedProviders } from "../state/integrationRules";
+import { countConnected } from "../state/integrationRules";
 import { computeRange } from "../state/timeRange";
 import type { RangePreset } from "../state/timeRange";
 import SimpleLineChart from "../components/SimpleLineChart";
