@@ -7,6 +7,8 @@ import Usage from "./pages/Usage";
 import Dashboard from "./pages/Dashboard";
 import ConnectAccounts from "./pages/ConnectAccounts";
 import RequireOnboarding from "./guards/RequireOnboarding";
+import Employees from "./pages/Employees";
+import Settings from "./pages/Settings";
 
 export default function App() {
   return (
@@ -34,6 +36,24 @@ export default function App() {
           </RequireOnboarding>
         }
       />
+
+      <Route
+        path="/employees"
+        element={
+          <RequireOnboarding>
+            <Employees />
+          </RequireOnboarding>
+        }
+      />
+      
+      <Route
+        path="/settings"
+        element={
+        <RequireOnboarding>
+          <Settings />
+        </RequireOnboarding>
+      }
+    />
 
       <Route
         path="/usage"
