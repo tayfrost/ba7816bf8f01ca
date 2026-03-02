@@ -1,3 +1,4 @@
+# app/controllers/slack_controller.py
 """
 Slack Controller
 
@@ -12,8 +13,8 @@ import httpx
 from fastapi import APIRouter, Request, HTTPException
 
 from app.services.slack_service import verify_slack_signature
-from app.services.oauth_service import process_oauth_success
-from app.services.message_service import process_message_event
+from app.services.oauth_service import process_slack_oauth
+from app.services.message_service import process_slack_message
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +26,13 @@ async def slack_oauth_callback(code: str = None, state: str = None):
     if not code:
         logger.warning("OAuth callback missing code parameter")
         raise HTTPException(status_code=400, detail="Missing code parameter")
-    
+
     client_id = os.environ.get("SLACK_CLIENT_ID")
     client_secret = os.environ.get("SLACK_CLIENT_SECRET")
     redirect_uri = os.environ.get("SLACK_REDIRECT_URI")
-    
+
     logger.info("OAuth callback received, exchanging code for token")
-    
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://slack.com/api/oauth.v2.access",
@@ -39,13 +40,13 @@ async def slack_oauth_callback(code: str = None, state: str = None):
                 "client_id": client_id,
                 "client_secret": client_secret,
                 "code": code,
-                "redirect_uri": redirect_uri
+                "redirect_uri": redirect_uri,
             }
         )
         data = response.json()
-    
+
     try:
-        process_oauth_success(data)
+        process_slack_oauth(data)
         return {"ok": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -56,18 +57,18 @@ async def slack_events(request: Request):
     body = await request.body()
     headers = request.headers
     payload = json.loads(body)
-    
+
     if payload.get("type") == "url_verification":
         logger.info("URL verification request")
         return {"challenge": payload.get("challenge")}
-    
+
     timestamp = headers.get("X-Slack-Request-Timestamp", "")
     signature = headers.get("X-Slack-Signature", "")
-    
+
     if not verify_slack_signature(body, timestamp, signature):
         logger.warning("Invalid signature")
         raise HTTPException(status_code=403, detail="Invalid signature")
-    
-    process_message_event(payload, timestamp)
-    
+
+    process_slack_message(payload, timestamp)
+
     return {"ok": True}
