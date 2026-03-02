@@ -156,7 +156,7 @@ export default function Dashboard() {
 
         {isMock && (
           <div style={{ marginBottom: 18, opacity: 0.9, color: BRAND_ORANGE, fontWeight: 800 }}>
-            Showing mock data (backend unavailable)
+            Showing mock data (mock mode enabled)
           </div>
         )}
 

@@ -1,19 +1,17 @@
 // src/hooks/useDashboardData.ts
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { DateRange } from "../state/timeRange";
-import { makeAllSeries } from "../state/metricsMock";
 import { getUsage } from "../api";
 import type { Series } from "../api";
 
 type Status = "idle" | "loading" | "success" | "error";
 
+const IS_MOCK = import.meta.env.VITE_USE_MOCKS === "true";
+
 export function useDashboardData(range: DateRange) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
-
-  const mockSeries = useMemo(() => makeAllSeries(range), [range]);
-
-  const [series, setSeries] = useState<Series[]>(mockSeries);
+  const [series, setSeries] = useState<Series[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,12 +26,12 @@ export function useDashboardData(range: DateRange) {
 
         setSeries(res.series);
         setStatus("success");
-      } catch {
+      } catch (e) {
         if (cancelled) return;
 
-        setSeries(mockSeries);
+        setSeries([]);
         setStatus("error");
-        setError("Backend unavailable – showing mock data.");
+        setError("Failed to load metrics.");
       }
     }
 
@@ -41,7 +39,7 @@ export function useDashboardData(range: DateRange) {
     return () => {
       cancelled = true;
     };
-  }, [range.start, range.end, mockSeries]);
+  }, [range.start, range.end]);
 
-  return { status, error, series, isMock: status === "error" };
+  return { status, error, series, isMock: IS_MOCK };
 }
