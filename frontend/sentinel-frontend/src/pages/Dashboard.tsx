@@ -56,11 +56,11 @@ export default function Dashboard() {
         </div>
 
         <nav style={{ flexGrow: 1 }}>
-          <SidebarLink label="Dashboard" active />
-          <SidebarLink label="Employees" />
-          <SidebarLink label="Connected Accounts" />
-          <SidebarLink label="Usage Guide" />
-          <SidebarLink label="Account Settings" />
+          <SidebarLink to="/dashboard" label="Dashboard" end />
+          <SidebarLink to="/employees" label="Employees" />
+          <SidebarLink to="/connect-accounts" label="Connected Accounts" />
+          <SidebarLink to="/usage" label="Usage Guide" />
+          <SidebarLink to="/settings" label="Account Settings" />
         </nav>
 
         <button onClick={reset} style={{ 

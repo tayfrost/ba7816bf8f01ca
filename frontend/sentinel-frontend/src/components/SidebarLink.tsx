@@ -1,30 +1,35 @@
+import { NavLink } from "react-router-dom";
+
 type Props = {
+  to: string;
   label: string;
-  active?: boolean;
-  onClick?: () => void;
+  end?: boolean;
 };
 
 const BRAND_ORANGE = "var(--color-top)";
 
-export default function SidebarLink({ label, active = false, onClick }: Props) {
+export default function SidebarLink({ to, label, end }: Props) {
   return (
-    <div
-      onClick={onClick}
-      style={{
+    <NavLink
+      to={to}
+      end={end}
+      style={({ isActive }) => ({
         padding: "12px 20px",
         margin: "8px 0",
         borderRadius: "12px",
         cursor: "pointer",
-        background: active ? `rgba(227, 141, 38, 0.25)` : "transparent",
-        color: active ? BRAND_ORANGE : "#ffffffa0",
-        fontWeight: "800",
+        background: isActive ? `rgba(227, 141, 38, 0.25)` : "transparent",
+        color: isActive ? BRAND_ORANGE : "#ffffffa0",
+        fontWeight: 800,
         fontSize: "13px",
         letterSpacing: "1px",
         transition: "all 0.3s ease",
-        borderLeft: active ? `4px solid ${BRAND_ORANGE}` : "4px solid transparent",
-      }}
+        borderLeft: isActive ? `4px solid ${BRAND_ORANGE}` : "4px solid transparent",
+        textDecoration: "none",
+        display: "block",
+      })}
     >
       {label.toUpperCase()}
-    </div>
+    </NavLink>
   );
 }
