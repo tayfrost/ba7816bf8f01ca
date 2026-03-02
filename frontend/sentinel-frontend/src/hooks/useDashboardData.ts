@@ -2,8 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DateRange } from "../state/timeRange";
 import { makeAllSeries } from "../state/metricsMock";
-import { getUsage } from "../api/usage";
-import type { Series } from "../api/usage";
+import { getUsage } from "../api";
+import type { Series } from "../api";
 
 type Status = "idle" | "loading" | "success" | "error";
 

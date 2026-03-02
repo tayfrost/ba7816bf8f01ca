@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import LandingHeader from "../components/LandingHeader"; 
 import { useOnboarding } from "../state/onboarding";
-import { startIntegration } from "../api/integrations";
+import { startIntegration } from "../api";
 
 type Provider = "slack" | "gmail" | "outlook";
 
