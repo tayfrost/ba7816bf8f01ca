@@ -29,6 +29,17 @@ export default function Signup() {
 
     if (selectedPlan) {
       setPlan(selectedPlan);
+
+      if (selectedPlan === "paid") {
+        navigate("/payment");
+      } else {
+        navigate("/connect-accounts");
+      }
+      return;
+    }
+
+    // If user came to signup without plan param, continue to plan selection
+    navigate("/plan");
     }
 
     navigate("/plan");
