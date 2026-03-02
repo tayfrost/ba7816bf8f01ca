@@ -5,29 +5,10 @@ import { computeRange } from "../state/timeRange";
 import type { RangePreset } from "../state/timeRange";
 import SimpleLineChart from "../components/SimpleLineChart";
 import { useDashboardData } from "../hooks/useDashboardData";
+import SidebarLink from "../components/SidebarLink";
 
 const BRAND_ORANGE = "var(--color-top)"; 
 const BRAND_DEEP = "var(--color-brand-deep)";
-
-const SidebarLink = ({ label, active = false }: { label: string, active?: boolean }) => (
-  <div style={{
-    padding: "12px 20px",
-    margin: "8px 0",
-    borderRadius: "12px",
-    cursor: "pointer",
-    background: active ? `rgba(227, 141, 38, 0.25)` : "transparent",
-    color: active ? BRAND_ORANGE : "#ffffffa0",
-    fontWeight: "800",
-    fontSize: "13px",
-    letterSpacing: "1px",
-    transition: "all 0.3s ease",
-    borderLeft: active ? `4px solid ${BRAND_ORANGE}` : "4px solid transparent",
-    boxShadow: active ? `0 4px 15px rgba(0, 0, 0, 0.3)` : "none",
-    textShadow: active ? `0 0 10px rgba(227, 141, 38, 0.3)` : "none"
-  }}>
-    {label.toUpperCase()}
-  </div>
-);
 
 export default function Dashboard() {
   const { signup, plan, integrations, reset } = useOnboarding();
