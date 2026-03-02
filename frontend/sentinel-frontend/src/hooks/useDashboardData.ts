@@ -43,5 +43,5 @@ export function useDashboardData(range: DateRange) {
     };
   }, [range.start, range.end, mockSeries]);
 
-  return { status, error, series };
+  return { status, error, series, isMock: status === "error" };
 }

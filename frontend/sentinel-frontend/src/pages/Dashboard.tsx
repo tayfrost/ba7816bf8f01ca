@@ -25,7 +25,7 @@ export default function Dashboard() {
     return computeRange(preset);
   }, [preset, customStart, customEnd]);
 
-  const { status, error, series: metricSeries } = useDashboardData(range);
+  const { status, error, series: metricSeries, isMock } = useDashboardData(range);
   const connectedCount = useMemo(() => countConnected(integrations), [integrations]);
   const riskScore = useMemo(() => Math.min(100, 35 + connectedCount * 20), [connectedCount]);
 
@@ -151,6 +151,12 @@ export default function Dashboard() {
         {status === "error" && error && (
           <div style={{ marginBottom: 18, opacity: 0.9, color: BRAND_ORANGE, fontWeight: 800 }}>
             {error}
+          </div>
+        )}
+
+        {isMock && (
+          <div style={{ marginBottom: 18, opacity: 0.9, color: BRAND_ORANGE, fontWeight: 800 }}>
+            Showing mock data (backend unavailable)
           </div>
         )}
 
