@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+
+  --color-top: #e38d26;    /* Rich Golden Orange */
+  --color-bottom: #f7e9c1; /* Warm Oatmeal */
+  
+  /* UI Elements */
+  --color-brand-deep: #3f0345;  /* Deep purple for contrast */
+  --color-brand-accent: #fcd34d; /* Bright Golden Halo */
+}
+
+@layer base {
+  body {
+    @apply antialiased m-0 p-0 overflow-hidden;
+    /* Vertical Gradient */
+    background: linear-gradient(to bottom, var(--color-top), var(--color-bottom));
+    min-height: 100vh;
+  }
+}
+

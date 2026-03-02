@@ -1,3 +1,7 @@
+
+.DS_Store
+**/.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -32,3 +36,18 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+
+#database configs
+*.db
+# Big models
+*.pt
+
+# Generated proto files
+filter/generated/
+*.pb2.py
+*.pb2_grpc.py
+*.pb2.pyi
+
+#mcp-debug tools
+.mcp-debug-tools/
+

@@ -1,6 +1,15 @@
 version: '3.8'
 
 services:
+  filter:
+    build:
+      context: .
+      dockerfile: filter/Dockerfile
+    ports:
+      - "50051:50051"
+      - "8001:8000"
+    restart: unless-stopped
+
   webhooks:
     build: ./webhooks
     ports:
@@ -9,6 +18,18 @@ services:
       - ./webhooks/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@pgvector:5432/sentinelai
+    depends_on:
+      - pgvector
+    restart: unless-stopped
+
+  payments:
+    build: ./payments
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./payments/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
     depends_on:
       - pgvector
     restart: unless-stopped
