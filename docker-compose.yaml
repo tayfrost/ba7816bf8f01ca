@@ -1,10 +1,19 @@
 version: '3.8'
 
 services:
+
   ai_service:
     build: ./ai_service
     ports:
       - "8001:8001"
+
+  filter:
+    build:
+      context: .
+      dockerfile: filter/Dockerfile
+    ports:
+      - "50051:50051"
+      - "8001:8000"
     restart: unless-stopped
 
   webhooks:
@@ -15,6 +24,18 @@ services:
       - ./webhooks/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@pgvector:5432/sentinelai
+    depends_on:
+      - pgvector
+    restart: unless-stopped
+
+  payments:
+    build: ./payments
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./payments/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
     depends_on:
       - pgvector
     restart: unless-stopped
@@ -31,5 +52,76 @@ services:
       - pgvector_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  kg-mcp-server:
+    build:
+      context: .
+      dockerfile: knowledge-graph/mcp-server/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8001
+      - KG_DATA_PATH=/app/data/papers.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8001))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: sentinelai-neo4j
+    profiles: ["dev"]
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/sentinelai2025
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_initial__size: 256m
+      NEO4J_dbms_memory_heap_max__size: 512m
+    volumes:
+      - neo4j_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+
 volumes:
   pgvector_data:
+  prometheus_data:
+  grafana_data:
+  neo4j_data:
