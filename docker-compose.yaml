@@ -15,7 +15,7 @@ services:
       dockerfile: filter/Dockerfile
     ports:
       - "50051:50051"
-      - "8003:8000"
+      - "9192:8000"
     restart: unless-stopped
 
   webhooks:
