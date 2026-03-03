@@ -696,5 +696,6 @@ def get_stats() -> dict:
 
 
 if __name__ == "__main__":
+    import uvicorn
     get_dataset()
-    mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT)
+    uvicorn.run(mcp.get_asgi_app(), host=MCP_HOST, port=MCP_PORT)
