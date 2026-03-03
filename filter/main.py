@@ -22,8 +22,12 @@ from inference.server import serve
 
 def init_app():
     """Initialise the application components."""
+    print("[MAIN] SentinelAI Filter Service starting...")
+    print("[MAIN] Python version:", sys.version)
+    print("[MAIN] Working directory:", Path.cwd())
     serve()
 
 
 if __name__ == "__main__":
+    print("[MAIN] Entry point reached")
     init_app()

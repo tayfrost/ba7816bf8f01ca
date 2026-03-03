@@ -21,7 +21,8 @@ RUN mkdir -p generated && \
 
 # Copy application code
 COPY filter/inference/ ./inference/
-COPY filter/services/ ./services/
+COPY filter/services/onnx_factory.py ./services/
+RUN touch services/__init__.py
 COPY filter/config.py .
 COPY filter/.env .
 COPY filter/main.py .
@@ -32,5 +33,5 @@ EXPOSE 50051
 # Expose metrics port
 EXPOSE 8000
 
-# Run the server
-CMD ["python", "main.py"]
+# Run the server with unbuffered output for immediate logs
+CMD ["python", "-u", "main.py"]

@@ -16,29 +16,47 @@ load_dotenv()
 from filter.v1 import filter_pb2
 from filter.v1 import filter_pb2_grpc
 import config
-from services.model_factory import load_onnx_model_and_tokenizer
+from services.onnx_factory import load_onnx_model_and_tokenizer
 
 
 class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
     def __init__(self):
         """Initialize tokenizer and ONNX model."""
+        print("[SERVER] Initializing FilterServiceServicer...")
+        
         self.model_name = os.environ.get("MODEL_NAME", config.MODEL_NAME)
         self.max_length = int(os.environ.get("max_token_length", config.MAX_LENGTH))
         self.overlap = int(os.environ.get("overlap", 32))
         self.threshold = float(os.environ.get("threshold", 0.5))
         
+        print(f"[SERVER] Configuration loaded:")
+        print(f"[SERVER]   Model: {self.model_name}")
+        print(f"[SERVER]   Max length: {self.max_length}")
+        print(f"[SERVER]   Overlap: {self.overlap}")
+        print(f"[SERVER]   Threshold: {self.threshold}")
+        
+        print(f"[SERVER] Loading ONNX model and tokenizer...")
         self.onnx_session, self.tokenizer = load_onnx_model_and_tokenizer()
         
-        print(f"✓ Model loaded: {self.model_name}")
-        print(f"✓ Max length: {self.max_length}, Overlap: {self.overlap}, Threshold: {self.threshold}")
+        # Get special token IDs from tokenizer
+        self.cls_token_id = self.tokenizer.token_to_id('[CLS]')
+        self.sep_token_id = self.tokenizer.token_to_id('[SEP]')
+        self.pad_token_id = self.tokenizer.token_to_id('[PAD]')
+        print(f"[SERVER] Special tokens - CLS: {self.cls_token_id}, SEP: {self.sep_token_id}, PAD: {self.pad_token_id}")
+        
+        print(f"[SERVER] ✓ FilterServiceServicer initialized successfully")
     
     def ClassifyMessage(self, request, context):
         """Classify a message using sliding window approach."""
+        print(f"[REQUEST] Received classification request")
         try:
             message = request.message
+            print(f"[REQUEST] Message length: {len(message)} chars")
             
             # Tokenize full message
-            tokens = self.tokenizer.encode(message, add_special_tokens=False)
+            encoding = self.tokenizer.encode(message, add_special_tokens=False)
+            tokens = encoding.ids
+            print(f"[REQUEST] Tokenized into {len(tokens)} tokens")
             
             # Handle empty or short messages
             if len(tokens) == 0:
@@ -63,6 +81,8 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
                     break
                 start += (self.max_length - self.overlap - 2)
             
+            print(f"[REQUEST] Split into {len(chunks)} chunks for processing")
+            
             # Run inference on each chunk
             all_responses = []
             max_category_conf = 0.0
@@ -76,12 +96,12 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             
             for i, chunk in enumerate(chunks):
                 # Add special tokens
-                input_ids = [self.tokenizer.cls_token_id] + chunk + [self.tokenizer.sep_token_id]
+                input_ids = [self.cls_token_id] + chunk + [self.sep_token_id]
                 attention_mask = [1] * len(input_ids)
                 
                 # Pad to max_length
                 padding_length = self.max_length - len(input_ids)
-                input_ids += [self.tokenizer.pad_token_id] * padding_length
+                input_ids += [self.pad_token_id] * padding_length
                 attention_mask += [0] * padding_length
                 
                 # Convert to numpy arrays
@@ -138,6 +158,8 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             # Combine all responses into single string
             all_responses_text = " | ".join(all_responses)
             
+            print(f"[RESPONSE] Classification complete: category={max_category}({max_category_conf:.3f}), severity={max_severity}({max_severity_conf:.3f}), is_risk={is_risk}")
+            
             return filter_pb2.ClassifyResponse(
                 category=max_category,
                 category_confidence=max_category_conf,
@@ -148,6 +170,9 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             )
             
         except Exception as e:
+            print(f"[ERROR] Failed to process message: {str(e)}")
+            import traceback
+            traceback.print_exc()
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Error processing message: {str(e)}")
             return filter_pb2.ClassifyResponse()
@@ -161,14 +186,26 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
 
 def serve():
+    print("[SERVER] Starting gRPC server...")
+    print("[SERVER] Creating thread pool executor with 10 workers...")
+    
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    
+    print("[SERVER] Initializing FilterServiceServicer...")
     filter_pb2_grpc.add_FilterServiceServicer_to_server(
         FilterServiceServicer(), server
     )
     
+    print("[SERVER] Binding to port 50051...")
     server.add_insecure_port('[::]:50051')
+    
+    print("[SERVER] Starting server...")
     server.start()
-    print("Filter gRPC server started on port 50051")
+    
+    print("="*60)
+    print("[SERVER] ✓ Filter gRPC server is ready and listening on port 50051")
+    print("="*60)
+    
     server.wait_for_termination()
 
 
