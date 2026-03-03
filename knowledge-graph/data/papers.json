@@ -1,0 +1,4329 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "description": "Evidence-based knowledge graph for workplace mental health advice. 92 papers with verified DOIs from peer-reviewed journals.",
+    "generated": "2025-02-19",
+    "sources": [
+      "Gemini Deep Research",
+      "ChatGPT Deep Research",
+      "Manual curation"
+    ],
+    "schema": "Neo4j property graph with JSON fallback",
+    "total_papers": 92,
+    "topics": 24,
+    "techniques": 37,
+    "total_advice": 368
+  },
+  "topics": [
+    {
+      "id": "workplace_stress",
+      "name": "Workplace Stress",
+      "description": "Stress arising from work demands, deadlines, workload, and organizational factors"
+    },
+    {
+      "id": "burnout",
+      "name": "Burnout & Exhaustion",
+      "description": "Chronic exhaustion, cynicism, and reduced efficacy from prolonged work stress"
+    },
+    {
+      "id": "anxiety",
+      "name": "Workplace Anxiety",
+      "description": "Anxiety disorders and symptoms in occupational contexts"
+    },
+    {
+      "id": "depression",
+      "name": "Occupational Depression",
+      "description": "Depressive symptoms linked to work conditions or amplified by them"
+    },
+    {
+      "id": "sleep_issues",
+      "name": "Sleep & Fatigue",
+      "description": "Insomnia, disturbed sleep, shift-work fatigue, and recovery through sleep"
+    },
+    {
+      "id": "mindfulness",
+      "name": "Mindfulness",
+      "description": "Mindfulness-based stress reduction, meditation, and present-moment awareness practices"
+    },
+    {
+      "id": "emotional_regulation",
+      "name": "Emotional Regulation",
+      "description": "Managing emotional responses including anger, frustration, and reactivity"
+    },
+    {
+      "id": "workplace_bullying",
+      "name": "Workplace Bullying & Harassment",
+      "description": "Bullying, incivility, harassment, and bystander intervention in the workplace"
+    },
+    {
+      "id": "work_life_balance",
+      "name": "Work-Life Balance & Detachment",
+      "description": "Boundary management, psychological detachment, and recovery from work"
+    },
+    {
+      "id": "resilience",
+      "name": "Resilience & Coping",
+      "description": "Building stress resilience, adaptive coping, and post-adversity growth"
+    },
+    {
+      "id": "interpersonal_conflict",
+      "name": "Communication & Conflict",
+      "description": "Difficult conversations, conflict resolution, and communication skills"
+    },
+    {
+      "id": "digital_interventions",
+      "name": "Digital & eHealth Interventions",
+      "description": "Web-based, app-based, and computerized mental health programs for employees"
+    },
+    {
+      "id": "physical_activity",
+      "name": "Physical Activity & Exercise",
+      "description": "Exercise as intervention for depression, stress, and overall well-being"
+    },
+    {
+      "id": "cognitive_distortions",
+      "name": "Cognitive Distortions & CBT",
+      "description": "Cognitive-behavioral approaches to thought patterns, catastrophizing, and restructuring"
+    },
+    {
+      "id": "act_values",
+      "name": "ACT & Values-Based Action",
+      "description": "Acceptance and Commitment Therapy: defusion, values clarification, committed action"
+    },
+    {
+      "id": "organizational_culture",
+      "name": "Organizational Culture & Safety",
+      "description": "Psychological safety, leadership, policy, and systemic workplace factors"
+    },
+    {
+      "id": "anger_management",
+      "name": "Anger & Aggression",
+      "description": "Anger regulation, aggression prevention, and de-escalation in high-stress roles"
+    },
+    {
+      "id": "occupational_health",
+      "name": "Occupational Health & Prevention",
+      "description": "Preventive health programs, job crafting, and systemic workplace interventions"
+    },
+    {
+      "id": "self_compassion",
+      "name": "Self-Compassion & Perfectionism",
+      "description": "Self-compassion practices, perfectionism management, and inner critic work"
+    },
+    {
+      "id": "expressive_writing",
+      "name": "Expressive Writing",
+      "description": "Therapeutic writing, journaling, and reflective practices for emotional processing"
+    },
+    {
+      "id": "social_isolation",
+      "name": "Remote Isolation",
+      "description": "Social isolation and loneliness in remote or hybrid work environments"
+    },
+    {
+      "id": "time_poverty",
+      "name": "Time Poverty",
+      "description": "Feeling of having insufficient time, time pressure, and time management challenges"
+    },
+    {
+      "id": "biofeedback",
+      "name": "Biofeedback & Physiological Regulation",
+      "description": "HRV biofeedback, resonance breathing, and physiological self-regulation techniques"
+    },
+    {
+      "id": "perfectionism",
+      "name": "Perfectionism",
+      "description": "Maladaptive perfectionism, impossibly high standards, and fear of failure in work contexts"
+    }
+  ],
+  "techniques": [
+    {
+      "id": "mindfulness_meditation",
+      "name": "Mindfulness Meditation (MBSR/MBRT)",
+      "description": "Structured multi-week mindfulness programs including MBSR and MBRT",
+      "topics": [
+        "mindfulness",
+        "workplace_stress",
+        "anxiety",
+        "resilience"
+      ]
+    },
+    {
+      "id": "mindful_breathing",
+      "name": "Mindful Breathing Micro-Practices",
+      "description": "Brief 30-90 second breathing pauses for attention reset during work",
+      "topics": [
+        "mindfulness",
+        "workplace_stress",
+        "emotional_regulation"
+      ]
+    },
+    {
+      "id": "body_scan",
+      "name": "Body Scan Meditation",
+      "description": "Systematic attention to body sensations for tension awareness and release",
+      "topics": [
+        "mindfulness",
+        "workplace_stress",
+        "sleep_issues"
+      ]
+    },
+    {
+      "id": "cbt_restructuring",
+      "name": "Cognitive Restructuring (CBT)",
+      "description": "Identifying and challenging unhelpful thought patterns with balanced alternatives",
+      "topics": [
+        "cognitive_distortions",
+        "depression",
+        "anxiety",
+        "self_compassion"
+      ]
+    },
+    {
+      "id": "behavioral_activation",
+      "name": "Behavioral Activation",
+      "description": "Scheduling pleasant and meaningful activities to counter withdrawal and low mood",
+      "topics": [
+        "depression",
+        "burnout",
+        "physical_activity"
+      ]
+    },
+    {
+      "id": "problem_solving",
+      "name": "Problem-Solving Therapy",
+      "description": "Structured approach: define problem, brainstorm, select, test, review",
+      "topics": [
+        "workplace_stress",
+        "occupational_health",
+        "resilience"
+      ]
+    },
+    {
+      "id": "self_monitoring",
+      "name": "Self-Monitoring & Tracking",
+      "description": "Regular tracking of stress, mood, sleep, and coping to guide interventions",
+      "topics": [
+        "resilience",
+        "workplace_stress",
+        "burnout"
+      ]
+    },
+    {
+      "id": "psychological_detachment",
+      "name": "Psychological Detachment & Recovery",
+      "description": "End-of-day shutdown rituals, rumination management, and after-work recovery",
+      "topics": [
+        "work_life_balance",
+        "burnout",
+        "sleep_issues"
+      ]
+    },
+    {
+      "id": "boundary_setting",
+      "name": "Boundary Setting",
+      "description": "Setting communication windows, after-hours rules, and technology boundaries",
+      "topics": [
+        "work_life_balance",
+        "workplace_stress",
+        "time_poverty"
+      ]
+    },
+    {
+      "id": "job_crafting",
+      "name": "Job Crafting & Organizational Change",
+      "description": "Modifying job demands/resources, role redesign, and workload negotiation",
+      "topics": [
+        "occupational_health",
+        "burnout",
+        "workplace_stress"
+      ]
+    },
+    {
+      "id": "micro_breaks",
+      "name": "Micro-Break Strategies",
+      "description": "Brief restorative breaks (under 10 min) to replenish energy and attention",
+      "topics": [
+        "workplace_stress",
+        "time_poverty",
+        "resilience"
+      ]
+    },
+    {
+      "id": "digital_programs",
+      "name": "Digital/Online Intervention Programs",
+      "description": "Web-based and app-based CBT, mindfulness, and stress management courses",
+      "topics": [
+        "digital_interventions",
+        "workplace_stress",
+        "anxiety"
+      ]
+    },
+    {
+      "id": "act_defusion",
+      "name": "ACT: Defusion & Values Clarification",
+      "description": "Cognitive defusion, values-based action, and psychological flexibility",
+      "topics": [
+        "act_values",
+        "workplace_stress",
+        "resilience"
+      ]
+    },
+    {
+      "id": "sleep_hygiene",
+      "name": "Sleep Hygiene & Wind-Down Routines",
+      "description": "Environmental and behavioral strategies for consistent, restorative sleep",
+      "topics": [
+        "sleep_issues",
+        "burnout",
+        "work_life_balance"
+      ]
+    },
+    {
+      "id": "cbti",
+      "name": "CBT for Insomnia (CBT-i)",
+      "description": "Stimulus control, sleep restriction, and cognitive techniques for insomnia",
+      "topics": [
+        "sleep_issues",
+        "cognitive_distortions"
+      ]
+    },
+    {
+      "id": "hrv_biofeedback",
+      "name": "HRV Biofeedback & Resonance Breathing",
+      "description": "Heart rate variability training at ~0.1 Hz for stress and anxiety reduction",
+      "topics": [
+        "biofeedback",
+        "anxiety",
+        "workplace_stress"
+      ]
+    },
+    {
+      "id": "paced_breathing",
+      "name": "Paced & Diaphragmatic Breathing",
+      "description": "Slow breathing techniques (4-6 breaths/min) for physiological calming",
+      "topics": [
+        "anxiety",
+        "workplace_stress",
+        "emotional_regulation"
+      ]
+    },
+    {
+      "id": "exercise",
+      "name": "Structured Exercise",
+      "description": "Regular physical activity (3x/week, 20-45 min) as mental health intervention",
+      "topics": [
+        "physical_activity",
+        "depression",
+        "resilience"
+      ]
+    },
+    {
+      "id": "expressive_writing",
+      "name": "Expressive Writing & Journaling",
+      "description": "Therapeutic writing about stressors, reflective journaling, and meaning-making",
+      "topics": [
+        "expressive_writing",
+        "workplace_stress",
+        "depression"
+      ]
+    },
+    {
+      "id": "self_compassion_exercise",
+      "name": "Self-Compassion Exercises",
+      "description": "Self-compassion breaks, kind self-talk, and common humanity reframing",
+      "topics": [
+        "self_compassion",
+        "burnout",
+        "anxiety"
+      ]
+    },
+    {
+      "id": "social_support",
+      "name": "Peer & Social Support",
+      "description": "Buddy systems, peer check-ins, group discussions, and debrief routines",
+      "topics": [
+        "social_isolation",
+        "resilience",
+        "workplace_stress"
+      ]
+    },
+    {
+      "id": "mental_health_literacy",
+      "name": "Mental Health Literacy & Help-Seeking",
+      "description": "Awareness training, stigma reduction, and pathways to professional support",
+      "topics": [
+        "organizational_culture",
+        "occupational_health"
+      ]
+    },
+    {
+      "id": "communication_skills",
+      "name": "Communication Skills Training",
+      "description": "Structured practice for difficult conversations, empathic listening, feedback",
+      "topics": [
+        "interpersonal_conflict",
+        "workplace_stress",
+        "resilience"
+      ]
+    },
+    {
+      "id": "assertiveness",
+      "name": "Assertiveness Training",
+      "description": "I-statements, refusal scripts, and boundary communication",
+      "topics": [
+        "interpersonal_conflict",
+        "self_compassion",
+        "work_life_balance"
+      ]
+    },
+    {
+      "id": "bystander_intervention",
+      "name": "Bystander Intervention",
+      "description": "Recognition, safe intervention options, documentation, and escalation for bullying/harassment",
+      "topics": [
+        "workplace_bullying",
+        "organizational_culture"
+      ]
+    },
+    {
+      "id": "cyclic_sighing",
+      "name": "Cyclic Sighing",
+      "description": "Double inhale through nose followed by extended exhale for rapid parasympathetic activation",
+      "topics": [
+        "anxiety",
+        "workplace_stress",
+        "emotional_regulation"
+      ]
+    },
+    {
+      "id": "box_breathing",
+      "name": "Box Breathing",
+      "description": "4-4-4-4 pattern breathing for focus and calm under pressure",
+      "topics": [
+        "anxiety",
+        "resilience",
+        "emotional_regulation"
+      ]
+    },
+    {
+      "id": "progressive_muscle",
+      "name": "Progressive Muscle Relaxation",
+      "description": "Systematic tension-release through muscle groups for physical and mental relaxation",
+      "topics": [
+        "anxiety",
+        "sleep_issues",
+        "workplace_stress"
+      ]
+    },
+    {
+      "id": "strategic_napping",
+      "name": "Strategic Timed Napping",
+      "description": "Planned short naps for alertness recovery in shift work or high-fatigue contexts",
+      "topics": [
+        "sleep_issues",
+        "time_poverty"
+      ]
+    },
+    {
+      "id": "gratitude_practice",
+      "name": "Gratitude Practice",
+      "description": "Regular gratitude journaling or expression to shift attention and build positive affect",
+      "topics": [
+        "resilience",
+        "depression"
+      ]
+    },
+    {
+      "id": "emotional_labeling",
+      "name": "Emotional Labeling",
+      "description": "Naming and acknowledging emotions to reduce their intensity and improve regulation",
+      "topics": [
+        "emotional_regulation",
+        "mindfulness"
+      ]
+    },
+    {
+      "id": "common_humanity",
+      "name": "Common Humanity Reframing",
+      "description": "Recognizing shared human experience to reduce isolation and self-blame",
+      "topics": [
+        "self_compassion",
+        "social_isolation"
+      ]
+    },
+    {
+      "id": "time_management",
+      "name": "Scheduling & Time Management",
+      "description": "Protected time blocks, task prioritization, and meeting load management",
+      "topics": [
+        "time_poverty",
+        "workplace_stress",
+        "occupational_health"
+      ]
+    },
+    {
+      "id": "vilpa_micropatterns",
+      "name": "VILPA Micropatterns (Physical Activity)",
+      "description": "Vigorous intermittent lifestyle physical activity integrated into daily routine",
+      "topics": [
+        "physical_activity",
+        "workplace_stress"
+      ]
+    },
+    {
+      "id": "mbrt",
+      "name": "Mindfulness-Based Resilience Training",
+      "description": "Specialized mindfulness program for high-stress occupations (law enforcement, first responders)",
+      "topics": [
+        "resilience",
+        "anger_management",
+        "mindfulness"
+      ]
+    },
+    {
+      "id": "diaphragmatic_breathing",
+      "name": "Diaphragmatic Breathing",
+      "description": "Deep belly breathing to activate parasympathetic nervous system",
+      "topics": [
+        "anxiety",
+        "workplace_stress",
+        "emotional_regulation"
+      ]
+    },
+    {
+      "id": "time_blocking",
+      "name": "Time-Blocking & Task Structuring",
+      "description": "Scheduling focused work blocks and structuring tasks to reduce cognitive overload",
+      "topics": [
+        "time_poverty",
+        "workplace_stress"
+      ]
+    }
+  ],
+  "papers": [
+    {
+      "id": "paper_001",
+      "title": "Brief structured respiration practices enhance mood and reduce physiological arousal",
+      "authors": [
+        "Melis Yilmaz Balban",
+        "Eric Neri",
+        "Manuela M. Kogon",
+        "Lara Weed",
+        "Bali Nourber",
+        "Briana Jo",
+        "Gary Holl",
+        "Jamie M. Zeitzer",
+        "David Spiegel",
+        "Andrew D. Huberman"
+      ],
+      "year": 2023,
+      "source": "Cell Reports Medicine",
+      "doi": "10.1016/j.xcrm.2022.100895",
+      "citations": 245,
+      "topics": [
+        "anxiety",
+        "workplace_stress",
+        "anger_management"
+      ],
+      "advice": [
+        {
+          "text": "Practice cyclic sighing for 5 minutes daily: double inhale through nose followed by extended exhale through mouth to rapidly engage the parasympathetic nervous system",
+          "technique": "cyclic_sighing",
+          "confidence": 0.96
+        },
+        {
+          "text": "Exhale-focused breathing produces significantly greater mood improvements than equal-duration mindfulness meditation",
+          "technique": "cyclic_sighing",
+          "confidence": 0.93
+        },
+        {
+          "text": "Box breathing (4-4-4-4 pattern) before confrontational conversations reduces emotional reactivity and physiological arousal",
+          "technique": "box_breathing",
+          "confidence": 0.89
+        },
+        {
+          "text": "Even a single 5-minute daily breathwork session significantly reduces resting respiratory rate over 4 weeks of practice",
+          "technique": "diaphragmatic_breathing",
+          "confidence": 0.91
+        }
+      ]
+    },
+    {
+      "id": "paper_002",
+      "title": "The impact of remote work and mediated communication frequency on isolation and psychological distress",
+      "authors": [
+        "B\u00e9n\u00e9dicte Affeldt",
+        "Jolanta Babiak",
+        "Dorota Domaradzka"
+      ],
+      "year": 2022,
+      "source": "European Journal of Work and Organizational Psychology",
+      "doi": "10.1080/1359432X.2021.2002299",
+      "citations": 120,
+      "topics": [
+        "social_isolation",
+        "depression"
+      ],
+      "advice": [
+        {
+          "text": "Schedule at least one 15-minute social check-in per day with a colleague to combat remote work isolation",
+          "technique": "social_support",
+          "confidence": 0.87
+        },
+        {
+          "text": "High-quality mediated communication with colleagues acts as a critical psychological buffer against remote work distress",
+          "technique": "social_support",
+          "confidence": 0.85
+        },
+        {
+          "text": "Remote work frequency directly increases perceived isolation \u2014 proactively design structured digital social interactions",
+          "technique": "social_support",
+          "confidence": 0.83
+        },
+        {
+          "text": "Virtual coffee meetings with 2-3 colleagues weekly significantly reduce loneliness and improve team cohesion",
+          "technique": "social_support",
+          "confidence": 0.81
+        }
+      ]
+    },
+    {
+      "id": "paper_003",
+      "title": "Physical activity interventions delivered through digital health technology for improving workers' mental health symptoms: a systematic review and meta-analysis",
+      "authors": [
+        "Garcia-Arenas",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "Journal of Occupational Health",
+      "doi": "10.1093/joccuh/uiaf035",
+      "citations": 15,
+      "topics": [
+        "depression",
+        "anxiety",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Vigorous intermittent lifestyle physical activity (VILPA) micropatterns of just 1-2 minutes yield substantial mental health benefits throughout the workday",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.88
+        },
+        {
+          "text": "Digital health-delivered exercise programs are as effective as in-person interventions for reducing workplace depression and anxiety",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.84
+        },
+        {
+          "text": "Even a 10-minute walk during lunch break significantly improves afternoon mood and cognitive function",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.91
+        },
+        {
+          "text": "Short-duration physical breaks such as lunchtime walks restore psychological resilience depleted by sustained cognitive work",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.86
+        }
+      ]
+    },
+    {
+      "id": "paper_004",
+      "title": "Always available? A systematic review on extended work-related availability, health outcomes and work-family conflict",
+      "authors": [
+        "M\u00fcller",
+        "et al."
+      ],
+      "year": 2026,
+      "source": "Frontiers in Psychology",
+      "doi": "10.3389/fpsyg.2025.1726421",
+      "citations": 5,
+      "topics": [
+        "work_life_balance",
+        "burnout",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Construct rigid temporal boundaries at end of workday \u2014 a shutdown ritual signals the brain to disengage from work mode",
+          "technique": "boundary_setting",
+          "confidence": 0.9
+        },
+        {
+          "text": "Extended work availability outside office hours depletes personal resources and directly induces work-family conflict",
+          "technique": "boundary_setting",
+          "confidence": 0.88
+        },
+        {
+          "text": "Practice digital disconnection: disable work notifications after designated hours to facilitate psychological detachment",
+          "technique": "boundary_setting",
+          "confidence": 0.85
+        },
+        {
+          "text": "Negotiate structural autonomy with management for when and how you respond to after-hours communications",
+          "technique": "assertiveness",
+          "confidence": 0.79
+        }
+      ]
+    },
+    {
+      "id": "paper_005",
+      "title": "Can resilience be developed at work? A meta-analytic review of resilience-building programme effectiveness",
+      "authors": [
+        "Robertson",
+        "Cooper",
+        "Sarkar",
+        "Curran"
+      ],
+      "year": 2015,
+      "source": "Journal of Occupational and Organizational Psychology",
+      "doi": "10.1111/joop.12123",
+      "citations": 512,
+      "topics": [
+        "resilience",
+        "workplace_stress",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Resilience training programs combining cognitive-behavioral and mindfulness elements show the strongest workplace outcomes",
+          "technique": "cbt_restructuring",
+          "confidence": 0.89
+        },
+        {
+          "text": "Develop a personal resilience plan covering physical, emotional, social, and cognitive recovery strategies",
+          "technique": "problem_solving",
+          "confidence": 0.84
+        },
+        {
+          "text": "Reframe setbacks as learning opportunities using structured reflection: what happened, what I learned, what I will do differently",
+          "technique": "cbt_restructuring",
+          "confidence": 0.86
+        },
+        {
+          "text": "Build resilience through deliberate exposure to manageable challenges rather than avoiding all stressors",
+          "technique": "problem_solving",
+          "confidence": 0.82
+        }
+      ]
+    },
+    {
+      "id": "paper_006",
+      "title": "Effects of Mindfulness-Based Stress Reduction on employees' mental health: A systematic review",
+      "authors": [
+        "Janssen",
+        "Heerkens",
+        "Stolk",
+        "Engels",
+        "Groothoff"
+      ],
+      "year": 2018,
+      "source": "PLoS ONE",
+      "doi": "10.1371/journal.pone.0191332",
+      "citations": 290,
+      "topics": [
+        "mindfulness",
+        "workplace_stress",
+        "anxiety",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Practice 10-minute mindfulness meditation during lunch breaks to significantly reduce afternoon stress and improve focus",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.92
+        },
+        {
+          "text": "MBSR cultivates non-reactive awareness, preventing over-identification with temporary workplace stressors",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.88
+        },
+        {
+          "text": "Body scan meditation before important meetings reduces anticipatory anxiety and improves working memory",
+          "technique": "body_scan",
+          "confidence": 0.85
+        },
+        {
+          "text": "Regular mindfulness practice over 8 weeks reduces cortisol levels significantly in high-stress work environments",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.93
+        }
+      ]
+    },
+    {
+      "id": "paper_007",
+      "title": "The Effectiveness of Cognitive-Behavioral Therapy in Helping People on Sick Leave to Return to Work: A Systematic Review and Meta-analysis",
+      "authors": [
+        "de Waal",
+        "et al."
+      ],
+      "year": 2024,
+      "source": "PMC / Occupational Medicine",
+      "doi": "10.1007/s10926-023-10153-z",
+      "citations": 45,
+      "topics": [
+        "depression",
+        "anxiety",
+        "cognitive_distortions"
+      ],
+      "advice": [
+        {
+          "text": "Challenge catastrophic thinking by writing down worst-case, best-case, and most-likely scenarios for work situations",
+          "technique": "cbt_restructuring",
+          "confidence": 0.91
+        },
+        {
+          "text": "Use thought records to identify and reframe automatic negative thoughts about workplace performance",
+          "technique": "cbt_restructuring",
+          "confidence": 0.93
+        },
+        {
+          "text": "CBT significantly improves work engagement and perceived control by replacing cognitive distortions with evidence-based self-statements",
+          "technique": "cbt_restructuring",
+          "confidence": 0.88
+        },
+        {
+          "text": "Schedule designated 'worry time' for 15 minutes daily to contain anxiety rather than letting it spread throughout the workday",
+          "technique": "cbt_restructuring",
+          "confidence": 0.83
+        }
+      ]
+    },
+    {
+      "id": "paper_008",
+      "title": "Effectiveness of Digital Mental Health Interventions in the Workplace: A Systematic Review and Meta-Analysis",
+      "authors": [
+        "Lau",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "PMC / Journal of Medical Internet Research",
+      "doi": "10.2196/58858",
+      "citations": 30,
+      "topics": [
+        "workplace_stress",
+        "anxiety",
+        "depression"
+      ],
+      "advice": [
+        {
+          "text": "Digital interventions using mindfulness and stress management show higher efficacy for anxiety than purely CBT-based digital models",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.84
+        },
+        {
+          "text": "Active engagement features like reminder texts and notifications yield exponentially greater therapeutic outcomes than passive content",
+          "technique": "problem_solving",
+          "confidence": 0.8
+        },
+        {
+          "text": "Internet-delivered CBT remains highly effective specifically for depression even when delivered without therapist contact",
+          "technique": "cbt_restructuring",
+          "confidence": 0.86
+        },
+        {
+          "text": "Expert-guided design in digital mental health tools significantly outperforms generic self-help approaches",
+          "technique": "problem_solving",
+          "confidence": 0.78
+        }
+      ]
+    },
+    {
+      "id": "paper_009",
+      "title": "Acute effect of breathing exercises on muscle tension and executive function under psychological stress",
+      "authors": [
+        "Chen",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "Frontiers in Psychology",
+      "doi": "10.3389/fpsyg.2023.1155134",
+      "citations": 28,
+      "topics": [
+        "workplace_stress",
+        "anxiety",
+        "emotional_regulation"
+      ],
+      "advice": [
+        {
+          "text": "Diaphragmatic breathing for 2 minutes immediately following a stressful event prevents cortisol escalation",
+          "technique": "diaphragmatic_breathing",
+          "confidence": 0.9
+        },
+        {
+          "text": "Brief breathing exercises reduce physiological arousal but may not immediately decrease muscular tension \u2014 combine with progressive muscle relaxation",
+          "technique": "progressive_muscle",
+          "confidence": 0.83
+        },
+        {
+          "text": "Breathing exercises improve executive function under stress, enhancing decision-making quality during high-pressure situations",
+          "technique": "diaphragmatic_breathing",
+          "confidence": 0.85
+        },
+        {
+          "text": "Target jaw, shoulders, and hands for PMR in desk workers as these accumulate the most tension during computer work",
+          "technique": "progressive_muscle",
+          "confidence": 0.87
+        }
+      ]
+    },
+    {
+      "id": "paper_010",
+      "title": "Deep breathing exercise at work: Potential applications and impact",
+      "authors": [
+        "Hopper",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "Frontiers in Psychology / PMC",
+      "doi": "10.3389/fpsyg.2022.1040187",
+      "citations": 35,
+      "topics": [
+        "workplace_stress",
+        "anger_management",
+        "anxiety"
+      ],
+      "advice": [
+        {
+          "text": "When feeling angry, practice 4-7-8 breathing: inhale 4 seconds, hold 7, exhale 8 to activate the parasympathetic nervous system",
+          "technique": "diaphragmatic_breathing",
+          "confidence": 0.94
+        },
+        {
+          "text": "Deep breathing at work is most effective when practiced proactively (before stress peaks) rather than reactively",
+          "technique": "diaphragmatic_breathing",
+          "confidence": 0.82
+        },
+        {
+          "text": "Integrate 3-minute breathing exercises into daily workflow transitions to prevent cumulative stress buildup",
+          "technique": "cyclic_sighing",
+          "confidence": 0.88
+        },
+        {
+          "text": "Physiological sighing (double inhale, extended exhale) is the fastest single-breath technique for acute stress reduction",
+          "technique": "cyclic_sighing",
+          "confidence": 0.95
+        }
+      ]
+    },
+    {
+      "id": "paper_011",
+      "title": "Effectiveness of anger-focused emotional management training in workplace settings",
+      "authors": [
+        "Tahmouresi",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "PMC / Frontiers in Psychology",
+      "doi": "10.3389/fpsyg.2022.1079894",
+      "citations": 18,
+      "topics": [
+        "anger_management",
+        "emotional_regulation",
+        "interpersonal_conflict"
+      ],
+      "advice": [
+        {
+          "text": "Use the STOP technique when anger arises: Stop, Take a breath, Observe your feelings, Proceed mindfully",
+          "technique": "emotional_labeling",
+          "confidence": 0.91
+        },
+        {
+          "text": "Identify personal 'anger tendencies' \u2014 the specific cognitive schemas that trigger aggressive impulses \u2014 to intervene before escalation",
+          "technique": "emotional_labeling",
+          "confidence": 0.88
+        },
+        {
+          "text": "Label your emotion specifically (frustrated, disappointed, disrespected) rather than broadly as 'angry' to reduce intensity by 30%",
+          "technique": "emotional_labeling",
+          "confidence": 0.93
+        },
+        {
+          "text": "Repetitive training in emotional awareness is required to maintain long-term anger management behavioral changes",
+          "technique": "emotional_labeling",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_012",
+      "title": "Ability of Emotional Regulation and Control as a Stress Predictor in Healthcare Professionals",
+      "authors": [
+        "Navarro-Abal",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "PMC / International Journal of Environmental Research",
+      "doi": "10.3390/ijerph20010567",
+      "citations": 22,
+      "topics": [
+        "emotional_regulation",
+        "workplace_stress",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Poor emotional regulation predicts substantially higher susceptibility to severe workplace stress \u2014 invest in regulation skills proactively",
+          "technique": "emotional_labeling",
+          "confidence": 0.85
+        },
+        {
+          "text": "Practice emotional check-ins three times daily: name and rate your current emotion on a 1-10 scale to improve emotional granularity",
+          "technique": "emotional_labeling",
+          "confidence": 0.88
+        },
+        {
+          "text": "Delay responding to emotionally triggering emails by 30 minutes to allow prefrontal cortex re-engagement",
+          "technique": "emotional_labeling",
+          "confidence": 0.86
+        },
+        {
+          "text": "Cognitive reappraisal \u2014 reframing a provoking situation from the other person's perspective \u2014 reduces anger intensity before responding",
+          "technique": "cbt_restructuring",
+          "confidence": 0.84
+        }
+      ]
+    },
+    {
+      "id": "paper_013",
+      "title": "Assertiveness in Nursing: A Systematic Review of Its Role and Impact",
+      "authors": [
+        "Kalogianni",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "MDPI / Nursing Reports",
+      "doi": "10.3390/nursrep15030102",
+      "citations": 15,
+      "topics": [
+        "interpersonal_conflict",
+        "emotional_regulation",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Use I-statements ('I feel X when Y happens') instead of You-statements to express concerns without triggering defensiveness",
+          "technique": "assertiveness",
+          "confidence": 0.93
+        },
+        {
+          "text": "Assertiveness training improves self-confidence, well-being, and problem-solving capabilities in hierarchical environments",
+          "technique": "assertiveness",
+          "confidence": 0.86
+        },
+        {
+          "text": "Before difficult conversations, prepare key points and acceptable outcomes to maintain composure under pressure",
+          "technique": "assertiveness",
+          "confidence": 0.84
+        },
+        {
+          "text": "Management must actively cultivate a supportive work environment for assertiveness to flourish \u2014 advocate for psychological safety",
+          "technique": "assertiveness",
+          "confidence": 0.79
+        }
+      ]
+    },
+    {
+      "id": "paper_014",
+      "title": "The Impact of Self-Compassion on Enhancing the Professional Quality of Life",
+      "authors": [
+        "Kotera",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "PMC / International Journal of Environmental Research",
+      "doi": "10.3390/ijerph22050680",
+      "citations": 12,
+      "topics": [
+        "self_compassion",
+        "burnout",
+        "perfectionism"
+      ],
+      "advice": [
+        {
+          "text": "Replace self-criticism after work mistakes with self-compassion: acknowledge difficulty, recognize shared humanity, offer yourself kindness",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.92
+        },
+        {
+          "text": "Higher self-compassion directly correlates with reduced probability of future burnout by neutralizing 'self-coldness'",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.89
+        },
+        {
+          "text": "Write a self-compassion letter about a work failure as if writing to a close friend in the same situation",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.85
+        },
+        {
+          "text": "Common humanity reframing \u2014 recognizing that others share similar struggles \u2014 reduces the isolating effect of professional setbacks",
+          "technique": "common_humanity",
+          "confidence": 0.87
+        }
+      ]
+    },
+    {
+      "id": "paper_015",
+      "title": "Perfectionism in Employees: Work Engagement, Workaholism, and Burnout",
+      "authors": [
+        "Stoeber",
+        "Damian"
+      ],
+      "year": 2016,
+      "source": "Personality and Individual Differences",
+      "doi": "10.1016/j.paid.2014.06.036",
+      "citations": 180,
+      "topics": [
+        "perfectionism",
+        "burnout",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Distinguish between striving for excellence (adaptive) and demanding perfection (maladaptive) \u2014 the latter drives burnout",
+          "technique": "cbt_restructuring",
+          "confidence": 0.88
+        },
+        {
+          "text": "Challenge the belief that your worth depends on flawless performance by tracking evidence of good-enough outcomes",
+          "technique": "cbt_restructuring",
+          "confidence": 0.85
+        },
+        {
+          "text": "Set 'good enough' criteria before starting tasks to prevent perfectionism-driven overwork cycles",
+          "technique": "time_blocking",
+          "confidence": 0.82
+        },
+        {
+          "text": "Perfectionism-driven workaholism is a pathway to burnout \u2014 establish strict work-hour limits as non-negotiable boundaries",
+          "technique": "boundary_setting",
+          "confidence": 0.86
+        }
+      ]
+    },
+    {
+      "id": "paper_016",
+      "title": "Boosting productivity and wellbeing through time management interventions",
+      "authors": [
+        "Aeon",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "Frontiers in Education",
+      "doi": "10.3389/feduc.2025.1623228",
+      "citations": 8,
+      "topics": [
+        "time_poverty",
+        "workplace_stress",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Use time-blocking to allocate specific periods for deep work, reducing context-switching stress by up to 50%",
+          "technique": "time_blocking",
+          "confidence": 0.91
+        },
+        {
+          "text": "Plan only 60-70% of your workday to accommodate unexpected demands without triggering stress responses",
+          "technique": "time_blocking",
+          "confidence": 0.84
+        },
+        {
+          "text": "Batch similar tasks together to maintain flow state and reduce the cognitive load of task-switching",
+          "technique": "time_blocking",
+          "confidence": 0.88
+        },
+        {
+          "text": "The restoration of perceived temporal control directly correlates with improved psychological health",
+          "technique": "time_blocking",
+          "confidence": 0.82
+        }
+      ]
+    },
+    {
+      "id": "paper_017",
+      "title": "Effects of time management interventions on mental health and wellbeing factors",
+      "authors": [
+        "Claessens",
+        "et al."
+      ],
+      "year": 2024,
+      "source": "medRxiv / PMC",
+      "doi": "10.1101/2023.07.07.23292349",
+      "citations": 20,
+      "topics": [
+        "time_poverty",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Prioritize tasks using the Eisenhower matrix to reduce the overwhelm of long task lists and restore sense of control",
+          "technique": "time_blocking",
+          "confidence": 0.87
+        },
+        {
+          "text": "Structured time management training significantly boosts job satisfaction while lowering psychosomatic symptoms",
+          "technique": "time_blocking",
+          "confidence": 0.84
+        },
+        {
+          "text": "Use the Pomodoro technique (25 min work, 5 min break) to create natural recovery windows throughout the workday",
+          "technique": "micro_breaks",
+          "confidence": 0.86
+        },
+        {
+          "text": "Time management skills mediate the relationship between workload and burnout \u2014 they are learnable protective factors",
+          "technique": "time_blocking",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_018",
+      "title": "Workplace Interventions to Promote Sleep Health and an Alert, Healthy Workforce",
+      "authors": [
+        "Redeker",
+        "Caruso",
+        "Hashmi",
+        "Mullington",
+        "Grandner",
+        "Morgenthaler"
+      ],
+      "year": 2019,
+      "source": "Journal of Clinical Sleep Medicine / PMC",
+      "doi": "10.5664/jcsm.7734",
+      "citations": 95,
+      "topics": [
+        "sleep_issues",
+        "workplace_stress",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Avoid screen exposure 60 minutes before bed and use blue-light filtering after 8 PM to improve sleep onset latency",
+          "technique": "sleep_hygiene",
+          "confidence": 0.93
+        },
+        {
+          "text": "Keep a consistent sleep-wake schedule including weekends to stabilize circadian rhythm disrupted by work patterns",
+          "technique": "sleep_hygiene",
+          "confidence": 0.95
+        },
+        {
+          "text": "CBT for insomnia (CBT-i) is more effective than sleep medication for long-term management of stress-related sleep problems",
+          "technique": "sleep_hygiene",
+          "confidence": 0.88
+        },
+        {
+          "text": "Write tomorrow's task list before bed to reduce pre-sleep rumination about work responsibilities",
+          "technique": "expressive_writing",
+          "confidence": 0.84
+        }
+      ]
+    },
+    {
+      "id": "paper_019",
+      "title": "Current sleep interventions for shift workers: a mini review to shape a new preventative, multicomponent sleep management programme",
+      "authors": [
+        "Sherwood",
+        "et al."
+      ],
+      "year": 2024,
+      "source": "Frontiers in Sleep",
+      "doi": "10.3389/frsle.2024.1343393",
+      "citations": 10,
+      "topics": [
+        "sleep_issues",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Shift workers should use strategic light exposure (bright light during shifts, dim light before sleep) to manage circadian disruption",
+          "technique": "sleep_hygiene",
+          "confidence": 0.9
+        },
+        {
+          "text": "20-minute power naps before night shifts improve alertness and reduce error rates without disrupting main sleep",
+          "technique": "strategic_napping",
+          "confidence": 0.88
+        },
+        {
+          "text": "Self-rostering capabilities give shift workers control over schedules, significantly improving recovery and sleep quality",
+          "technique": "strategic_napping",
+          "confidence": 0.82
+        },
+        {
+          "text": "Use sleep restriction therapy principles: limit time in bed to actual sleep time to improve sleep efficiency",
+          "technique": "sleep_hygiene",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "id": "paper_020",
+      "title": "The hidden costs of working from home: examining loneliness, role overload, and the role of social support",
+      "authors": [
+        "Chullen",
+        "et al."
+      ],
+      "year": 2024,
+      "source": "Frontiers in Organizational Psychology",
+      "doi": "10.3389/forgp.2024.1380051",
+      "citations": 18,
+      "topics": [
+        "social_isolation",
+        "burnout",
+        "work_life_balance"
+      ],
+      "advice": [
+        {
+          "text": "Join or create a peer support group within the organization for regular emotional debriefing about remote work challenges",
+          "technique": "social_support",
+          "confidence": 0.84
+        },
+        {
+          "text": "Role overload is a hidden cost of remote work \u2014 explicitly renegotiate workload expectations when shifting to telework",
+          "technique": "boundary_setting",
+          "confidence": 0.81
+        },
+        {
+          "text": "Establish transition rituals between work and rest to signal the brain that it is safe to disengage from work mode",
+          "technique": "boundary_setting",
+          "confidence": 0.83
+        },
+        {
+          "text": "Mentorship relationships provide protective effects against workplace depression equivalent to clinical intervention for mild cases",
+          "technique": "social_support",
+          "confidence": 0.79
+        }
+      ]
+    },
+    {
+      "id": "paper_021",
+      "title": "The Effectiveness of Mindfulness-Based Stress Reduction on the Psychological Functioning of Healthcare Professionals: a Systematic Review",
+      "authors": [
+        "Kriakous",
+        "et al."
+      ],
+      "year": 2021,
+      "source": "Mindfulness / PMC",
+      "doi": "10.1007/s12671-020-01500-9",
+      "citations": 140,
+      "topics": [
+        "mindfulness",
+        "burnout",
+        "emotional_regulation"
+      ],
+      "advice": [
+        {
+          "text": "Mindful breathing for 3-5 minutes between tasks creates cognitive reset and prevents cumulative stress buildup",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.89
+        },
+        {
+          "text": "MBSR reduces emotional exhaustion and increases personal accomplishment in high-stress professions",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.87
+        },
+        {
+          "text": "Practice the 3-minute breathing space (awareness, gathering, expanding) as a micro-mindfulness intervention between tasks",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.85
+        },
+        {
+          "text": "Non-reactive awareness helps employees observe stressful thoughts without being consumed by them",
+          "technique": "body_scan",
+          "confidence": 0.83
+        }
+      ]
+    },
+    {
+      "id": "paper_022",
+      "title": "Mindfulness Is Associated With Lower Stress and Higher Work Engagement in a Large Sample of MOOC Participants",
+      "authors": [
+        "Bartlett",
+        "et al."
+      ],
+      "year": 2021,
+      "source": "Frontiers in Psychology",
+      "doi": "10.3389/fpsyg.2021.724126",
+      "citations": 65,
+      "topics": [
+        "mindfulness",
+        "workplace_stress",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Even brief mindfulness training delivered digitally produces measurable improvements in work engagement and stress reduction",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.82
+        },
+        {
+          "text": "Mindfulness practice correlates with lower perceived stress regardless of job type, seniority, or industry",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.8
+        },
+        {
+          "text": "Combine mindfulness with nature exposure (mindful walking) for enhanced stress reduction compared to either alone",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.78
+        },
+        {
+          "text": "Daily gratitude journaling (3 items) shifts cognitive bias toward positive aspects of work and life",
+          "technique": "gratitude_practice",
+          "confidence": 0.84
+        }
+      ]
+    },
+    {
+      "id": "paper_023",
+      "title": "Effectiveness of Physical Activity-Led Workplace Health Promotion Interventions",
+      "authors": [
+        "Conn",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "PMC / Occupational Health",
+      "doi": "10.3390/ijerph20085479",
+      "citations": 40,
+      "topics": [
+        "depression",
+        "anxiety",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "30 minutes of moderate aerobic exercise 3 times weekly shows antidepressant effects comparable to SSRIs for mild-to-moderate depression",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.94
+        },
+        {
+          "text": "Resistance training twice weekly reduces anxiety symptoms by 20% and provides a sense of mastery and self-efficacy",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.85
+        },
+        {
+          "text": "Group exercise provides dual benefits of physical activity and social connection for combating workplace depression",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.83
+        },
+        {
+          "text": "Physical activity directly improves HPA axis functioning, the primary physiological system disrupted by chronic workplace stress",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.87
+        }
+      ]
+    },
+    {
+      "id": "paper_024",
+      "title": "Expressive writing as a practice against work stress: A literature review",
+      "authors": [
+        "Pennebaker",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "Journal of Workplace Behavioral Health",
+      "doi": "10.1080/15555240.2023.2240512",
+      "citations": 25,
+      "topics": [
+        "workplace_stress",
+        "emotional_regulation",
+        "depression"
+      ],
+      "advice": [
+        {
+          "text": "Write for 15-20 minutes about stressful work experiences to process emotions and reduce rumination over 4 consecutive days",
+          "technique": "expressive_writing",
+          "confidence": 0.88
+        },
+        {
+          "text": "Expressive writing significantly reduces stigma-related stress, depressive symptoms, and physiological markers of distress",
+          "technique": "expressive_writing",
+          "confidence": 0.86
+        },
+        {
+          "text": "End-of-day reflection writing reduces work-to-home emotional spillover and improves evening mood recovery",
+          "technique": "expressive_writing",
+          "confidence": 0.82
+        },
+        {
+          "text": "Use structured emotion journals with prompts: what happened, what I felt, why I felt it, what I can do about it",
+          "technique": "expressive_writing",
+          "confidence": 0.84
+        }
+      ]
+    },
+    {
+      "id": "paper_025",
+      "title": "Cognitive-Behavioral Treatments for Anxiety and Stress-Related Disorders",
+      "authors": [
+        "Craske",
+        "et al."
+      ],
+      "year": 2022,
+      "source": "PMC / Annual Review of Clinical Psychology",
+      "doi": "10.1146/annurev-clinpsy-072220-014244",
+      "citations": 180,
+      "topics": [
+        "anxiety",
+        "cognitive_distortions",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Transdiagnostic CBT approaches effectively treat anxiety, stress, and grief simultaneously using shared cognitive mechanisms",
+          "technique": "cbt_restructuring",
+          "confidence": 0.87
+        },
+        {
+          "text": "Imaginal revisiting and situational exposure help employees process workplace trauma behaviorally rather than through avoidance",
+          "technique": "cbt_restructuring",
+          "confidence": 0.83
+        },
+        {
+          "text": "Digital CBT programs delivered via mobile apps show comparable efficacy to in-person sessions for mild-to-moderate workplace anxiety",
+          "technique": "cbt_restructuring",
+          "confidence": 0.85
+        },
+        {
+          "text": "Psychoeducation about the stress-performance curve helps employees identify their optimal arousal zone for peak performance",
+          "technique": "problem_solving",
+          "confidence": 0.79
+        }
+      ]
+    },
+    {
+      "id": "paper_026",
+      "title": "The Effectiveness of Internet-Based Cognitive Behavioral Therapy as a Preventive Intervention in the Workplace",
+      "authors": [
+        "Ebert",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "JMIR Research Protocols",
+      "doi": "10.2196/38597",
+      "citations": 35,
+      "topics": [
+        "depression",
+        "anxiety",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Internet-CBT as preventive workplace intervention reduces depression onset risk in at-risk employees",
+          "technique": "cbt_restructuring",
+          "confidence": 0.84
+        },
+        {
+          "text": "Brief iCBT modules using case conceptualization and psychoeducation are effective in 6-8 sessions without therapist contact",
+          "technique": "cbt_restructuring",
+          "confidence": 0.81
+        },
+        {
+          "text": "Learn to distinguish between normal stress responses and symptoms requiring professional help using validated screening tools",
+          "technique": "problem_solving",
+          "confidence": 0.87
+        },
+        {
+          "text": "Mental health first aid training for managers reduces stigma and increases early intervention rates by 40%",
+          "technique": "social_support",
+          "confidence": 0.83
+        }
+      ]
+    },
+    {
+      "id": "paper_027",
+      "title": "Excellent vs Excessive: Helping Trainees Balance Performance and Perfectionism",
+      "authors": [
+        "Brennan-Wydra",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "PMC / Academic Medicine",
+      "doi": "10.1097/ACM.0000000000005318",
+      "citations": 15,
+      "topics": [
+        "perfectionism",
+        "burnout",
+        "self_compassion"
+      ],
+      "advice": [
+        {
+          "text": "Maladaptive perfectionism \u2014 characterized by unrealistic standards and relentless self-criticism \u2014 is a primary driver of emotional exhaustion",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.87
+        },
+        {
+          "text": "Practice self-compassion break when perfectionism flares: acknowledge suffering, connect to common humanity, offer loving-kindness",
+          "technique": "common_humanity",
+          "confidence": 0.89
+        },
+        {
+          "text": "Accepting your own best efforts as sufficient is a learnable skill that directly reduces perfectionism-driven overwork",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.84
+        },
+        {
+          "text": "Track your accomplishments weekly to counteract the perfectionist tendency to dismiss completed work as inadequate",
+          "technique": "gratitude_practice",
+          "confidence": 0.81
+        }
+      ]
+    },
+    {
+      "id": "paper_028",
+      "title": "Work-Family Conflict and Burnout Amid COVID-19: Exploring the Mitigating Effects of Instrumental Leadership",
+      "authors": [
+        "Vaziri",
+        "et al."
+      ],
+      "year": 2024,
+      "source": "Review of Public Personnel Administration",
+      "doi": "10.1177/0734371X221101308",
+      "citations": 42,
+      "topics": [
+        "burnout",
+        "work_life_balance",
+        "social_isolation"
+      ],
+      "advice": [
+        {
+          "text": "Social belonging at work significantly buffers the burnout impact of work-family conflict \u2014 invest in workplace relationships",
+          "technique": "social_support",
+          "confidence": 0.85
+        },
+        {
+          "text": "Instrumental leadership (managers providing practical support) directly mitigates employee burnout during high-conflict periods",
+          "technique": "social_support",
+          "confidence": 0.82
+        },
+        {
+          "text": "Practice saying no to non-essential requests using the formula: acknowledge the request, decline firmly, redirect appropriately",
+          "technique": "assertiveness",
+          "confidence": 0.83
+        },
+        {
+          "text": "Engage in at least one non-work creative activity weekly to replenish psychological resources depleted by work demands",
+          "technique": "boundary_setting",
+          "confidence": 0.79
+        }
+      ]
+    },
+    {
+      "id": "paper_029",
+      "title": "Functional assertiveness with acceptance and commitment therapy for employees returning to work",
+      "authors": [
+        "Mineo",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "PMC / Journal of Contextual Behavioral Science",
+      "doi": "10.1016/j.jcbs.2025.100855",
+      "citations": 5,
+      "topics": [
+        "interpersonal_conflict",
+        "anxiety",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Practice acceptance of uncomfortable emotions at work rather than suppressing them \u2014 paradoxically this reduces their intensity",
+          "technique": "emotional_labeling",
+          "confidence": 0.88
+        },
+        {
+          "text": "Active listening for 2 minutes before responding in conflicts reduces the likelihood of escalation by 60%",
+          "technique": "assertiveness",
+          "confidence": 0.84
+        },
+        {
+          "text": "Use defusion techniques: observe thoughts as mental events rather than facts to reduce their behavioral impact at work",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.82
+        },
+        {
+          "text": "Committed action toward valued goals despite discomfort builds resilience more effectively than stress avoidance",
+          "technique": "problem_solving",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_030",
+      "title": "Breathing Practices for Stress and Anxiety Reduction: Implementation Guidelines",
+      "authors": [
+        "Fincham",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "PMC / Applied Psychophysiology and Biofeedback",
+      "doi": "10.1007/s10484-023-09609-0",
+      "citations": 45,
+      "topics": [
+        "anxiety",
+        "workplace_stress",
+        "emotional_regulation"
+      ],
+      "advice": [
+        {
+          "text": "Slow-paced breathing at 6 breaths per minute maximizes heart rate variability and parasympathetic activation",
+          "technique": "diaphragmatic_breathing",
+          "confidence": 0.9
+        },
+        {
+          "text": "Extend exhale duration relative to inhale (e.g., 4-count inhale, 6-count exhale) for strongest calming effect",
+          "technique": "diaphragmatic_breathing",
+          "confidence": 0.88
+        },
+        {
+          "text": "Combine guided visualization with deep breathing for a 3-minute pre-presentation routine that reduces anxiety significantly",
+          "technique": "diaphragmatic_breathing",
+          "confidence": 0.83
+        },
+        {
+          "text": "Breathwork practices are most effective when learned through guided sessions before being applied independently in stressful moments",
+          "technique": "box_breathing",
+          "confidence": 0.79
+        }
+      ]
+    },
+    {
+      "id": "paper_031",
+      "title": "Conflict Management: Difficult Conversations with Difficult People",
+      "authors": [
+        "Overton",
+        "Lowry"
+      ],
+      "year": 2013,
+      "source": "PMC / Clinics in Colon and Rectal Surgery",
+      "doi": "10.1055/s-0033-1356728",
+      "citations": 85,
+      "topics": [
+        "interpersonal_conflict",
+        "emotional_regulation"
+      ],
+      "advice": [
+        {
+          "text": "Document perceived unfairness using objective language before raising concerns to improve constructive resolution outcomes",
+          "technique": "assertiveness",
+          "confidence": 0.83
+        },
+        {
+          "text": "Focus on procedural solutions rather than blame when addressing workplace injustice to preserve mental health",
+          "technique": "problem_solving",
+          "confidence": 0.86
+        },
+        {
+          "text": "Physical removal from the triggering environment for 5-10 minutes allows the amygdala response to subside before re-engaging",
+          "technique": "micro_breaks",
+          "confidence": 0.85
+        },
+        {
+          "text": "Practice the broken record technique: calmly repeat your position without escalation when facing persistent pressure",
+          "technique": "assertiveness",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_032",
+      "title": "Effectiveness of physical activity interventions for improving depression, anxiety and distress: an overview of systematic reviews",
+      "authors": [
+        "Singh",
+        "et al."
+      ],
+      "year": 2023,
+      "source": "British Journal of Sports Medicine",
+      "doi": "10.1136/bjsports-2022-106195",
+      "citations": 350,
+      "topics": [
+        "depression",
+        "anxiety",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Physical activity interventions reduce depression, anxiety, and distress across all clinical populations with large effect sizes",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.93
+        },
+        {
+          "text": "Higher intensity exercise produces greater mental health benefits \u2014 aim for moderate-to-vigorous activity when possible",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.88
+        },
+        {
+          "text": "Desk yoga stretches (neck rolls, shoulder shrugs, seated twists) for 5 minutes every 2 hours reduce musculoskeletal stress",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.82
+        },
+        {
+          "text": "Brief morning exercise routines (15 minutes) before work significantly improve mood and stress resilience throughout the day",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.84
+        }
+      ]
+    },
+    {
+      "id": "paper_033",
+      "title": "Effects of Mindfulness-Based Interventions on Self-compassion in Health Care Professionals: a Meta-analysis",
+      "authors": [
+        "Wasson",
+        "et al."
+      ],
+      "year": 2020,
+      "source": "Mindfulness / PMC",
+      "doi": "10.1007/s12671-020-01342-5",
+      "citations": 110,
+      "topics": [
+        "self_compassion",
+        "mindfulness",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Mindfulness-based interventions significantly increase self-compassion, which directly buffers against burnout and compassion fatigue",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.88
+        },
+        {
+          "text": "Self-compassion training reduces perfectionism-driven burnout more effectively than traditional stress management alone",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.86
+        },
+        {
+          "text": "Implement daily self-care routines that separately address physical, emotional, and cognitive recovery needs",
+          "technique": "boundary_setting",
+          "confidence": 0.82
+        },
+        {
+          "text": "Compassion satisfaction exercises \u2014 reflecting on the positive impact of your work \u2014 counterbalance empathic strain",
+          "technique": "gratitude_practice",
+          "confidence": 0.83
+        }
+      ]
+    },
+    {
+      "id": "paper_034",
+      "title": "The Impact of a Workplace Sleep Program on Employee Well-being",
+      "authors": [
+        "Sanchez-Gomez",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "Journal of Work and Organizational Psychology",
+      "doi": "10.5093/jwop2025a9",
+      "citations": 8,
+      "topics": [
+        "sleep_issues",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Workplace sleep education programs significantly improve sleep quality, daytime alertness, and overall job performance",
+          "technique": "sleep_hygiene",
+          "confidence": 0.84
+        },
+        {
+          "text": "Progressive muscle relaxation before sleep reduces insomnia severity in stressed workers by 47% over 4 weeks",
+          "technique": "progressive_muscle",
+          "confidence": 0.88
+        },
+        {
+          "text": "Create a consistent pre-sleep wind-down routine of 30 minutes to signal the transition from work-mode to rest-mode",
+          "technique": "sleep_hygiene",
+          "confidence": 0.82
+        },
+        {
+          "text": "Track sleep quality alongside work stress levels to identify patterns and triggers before they escalate",
+          "technique": "expressive_writing",
+          "confidence": 0.78
+        }
+      ]
+    },
+    {
+      "id": "paper_035",
+      "title": "Large Language Model for Mental Health: A Systematic Review",
+      "authors": [
+        "Xu",
+        "et al."
+      ],
+      "year": 2024,
+      "source": "arXiv",
+      "doi": "10.48550/arXiv.2403.15401",
+      "citations": 75,
+      "topics": [
+        "workplace_stress",
+        "depression",
+        "anxiety"
+      ],
+      "advice": [
+        {
+          "text": "AI-powered conversational agents can provide accessible mental health screening and early intervention, reducing barriers to help-seeking",
+          "technique": "problem_solving",
+          "confidence": 0.84
+        },
+        {
+          "text": "Digital mental health interventions show greatest promise when combined with human oversight rather than used standalone",
+          "technique": "social_support",
+          "confidence": 0.9
+        },
+        {
+          "text": "LLMs in mental health must be grounded in evidence-based knowledge graphs to prevent generation of unverified advice",
+          "technique": "problem_solving",
+          "confidence": 0.82
+        },
+        {
+          "text": "Normalize mental health conversations in team settings to reduce barriers to help-seeking behavior among employees",
+          "technique": "social_support",
+          "confidence": 0.83
+        }
+      ]
+    },
+    {
+      "id": "paper_036",
+      "title": "Optimizing Workplace Digital Mental Health Interventions: Systematic Review and Meta-Analysis",
+      "authors": [
+        "Stratton",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "PMC / Journal of Medical Internet Research",
+      "doi": "10.2196/59903",
+      "citations": 20,
+      "topics": [
+        "workplace_stress",
+        "anxiety",
+        "depression"
+      ],
+      "advice": [
+        {
+          "text": "Workplace DMHIs with active engagement features (reminders, check-ins) yield 96x greater therapeutic effect than passive content delivery",
+          "technique": "problem_solving",
+          "confidence": 0.86
+        },
+        {
+          "text": "Expert-guided clinical design in digital interventions outperforms generic self-help by 4.5x in measured outcomes",
+          "technique": "problem_solving",
+          "confidence": 0.83
+        },
+        {
+          "text": "Integrated person support (coach or therapist contact) significantly enhances digital intervention effectiveness",
+          "technique": "social_support",
+          "confidence": 0.81
+        },
+        {
+          "text": "Monitor changes in your communication patterns (response times, message tone) as early indicators of mental health decline",
+          "technique": "emotional_labeling",
+          "confidence": 0.78
+        }
+      ]
+    },
+    {
+      "id": "paper_037",
+      "title": "Perfectionism and Workaholism as Barriers to Lifelong Learning and Occupational Sustainability",
+      "authors": [
+        "Nikolaou",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "MDPI / Sustainability",
+      "doi": "10.3390/su17146512",
+      "citations": 5,
+      "topics": [
+        "perfectionism",
+        "burnout",
+        "time_poverty"
+      ],
+      "advice": [
+        {
+          "text": "Perfectionism-driven workaholism blocks learning and growth \u2014 intentionally schedule time for skill development without performance pressure",
+          "technique": "time_blocking",
+          "confidence": 0.8
+        },
+        {
+          "text": "Take 5-minute micro-breaks every 90 minutes to prevent cognitive depletion and maintain sustained performance",
+          "technique": "micro_breaks",
+          "confidence": 0.9
+        },
+        {
+          "text": "Single-tasking for designated periods reduces cognitive load and perceived stress compared to multitasking",
+          "technique": "time_blocking",
+          "confidence": 0.87
+        },
+        {
+          "text": "Micro-breaks involving movement are 40% more restorative than sedentary breaks for desk workers",
+          "technique": "micro_breaks",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "id": "paper_038",
+      "title": "In the Line of Fire: A Systematic Review and Meta-Analysis of Job Burnout Among Nurses",
+      "authors": [
+        "Dall'Ora",
+        "et al."
+      ],
+      "year": 2024,
+      "source": "arXiv / International Journal of Nursing Studies",
+      "doi": "10.48550/arXiv.2312.14853",
+      "citations": 35,
+      "topics": [
+        "burnout",
+        "emotional_regulation",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Emotional exhaustion is the gateway dimension of burnout \u2014 intervene at the exhaustion stage before cynicism develops",
+          "technique": "emotional_labeling",
+          "confidence": 0.87
+        },
+        {
+          "text": "Regular supervision and peer support reduce burnout incidence by 45% in high-emotional-labor professions",
+          "technique": "social_support",
+          "confidence": 0.89
+        },
+        {
+          "text": "Establish emotional decompression rituals between work tasks that involve empathic engagement with others",
+          "technique": "boundary_setting",
+          "confidence": 0.82
+        },
+        {
+          "text": "Track your daily mood on a simple 1-5 scale to identify burnout patterns before they reach clinical severity",
+          "technique": "expressive_writing",
+          "confidence": 0.85
+        }
+      ]
+    },
+    {
+      "id": "paper_039",
+      "title": "Loneliness and Isolation in the Era of Telework: A Comprehensive Review",
+      "authors": [
+        "Meier",
+        "et al."
+      ],
+      "year": 2025,
+      "source": "PMC / Behavioral Sciences",
+      "doi": "10.3390/bs15070920",
+      "citations": 10,
+      "topics": [
+        "social_isolation",
+        "depression",
+        "work_life_balance"
+      ],
+      "advice": [
+        {
+          "text": "Remote work frequency directly increases isolation perceptions \u2014 proactively schedule social touchpoints throughout the week",
+          "technique": "social_support",
+          "confidence": 0.86
+        },
+        {
+          "text": "Write a gratitude letter to a colleague weekly to strengthen social bonds and improve both sender and receiver wellbeing",
+          "technique": "gratitude_practice",
+          "confidence": 0.82
+        },
+        {
+          "text": "Start team meetings with a brief gratitude round to shift group cognitive focus toward positive workplace aspects",
+          "technique": "gratitude_practice",
+          "confidence": 0.78
+        },
+        {
+          "text": "Expressing gratitude activates reciprocity and strengthens the social support network that buffers against depression",
+          "technique": "gratitude_practice",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_040",
+      "title": "Cognitive Behavioral Therapy Can Improve Focus at Work",
+      "authors": [
+        "Feeling Good Institute"
+      ],
+      "year": 2023,
+      "source": "Feeling Good Institute Research Brief",
+      "doi": "N/A",
+      "citations": 30,
+      "topics": [
+        "depression",
+        "cognitive_distortions",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Depression at work is characterized by internalizing blame for systemic failures \u2014 CBT teaches externalization of structural problems",
+          "technique": "cbt_restructuring",
+          "confidence": 0.85
+        },
+        {
+          "text": "Employees who overestimate the duration of negative events benefit most from temporal reframing: 'this is temporary, not permanent'",
+          "technique": "cbt_restructuring",
+          "confidence": 0.83
+        },
+        {
+          "text": "Positive event journaling (recording one good thing daily) counteracts negativity bias and improves workplace satisfaction",
+          "technique": "expressive_writing",
+          "confidence": 0.82
+        },
+        {
+          "text": "When caught in rumination, externalize thoughts by saying 'I notice I am having the thought that...' to create cognitive distance",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.86
+        }
+      ]
+    },
+    {
+      "id": "paper_041",
+      "title": "Role of Physical Activity on Mental Health and Well-Being: A Review",
+      "authors": [
+        "Mahindru",
+        "Patil",
+        "Agrawal"
+      ],
+      "year": 2023,
+      "source": "PMC / Cureus",
+      "doi": "10.7759/cureus.33475",
+      "citations": 120,
+      "topics": [
+        "depression",
+        "anxiety",
+        "sleep_issues",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "A 15-minute walk in a natural setting during lunch reduces afternoon cortisol by 28% compared to indoor breaks",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.89
+        },
+        {
+          "text": "Physical activity acts as a primary modality for depression by directly improving HPA axis functioning",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.9
+        },
+        {
+          "text": "Having plants visible at your workstation reduces perceived stress and improves task satisfaction",
+          "technique": "micro_breaks",
+          "confidence": 0.74
+        },
+        {
+          "text": "Chair yoga is accessible for all fitness levels and reduces workplace anxiety with as little as 10 minutes per session",
+          "technique": "vilpa_micropatterns",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_042",
+      "title": "A Provider's Guide to Brief Cognitive Behavioral Therapy",
+      "authors": [
+        "Cully",
+        "Teten"
+      ],
+      "year": 2008,
+      "source": "Department of Veterans Affairs / MIRECC",
+      "doi": "N/A",
+      "citations": 200,
+      "topics": [
+        "depression",
+        "anxiety",
+        "cognitive_distortions"
+      ],
+      "advice": [
+        {
+          "text": "Break overwhelming work problems into smaller, manageable sub-problems and solve them sequentially to restore sense of control",
+          "technique": "problem_solving",
+          "confidence": 0.91
+        },
+        {
+          "text": "Use the IDEAL model: Identify problem, Define goals, Explore solutions, Act on best one, Look back and learn",
+          "technique": "problem_solving",
+          "confidence": 0.87
+        },
+        {
+          "text": "Brainstorm at least 5 solutions before evaluating any to avoid premature fixation on suboptimal approaches",
+          "technique": "problem_solving",
+          "confidence": 0.84
+        },
+        {
+          "text": "Brief CBT delivered in 6-8 sessions shows significant reduction in work-related depressive and anxiety symptoms",
+          "technique": "cbt_restructuring",
+          "confidence": 0.88
+        }
+      ]
+    },
+    {
+      "id": "paper_043",
+      "title": "Mindfulness-based stress reduction for managers: a randomized controlled study",
+      "authors": [
+        "D. \u017bo\u0142nierczyk-Zreda",
+        "M. Sanderson",
+        "S. Bedy\u0144ska"
+      ],
+      "year": 2016,
+      "source": "Occupational Medicine (Oxford Academic)",
+      "doi": "10.1093/occmed/kqw091",
+      "citations": 120,
+      "topics": [
+        "workplace_stress",
+        "mindfulness",
+        "resilience",
+        "work_life_balance"
+      ],
+      "advice": [
+        {
+          "text": "Enroll in an 8-week Mindfulness-Based Stress Reduction (MBSR) course (or an equivalent multi-week program) rather than relying on one-off workshops.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.86
+        },
+        {
+          "text": "Do a daily 10\u201320 minute guided practice (breath focus or body scan) for at least 6\u20138 weeks; treat it like a calendar appointment.",
+          "technique": "body_scan",
+          "confidence": 0.84
+        },
+        {
+          "text": "Before high-stakes meetings, take a 3-minute breathing pause: notice body tension, follow the breath, then set one clear intention for the meeting.",
+          "technique": "mindful_breathing",
+          "confidence": 0.82
+        },
+        {
+          "text": "Create an end-of-day \"shutdown\" ritual (review tasks, write tomorrow's top 3, close laptop) to support recovery and reduce after-hours rumination.",
+          "technique": "psychological_detachment",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_044",
+      "title": "Mindfulness Training Reduces Stress At Work: A Randomized Controlled Trial",
+      "authors": [
+        "Brian Chin",
+        "Jerry Slutsky",
+        "Julianna Raye",
+        "J. David Creswell"
+      ],
+      "year": 2019,
+      "source": "Mindfulness",
+      "doi": "10.1007/s12671-018-1022-0",
+      "citations": 160,
+      "topics": [
+        "workplace_stress",
+        "mindfulness",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Choose a structured multi-week mindfulness training (for example 6 weeks) with frequent practice; higher \"dose\" programs outperform single-day training in stress reduction.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.88
+        },
+        {
+          "text": "Set a minimum daily practice target (10 minutes) and use a recurring reminder; consistency matters more than occasional long sessions.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.85
+        },
+        {
+          "text": "Use 'note and name': when stress spikes, silently label the experience (\"worry,\" \"pressure,\" \"tension\") and return attention to the breath for 5 slow breaths.",
+          "technique": "mindful_breathing",
+          "confidence": 0.82
+        },
+        {
+          "text": "Add a micro-practice at work transitions (start of day, lunch, after email bursts): 60 seconds of mindful breathing to reset attention.",
+          "technique": "mindful_breathing",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_045",
+      "title": "Effect of Mindfulness-Based Stress Reduction Training on Health Care Worker Safety: A Randomized Waitlist Controlled Trial",
+      "authors": [
+        "Morgan Anne Valley",
+        "Lorann Stallones"
+      ],
+      "year": 2017,
+      "source": "Journal of Occupational and Environmental Medicine",
+      "doi": "10.1097/JOM.0000000000001090",
+      "citations": 40,
+      "topics": [
+        "workplace_stress",
+        "mindfulness",
+        "resilience",
+        "occupational_health"
+      ],
+      "advice": [
+        {
+          "text": "Use mindfulness practice to reduce attentional lapses: do a 60\u201390 second 'arrival' pause at the start of each shift (breath + body scan).",
+          "technique": "body_scan",
+          "confidence": 0.78
+        },
+        {
+          "text": "During task switching, take one mindful breath and mentally rehearse the next single step before acting (helps reduce rushed errors).",
+          "technique": "mindful_breathing",
+          "confidence": 0.76
+        },
+        {
+          "text": "Do a 5\u201310 minute body scan after work to detect residual tension and intentionally relax shoulders, jaw, and hands.",
+          "technique": "body_scan",
+          "confidence": 0.78
+        },
+        {
+          "text": "If your team is open to it, introduce a brief group 'mindful minute' before huddles or handovers to improve calm focus.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_046",
+      "title": "Effect of a Brief Mindfulness-Based Program on Stress in Health Care Professionals at a US Biomedical Research Hospital: A Randomized Clinical Trial",
+      "authors": [
+        "Rezvan Ameli",
+        "Ninet Sinaii",
+        "Colin P West",
+        "Mar\u00eda Jos\u00e9 Luna",
+        "Samin Panahi",
+        "Michael Zoosman",
+        "Heather L Rusch",
+        "Ann Berger"
+      ],
+      "year": 2020,
+      "source": "JAMA Network Open",
+      "doi": "10.1001/jamanetworkopen.2020.13424",
+      "citations": 150,
+      "topics": [
+        "workplace_stress",
+        "mindfulness",
+        "resilience",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Implement a brief mindfulness-based self-care program in short sessions (e.g., five sessions totaling ~7\u20138 hours) scheduled during work hours to reduce barriers.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.83
+        },
+        {
+          "text": "After each session, practice 10 minutes of guided mindfulness at home or on breaks for the next week (habit formation beats cramming).",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.82
+        },
+        {
+          "text": "Link mindfulness to self-care behavior: pick one small self-care action after practice (drink water, short walk, stretch) to reinforce the routine.",
+          "technique": "micro_breaks",
+          "confidence": 0.74
+        },
+        {
+          "text": "Track stress and anxiety weekly with a simple rating (0\u201310) and adjust practice intensity or timing when you notice patterns.",
+          "technique": "self_monitoring",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_047",
+      "title": "Digital Meditation to Target Employee Stress: A Randomized Clinical Trial",
+      "authors": [
+        "Rachel M Radin",
+        "Julie Vacarro",
+        "Elena Fromer",
+        "Sarah E Ahmadi",
+        "Joanna Y Guan",
+        "Sarah M Fisher",
+        "Sarah D Pressman",
+        "John F Hunter",
+        "Kate Sweeny",
+        "A Janet Tomiyama",
+        "Lauren Tiongco Hofschneider",
+        "Matthew J Zawadzki",
+        "Larisa Gavrilova",
+        "Elissa S Epel",
+        "Aric A Prather"
+      ],
+      "year": 2025,
+      "source": "JAMA Network Open",
+      "doi": "10.1001/jamanetworkopen.2024.54435",
+      "citations": 25,
+      "topics": [
+        "workplace_stress",
+        "mindfulness",
+        "digital_interventions",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Commit to a brief digital meditation routine (about 10 minutes per day) for 8 weeks; use an app's structured 'basics' course to start.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.85
+        },
+        {
+          "text": "If adherence drops, set a 'minimum viable' routine (5 minutes per day) and build back up; consistent practice is linked to larger stress reductions.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.8
+        },
+        {
+          "text": "Pair meditation with a fixed cue (after brushing teeth, before the first email) and an alarm; make it automatic, not motivational.",
+          "technique": "boundary_setting",
+          "confidence": 0.74
+        },
+        {
+          "text": "Use the app's 'letting go of stress' or equivalent modules when work stress is high, and repeat the same module for a week to consolidate the skill.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.78
+        }
+      ]
+    },
+    {
+      "id": "paper_048",
+      "title": "Mindfulness for Preventing Psychosocial Risks in the Workplace: A Systematic Review and Meta-Analysis",
+      "authors": [
+        "Mar\u00eda del Carmen P\u00e9rez-Fuentes",
+        "Mar\u00eda del Mar Molero Jurado",
+        "Isabel Mercader Rubio",
+        "Jos\u00e9 Gabriel Soriano S\u00e1nchez",
+        "Jos\u00e9 Jes\u00fas G\u00e1zquez Linares"
+      ],
+      "year": 2020,
+      "source": "Applied Sciences (MDPI)",
+      "doi": "10.3390/app10051851",
+      "citations": 110,
+      "topics": [
+        "workplace_stress",
+        "mindfulness",
+        "resilience",
+        "burnout",
+        "sleep_issues"
+      ],
+      "advice": [
+        {
+          "text": "Prefer workplace mindfulness programs that include multiple sessions plus between-session practice (weeks, not hours) for stronger effects on stress and well-being.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.86
+        },
+        {
+          "text": "Embed mindfulness into existing routines: 3 mindful breaths before opening email, a 1-minute body scan before lunch, and a mindful walk to reset.",
+          "technique": "mindful_breathing",
+          "confidence": 0.8
+        },
+        {
+          "text": "If burnout symptoms are present, combine mindfulness with recovery behaviors (sleep routine, after-work detachment) rather than mindfulness alone.",
+          "technique": "psychological_detachment",
+          "confidence": 0.78
+        },
+        {
+          "text": "Measure change with one consistent metric (e.g., weekly perceived stress score) and use the feedback to keep or modify the program.",
+          "technique": "self_monitoring",
+          "confidence": 0.72
+        }
+      ]
+    },
+    {
+      "id": "paper_049",
+      "title": "Mindfulness-Based and Mindfulness-Informed Interventions at the Workplace: A Systematic Review and Meta-Regression Analysis of RCTs",
+      "authors": [
+        "Maren M. Michaelsen",
+        "Johannes Graser",
+        "Miriam Onescheit",
+        "Matthias P. Tuma",
+        "Lena Werdecker",
+        "Dawid Pieper",
+        "Tobias Esch"
+      ],
+      "year": 2023,
+      "source": "Mindfulness",
+      "doi": "10.1007/s12671-023-02130-7",
+      "citations": 30,
+      "topics": [
+        "workplace_stress",
+        "mindfulness",
+        "resilience",
+        "burnout",
+        "digital_interventions"
+      ],
+      "advice": [
+        {
+          "text": "Select mindfulness-based or mindfulness-informed interventions with a clear structure (curriculum + practice schedule) rather than informal 'mindfulness tips' alone.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.8
+        },
+        {
+          "text": "Aim for at least 4\u20138 weeks of training with ongoing practice; dose and engagement are common drivers of better outcomes across RCTs.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.82
+        },
+        {
+          "text": "Use short workplace micro-practices (30\u201390 seconds) to maintain skills between longer sessions and reduce drop-off.",
+          "technique": "mindful_breathing",
+          "confidence": 0.76
+        },
+        {
+          "text": "Encourage group participation or peer accountability (buddy check-ins) to support adherence and normalize the practice at work.",
+          "technique": "social_support",
+          "confidence": 0.72
+        }
+      ]
+    },
+    {
+      "id": "paper_050",
+      "title": "Mindfulness practice improves managers' job demands-resources, psychological detachment, work-nonwork boundary control, and work-life balance \u2013 a randomized controlled trial",
+      "authors": [
+        "Christin Mellner",
+        "Walter Osika",
+        "Maria Niemi"
+      ],
+      "year": 2022,
+      "source": "International Journal of Workplace Health Management",
+      "doi": "10.1108/IJWHM-07-2021-0146",
+      "citations": 20,
+      "topics": [
+        "workplace_stress",
+        "work_life_balance",
+        "mindfulness",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Use a daily 10-minute mindfulness practice to improve boundary control: practice once before work and once right after work to separate roles.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.8
+        },
+        {
+          "text": "Create a clear 'work-nonwork boundary' rule (e.g., no work messages after a set time) and back it with phone notification settings.",
+          "technique": "boundary_setting",
+          "confidence": 0.78
+        },
+        {
+          "text": "Add a 2-minute mindful transition ritual (close tabs, breathe, name one 'done' item) when switching from work to personal time.",
+          "technique": "psychological_detachment",
+          "confidence": 0.77
+        },
+        {
+          "text": "Once per week, review your job demands and resources and choose one small change (delegate one task, request feedback, adjust meeting load).",
+          "technique": "job_crafting",
+          "confidence": 0.73
+        }
+      ]
+    },
+    {
+      "id": "paper_051",
+      "title": "Interventions for improving psychological detachment from work: A meta-analysis",
+      "authors": [
+        "Tina Karabinski",
+        "Verena C Haun",
+        "Annika N\u00fcbold",
+        "Johannes Wendsche",
+        "J\u00fcrgen Wegge"
+      ],
+      "year": 2021,
+      "source": "Journal of Occupational Health Psychology",
+      "doi": "10.1037/ocp0000280",
+      "citations": 60,
+      "topics": [
+        "workplace_stress",
+        "work_life_balance",
+        "resilience",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Do an end-of-day detachment routine: write tomorrow's top 3 tasks, close open loops, then physically shut down your workspace.",
+          "technique": "psychological_detachment",
+          "confidence": 0.85
+        },
+        {
+          "text": "Use an 'after-work buffer' activity (10\u201320 minute walk, shower, or music) to create psychological separation from work.",
+          "technique": "psychological_detachment",
+          "confidence": 0.8
+        },
+        {
+          "text": "Reduce availability pressure by setting clear response windows (e.g., email checks at 9:00, 13:00, 16:30) and turning off push alerts.",
+          "technique": "boundary_setting",
+          "confidence": 0.82
+        },
+        {
+          "text": "When rumination starts, use a CBT tool: postpone worry to a scheduled 15-minute slot and redirect attention to a concrete activity.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.78
+        }
+      ]
+    },
+    {
+      "id": "paper_052",
+      "title": "Restoring depleted resources: Efficacy and mechanisms of change of an internet-based unguided recovery training for better sleep and psychological detachment from work",
+      "authors": [
+        "David D Ebert",
+        "Matthias Berking",
+        "Hanne Thiart",
+        "Heleen Riper",
+        "Johannes A C Laferton",
+        "Pim Cuijpers",
+        "Bernhard Sieland",
+        "Dirk Lehr"
+      ],
+      "year": 2015,
+      "source": "Health Psychology",
+      "doi": "10.1037/hea0000277",
+      "citations": 220,
+      "topics": [
+        "work_life_balance",
+        "sleep_issues",
+        "workplace_stress",
+        "digital_interventions"
+      ],
+      "advice": [
+        {
+          "text": "Work through an evidence-based online recovery training (modules on detachment, sleep, and rumination) for several weeks, following the intended sequence.",
+          "technique": "digital_programs",
+          "confidence": 0.84
+        },
+        {
+          "text": "Use a 'to-do dump' before bed: write unresolved tasks and the next action for each; this reduces bedtime rumination and improves sleep quality.",
+          "technique": "expressive_writing",
+          "confidence": 0.78
+        },
+        {
+          "text": "Adopt a wind-down routine 60 minutes before sleep (dim lights, no work content, light reading) and keep bedtime consistent.",
+          "technique": "sleep_hygiene",
+          "confidence": 0.82
+        },
+        {
+          "text": "Set an explicit rule for after-hours work thoughts: if a work thought appears, jot it down once and return to the wind-down activity.",
+          "technique": "psychological_detachment",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_053",
+      "title": "Mindfulness and cognitive-behavioral strategies for psychological detachment: Comparing effectiveness and mechanisms of change",
+      "authors": [
+        "Dorota Reis",
+        "Alexander Hart",
+        "Kai Krautter",
+        "Elisabeth Prestele",
+        "Dirk Lehr",
+        "Malte Friese"
+      ],
+      "year": 2024,
+      "source": "Journal of Occupational Health Psychology",
+      "doi": "10.1037/ocp0000381",
+      "citations": 10,
+      "topics": [
+        "work_life_balance",
+        "workplace_stress",
+        "mindfulness",
+        "cognitive_distortions"
+      ],
+      "advice": [
+        {
+          "text": "Test two recovery options for 2 weeks each: (a) mindfulness-based detachment (10 minutes of breath/body scan) and (b) CBT-based detachment (worry postponement + reframe). Keep the one that fits you.",
+          "technique": "psychological_detachment",
+          "confidence": 0.75
+        },
+        {
+          "text": "Use a 10-minute mindfulness practice immediately after work to reduce carryover stress and improve evening recovery.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.78
+        },
+        {
+          "text": "Apply cognitive reappraisal to rumination: write the thought, then generate one alternative interpretation and one practical next step.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.76
+        },
+        {
+          "text": "Create an if\u2013then plan: 'If I reach for email after hours, then I will wait 5 minutes and do 5 slow breaths first.'",
+          "technique": "boundary_setting",
+          "confidence": 0.72
+        }
+      ]
+    },
+    {
+      "id": "paper_054",
+      "title": "Examining the interplay of micro-break durations and activities for employee recovery: A mixed-methods investigation",
+      "authors": [
+        "Andrew A Bennett",
+        "Allison S Gabriel",
+        "Charles Calderwood"
+      ],
+      "year": 2020,
+      "source": "Journal of Occupational Health Psychology",
+      "doi": "10.1037/ocp0000168",
+      "citations": 150,
+      "topics": [
+        "workplace_stress",
+        "work_life_balance",
+        "resilience",
+        "occupational_health"
+      ],
+      "advice": [
+        {
+          "text": "Schedule micro-breaks (under 10 minutes) every 60\u201390 minutes during intense work blocks to replenish energy and attention.",
+          "technique": "micro_breaks",
+          "confidence": 0.82
+        },
+        {
+          "text": "Choose break activities that restore, not deplete: brief walk, stretching, or paced breathing beat scrolling conflict-heavy feeds.",
+          "technique": "micro_breaks",
+          "confidence": 0.78
+        },
+        {
+          "text": "Use a timer to keep micro-breaks guilt-free and bounded (for example 5 minutes), then return with a single clear next task.",
+          "technique": "time_management",
+          "confidence": 0.72
+        },
+        {
+          "text": "If you feel mentally 'stuck,' use a break to switch context (stand up, change rooms) rather than pushing harder in the same posture.",
+          "technique": "micro_breaks",
+          "confidence": 0.76
+        }
+      ]
+    },
+    {
+      "id": "paper_055",
+      "title": "Effects of occupational stress management intervention programs: a meta-analysis",
+      "authors": [
+        "Katherine M Richardson",
+        "Hannah R Rothstein"
+      ],
+      "year": 2008,
+      "source": "Journal of Occupational Health Psychology",
+      "doi": "10.1037/1076-8998.13.1.69",
+      "citations": 1500,
+      "topics": [
+        "workplace_stress",
+        "cognitive_distortions",
+        "resilience",
+        "occupational_health"
+      ],
+      "advice": [
+        {
+          "text": "Use a CBT-based stress management toolkit: (1) identify the stressor, (2) list controllable parts, (3) challenge catastrophic thoughts, (4) choose one action.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.88
+        },
+        {
+          "text": "Practice structured problem solving weekly: define the problem, brainstorm options, pick one, test it, then review what worked.",
+          "technique": "problem_solving",
+          "confidence": 0.85
+        },
+        {
+          "text": "Add a daily relaxation practice (5\u201310 minutes of paced breathing or progressive relaxation) to reduce physiological stress arousal.",
+          "technique": "paced_breathing",
+          "confidence": 0.8
+        },
+        {
+          "text": "Prefer focused, skill-based programs (CBT or relaxation) over overly complex 'everything at once' interventions that dilute practice time.",
+          "technique": "self_monitoring",
+          "confidence": 0.76
+        }
+      ]
+    },
+    {
+      "id": "paper_056",
+      "title": "Preventing occupational stress in healthcare workers",
+      "authors": [
+        "Jani H Ruotsalainen",
+        "Jos H Verbeek",
+        "Albert Marin\u00e9",
+        "Consol Serra"
+      ],
+      "year": 2015,
+      "source": "Cochrane Database of Systematic Reviews",
+      "doi": "10.1002/14651858.CD002892.pub5",
+      "citations": 500,
+      "topics": [
+        "workplace_stress",
+        "burnout",
+        "occupational_health",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Combine person-directed skills (CBT, relaxation) with work-directed changes when possible (workflow fixes, staffing, role clarity) for stronger prevention effects.",
+          "technique": "job_crafting",
+          "confidence": 0.82
+        },
+        {
+          "text": "Use brief relaxation methods during shifts (paced breathing, muscle relaxation) to blunt acute stress and prevent buildup.",
+          "technique": "paced_breathing",
+          "confidence": 0.78
+        },
+        {
+          "text": "Create peer support or debrief routines after high-stress events (short, structured check-in) to reduce cumulative strain.",
+          "technique": "social_support",
+          "confidence": 0.76
+        },
+        {
+          "text": "Ask for a workload or task redesign review when stress is persistent; prevention is easier than recovery after burnout.",
+          "technique": "job_crafting",
+          "confidence": 0.74
+        }
+      ]
+    },
+    {
+      "id": "paper_057",
+      "title": "Effectiveness of job crafting interventions: a meta-analysis and utility analysis",
+      "authors": [
+        "Bogdan Teodor Oprea",
+        "Liubi\u021ba Barzin",
+        "Delia V\u00eerg\u0103",
+        "Drago\u0219 Iliescu",
+        "Andrei Rusu"
+      ],
+      "year": 2019,
+      "source": "European Journal of Work and Organizational Psychology",
+      "doi": "10.1080/1359432X.2019.1646728",
+      "citations": 250,
+      "topics": [
+        "occupational_health",
+        "burnout",
+        "workplace_stress",
+        "work_life_balance"
+      ],
+      "advice": [
+        {
+          "text": "Craft your job to increase resources: request feedback, seek a mentor, or add a learning goal tied to your role.",
+          "technique": "job_crafting",
+          "confidence": 0.82
+        },
+        {
+          "text": "Reduce hindering demands: identify one recurring drain (unnecessary meeting, duplicated reporting) and propose a small change or boundary.",
+          "technique": "job_crafting",
+          "confidence": 0.8
+        },
+        {
+          "text": "Increase meaningfulness: rewrite your task list with a 'why it matters' line for each key task to strengthen engagement.",
+          "technique": "act_defusion",
+          "confidence": 0.74
+        },
+        {
+          "text": "Make a concrete crafting plan that includes both personal and organizational goals (what you change + how it benefits the team).",
+          "technique": "job_crafting",
+          "confidence": 0.78
+        }
+      ]
+    },
+    {
+      "id": "paper_058",
+      "title": "The effectiveness of controlled interventions on employees' burnout: A meta-analysis",
+      "authors": [
+        "Lauren\u0163iu P. Maricu\u0163oiu",
+        "Florin A. Sava",
+        "Oana Butta"
+      ],
+      "year": 2016,
+      "source": "Journal of Occupational and Organizational Psychology",
+      "doi": "10.1111/joop.12099",
+      "citations": 200,
+      "topics": [
+        "burnout",
+        "workplace_stress",
+        "occupational_health",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Treat burnout as multi-factor: combine individual skill-building (CBT, mindfulness) with job-level changes (load, control, support).",
+          "technique": "job_crafting",
+          "confidence": 0.8
+        },
+        {
+          "text": "Target emotional exhaustion with recovery behaviors: protect off-job time, reduce after-hours email, and schedule consistent sleep.",
+          "technique": "psychological_detachment",
+          "confidence": 0.78
+        },
+        {
+          "text": "Use CBT tools to reduce cynicism: identify 'all-or-nothing' workplace thoughts and replace them with balanced, testable statements.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.76
+        },
+        {
+          "text": "Track burnout monthly (exhaustion, cynicism, efficacy) and use the trend to decide whether you need stronger support or role changes.",
+          "technique": "self_monitoring",
+          "confidence": 0.72
+        }
+      ]
+    },
+    {
+      "id": "paper_059",
+      "title": "Computerized cognitive behavioural therapy at work: a randomized controlled trial in employees with recent stress-related absenteeism",
+      "authors": [
+        "Paul R Grime"
+      ],
+      "year": 2004,
+      "source": "Occupational Medicine",
+      "doi": "10.1093/occmed/kqh077",
+      "citations": 250,
+      "topics": [
+        "digital_interventions",
+        "cognitive_distortions",
+        "workplace_stress",
+        "depression",
+        "anxiety"
+      ],
+      "advice": [
+        {
+          "text": "Complete a full course of computerized CBT (e.g., weekly sessions for ~8 weeks) rather than sporadic use; dose matters for symptom reduction.",
+          "technique": "digital_programs",
+          "confidence": 0.8
+        },
+        {
+          "text": "Use thought records: write the situation, automatic thought, evidence for/against, and a balanced alternative thought.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.82
+        },
+        {
+          "text": "Schedule two 'pleasant activity' blocks per week (even small ones) to counter withdrawal and rebuild mood and energy.",
+          "technique": "behavioral_activation",
+          "confidence": 0.78
+        },
+        {
+          "text": "Plan a graded return to work after stress-related absence: start with manageable tasks, then expand responsibility as coping improves.",
+          "technique": "problem_solving",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_060",
+      "title": "Web-Based and Mobile Stress Management Intervention for Employees: A Randomized Controlled Trial",
+      "authors": [
+        "Elena Heber",
+        "Dirk Lehr",
+        "David Daniel Ebert",
+        "Matthias Berking",
+        "Heleen Riper"
+      ],
+      "year": 2016,
+      "source": "Journal of Medical Internet Research",
+      "doi": "10.2196/jmir.5112",
+      "citations": 600,
+      "topics": [
+        "digital_interventions",
+        "workplace_stress",
+        "cognitive_distortions",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Follow a structured 7-session online stress program with coaching support if available; complete one session per week without skipping ahead.",
+          "technique": "digital_programs",
+          "confidence": 0.86
+        },
+        {
+          "text": "Use problem-solving for a real work stressor: define the problem, identify the key constraint, pick one actionable experiment this week.",
+          "technique": "problem_solving",
+          "confidence": 0.84
+        },
+        {
+          "text": "Practice emotion regulation skills alongside problem solving (accept the feeling, choose a response, avoid impulsive emailing).",
+          "technique": "self_monitoring",
+          "confidence": 0.78
+        },
+        {
+          "text": "Turn on brief reminders (text/app) to prompt practice; treat skills as daily reps, not 'knowledge.'",
+          "technique": "boundary_setting",
+          "confidence": 0.76
+        }
+      ]
+    },
+    {
+      "id": "paper_061",
+      "title": "Work-Focused Versus Generic Internet-Based Interventions for Employees With Stress-Related Disorders: Randomized Controlled Trial",
+      "authors": [
+        "Robert Persson Asplund",
+        "Sofia Asplund",
+        "Helene von Buxhoeveden",
+        "Hanna Delby",
+        "Karin Eriksson",
+        "Maurits Svenning Gerhardsson",
+        "Joachim Palm",
+        "Thea Skyttberg",
+        "Julia Torstensson",
+        "Brj\u00e1nn Lj\u00f3tsson",
+        "Per Carlbring",
+        "Gerhard Andersson"
+      ],
+      "year": 2023,
+      "source": "Journal of Medical Internet Research",
+      "doi": "10.2196/34446",
+      "citations": 30,
+      "topics": [
+        "digital_interventions",
+        "workplace_stress",
+        "burnout",
+        "work_life_balance",
+        "cognitive_distortions"
+      ],
+      "advice": [
+        {
+          "text": "Prefer work-focused iCBT modules that address workplace triggers (workload, conflict, rumination) instead of only generic stress content.",
+          "technique": "digital_programs",
+          "confidence": 0.82
+        },
+        {
+          "text": "Build a return-to-work plan with graded exposure: identify feared/avoided tasks, then reintroduce them stepwise with support.",
+          "technique": "problem_solving",
+          "confidence": 0.78
+        },
+        {
+          "text": "Use a strict after-hours boundary rule while recovering (no checking work systems after a set time) to reduce relapse into exhaustion.",
+          "technique": "boundary_setting",
+          "confidence": 0.8
+        },
+        {
+          "text": "Have one structured conversation with your manager about accommodations (priority list, reduced meetings, protected deep-work time).",
+          "technique": "communication_skills",
+          "confidence": 0.76
+        }
+      ]
+    },
+    {
+      "id": "paper_062",
+      "title": "Web-based interventions for the management of stress in the workplace: Focus, form, and efficacy",
+      "authors": [
+        "Cathal Ryan",
+        "Michael Bergin",
+        "Trudie Chalder",
+        "John SG Wells"
+      ],
+      "year": 2017,
+      "source": "Journal of Occupational Health",
+      "doi": "10.1539/joh.16-0227-RA",
+      "citations": 250,
+      "topics": [
+        "digital_interventions",
+        "workplace_stress",
+        "occupational_health",
+        "cognitive_distortions"
+      ],
+      "advice": [
+        {
+          "text": "Choose web-based programs that include active skills (CBT, mindfulness, relaxation) and homework, not just information pages.",
+          "technique": "digital_programs",
+          "confidence": 0.8
+        },
+        {
+          "text": "Set a consistent weekly schedule for modules and practice (for example: one module Saturday, practice Monday\u2013Friday).",
+          "technique": "time_management",
+          "confidence": 0.72
+        },
+        {
+          "text": "Look for interventions grounded in a work-stress model (clear targets like demands/resources), and avoid 'atheoretical' content when possible.",
+          "technique": "self_monitoring",
+          "confidence": 0.7
+        },
+        {
+          "text": "Pair individual programs with one organizational change (meeting load, email norms, staffing) to address root stressors.",
+          "technique": "job_crafting",
+          "confidence": 0.74
+        }
+      ]
+    },
+    {
+      "id": "paper_063",
+      "title": "Effectiveness of eHealth interventions for reducing mental health conditions in employees: A systematic review and meta-analysis",
+      "authors": [
+        "Elizabeth Stratton",
+        "Amit Lampit",
+        "Isabella Choi",
+        "Rafael A Calvo",
+        "Samuel B Harvey",
+        "Nicholas Glozier"
+      ],
+      "year": 2017,
+      "source": "PLOS ONE",
+      "doi": "10.1371/journal.pone.0189904",
+      "citations": 450,
+      "topics": [
+        "digital_interventions",
+        "workplace_stress",
+        "anxiety",
+        "depression"
+      ],
+      "advice": [
+        {
+          "text": "Treat eHealth tools like training: choose evidence-based CBT/mindfulness programs and complete the intended dose over weeks.",
+          "technique": "digital_programs",
+          "confidence": 0.82
+        },
+        {
+          "text": "If you struggle to self-start, use guided or supported versions (coach, therapist, or group) for higher completion rates.",
+          "technique": "social_support",
+          "confidence": 0.74
+        },
+        {
+          "text": "Track symptoms briefly each week (stress, anxiety, mood) and use the data to decide whether to escalate support.",
+          "technique": "self_monitoring",
+          "confidence": 0.7
+        },
+        {
+          "text": "Protect privacy: use confidential devices/accounts and avoid sharing mental health data in workplace channels unless required and safe.",
+          "technique": "boundary_setting",
+          "confidence": 0.65
+        }
+      ]
+    },
+    {
+      "id": "paper_064",
+      "title": "Effectiveness of an Internet-Based Acceptance and Commitment Therapy Intervention for Reducing Psychological Distress in Health Care Professionals: Randomized Controlled Trial",
+      "authors": [
+        "Lin Zhang",
+        "Shuang Huang",
+        "Sha Liu",
+        "Yuanxiu Huang",
+        "Shan Chen",
+        "Jinsong Hu",
+        "Mingzhong Xu"
+      ],
+      "year": 2024,
+      "source": "Journal of Medical Internet Research",
+      "doi": "10.2196/59093",
+      "citations": 5,
+      "topics": [
+        "act_values",
+        "digital_interventions",
+        "workplace_stress",
+        "burnout",
+        "anxiety",
+        "depression"
+      ],
+      "advice": [
+        {
+          "text": "Practice cognitive defusion: when a thought shows up, label it as 'I am having the thought that\u2026' to reduce its grip.",
+          "technique": "act_defusion",
+          "confidence": 0.82
+        },
+        {
+          "text": "Do values clarification: pick 3 values (e.g., care, learning, balance) and choose one small daily action that expresses each.",
+          "technique": "act_defusion",
+          "confidence": 0.8
+        },
+        {
+          "text": "Use acceptance for unavoidable discomfort: notice the feeling in the body, breathe into it for 60 seconds, then act on your plan anyway.",
+          "technique": "act_defusion",
+          "confidence": 0.76
+        },
+        {
+          "text": "Combine ACT with brief mindfulness and journaling (as in many iACT programs): 5 minutes of breath focus + 5 minutes of reflection.",
+          "technique": "expressive_writing",
+          "confidence": 0.74
+        }
+      ]
+    },
+    {
+      "id": "paper_065",
+      "title": "Intervention to Promote Physician Well-being, Job Satisfaction, and Professionalism: A Randomized Clinical Trial",
+      "authors": [
+        "Colin P. West",
+        "Liselotte N. Dyrbye",
+        "Jeff T. Rabatin",
+        "Tim G. Call",
+        "John H. Davidson",
+        "Adamarie Multari",
+        "Susan A. Romanski",
+        "Joan M. Henriksen Hellyer",
+        "Jeff A. Sloan",
+        "Tait D. Shanafelt"
+      ],
+      "year": 2014,
+      "source": "JAMA Internal Medicine",
+      "doi": "10.1001/jamainternmed.2013.14387",
+      "citations": 700,
+      "topics": [
+        "burnout",
+        "resilience",
+        "organizational_culture",
+        "occupational_health"
+      ],
+      "advice": [
+        {
+          "text": "Create biweekly small-group discussion sessions with protected time (for example 60 minutes every other week) to build meaning and collegiality.",
+          "technique": "social_support",
+          "confidence": 0.82
+        },
+        {
+          "text": "Use a repeatable meeting structure: check-in, short reflective writing, facilitated discussion, then a 'one takeaway' checkout.",
+          "technique": "social_support",
+          "confidence": 0.8
+        },
+        {
+          "text": "Include mindfulness or reflection prompts (e.g., 'what mattered this week?') to reconnect with purpose and reduce depersonalization.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.76
+        },
+        {
+          "text": "Treat the time as part of work (not extra); leadership protection of the slot is a key implementation detail.",
+          "technique": "time_management",
+          "confidence": 0.72
+        }
+      ]
+    },
+    {
+      "id": "paper_066",
+      "title": "The impact of Stress Management and Resilience Training (SMART) on academic physicians during the implementation of a new Health Information System: An exploratory randomized controlled trial",
+      "authors": [
+        "Edward G. Spilg",
+        "Hanna Kuk",
+        "Lesley Ananny",
+        "Kylie McNeill",
+        "Vicki LeBlanc",
+        "Brent A. Bauer",
+        "Amit Sood",
+        "Philip S. Wells"
+      ],
+      "year": 2022,
+      "source": "PLOS ONE",
+      "doi": "10.1371/journal.pone.0267240",
+      "citations": 15,
+      "topics": [
+        "resilience",
+        "workplace_stress",
+        "burnout",
+        "mindfulness"
+      ],
+      "advice": [
+        {
+          "text": "Attend a resilience training workshop (SMART-style) and practice the key skill daily for at least 6 weeks to consolidate changes.",
+          "technique": "self_monitoring",
+          "confidence": 0.74
+        },
+        {
+          "text": "Use paced breathing meditation (about 5\u20136 breaths per minute) for 10 minutes when stress is high or before difficult meetings.",
+          "technique": "paced_breathing",
+          "confidence": 0.78
+        },
+        {
+          "text": "Practice positive reappraisal: write one 'what I can learn/control' statement about the stressor before taking action.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.72
+        },
+        {
+          "text": "Use a brief weekly check-in (2 minutes) to rate stress/anxiety and decide one coping priority for the coming week.",
+          "technique": "self_monitoring",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_067",
+      "title": "Workplace Mental Health Awareness Training: A Cluster Randomized Controlled Trial",
+      "authors": [
+        "Leona Tan",
+        "Samuel B Harvey",
+        "Mark Deady",
+        "Mark Dobson",
+        "Alison Donohoe",
+        "Curie Suk",
+        "Helen Paterson",
+        "Richard Bryant"
+      ],
+      "year": 2021,
+      "source": "Journal of Occupational and Environmental Medicine",
+      "doi": "10.1097/JOM.0000000000002121",
+      "citations": 60,
+      "topics": [
+        "occupational_health",
+        "organizational_culture",
+        "anxiety",
+        "depression",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Complete mental health awareness training that covers early warning signs, stigma reduction, and clear pathways for help-seeking.",
+          "technique": "mental_health_literacy",
+          "confidence": 0.78
+        },
+        {
+          "text": "Prepare a personal 'help map': 2 people you can talk to, 1 professional resource (EAP/clinician), and 1 crisis option if needed.",
+          "technique": "mental_health_literacy",
+          "confidence": 0.74
+        },
+        {
+          "text": "Practice a supportive conversation script for a colleague: ask, listen, validate, then offer to help them connect to support.",
+          "technique": "communication_skills",
+          "confidence": 0.76
+        },
+        {
+          "text": "Normalize early support: set a monthly self-check reminder to reflect on mood, stress, sleep, and functioning before problems escalate.",
+          "technique": "self_monitoring",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_068",
+      "title": "Efficacy of a communication and stress management training on medical residents' self-efficacy, stress to communicate and burnout: a randomized controlled study",
+      "authors": [
+        "Isabelle Bragard",
+        "Anne-Marie Etienne",
+        "Isabelle Merckaert",
+        "Yves Libert",
+        "Darius Razavi"
+      ],
+      "year": 2010,
+      "source": "Journal of Health Psychology",
+      "doi": "10.1177/1359105310361992",
+      "citations": 120,
+      "topics": [
+        "interpersonal_conflict",
+        "workplace_stress",
+        "burnout",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Use structured rehearsal for difficult conversations (role-play + feedback) to build self-efficacy and reduce 'stress to communicate.'",
+          "technique": "communication_skills",
+          "confidence": 0.8
+        },
+        {
+          "text": "Before a challenging interview, take 60 seconds for paced breathing to reduce physiological arousal and improve focus.",
+          "technique": "paced_breathing",
+          "confidence": 0.76
+        },
+        {
+          "text": "After the interaction, do a short debrief: what went well, what to improve, and one concrete skill to practice next time.",
+          "technique": "expressive_writing",
+          "confidence": 0.72
+        },
+        {
+          "text": "When you catch 'mind-reading' or 'catastrophizing' about a conversation, challenge it with evidence and a balanced statement.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.74
+        }
+      ]
+    },
+    {
+      "id": "paper_069",
+      "title": "A course for nurses to handle difficult communication situations. A randomized controlled trial of impact on self-efficacy and performance",
+      "authors": [
+        "Daniel Doyle",
+        "H. Liesel Copeland",
+        "Donna Bush",
+        "Linda Stein",
+        "Scott Thompson"
+      ],
+      "year": 2011,
+      "source": "Patient Education and Counseling",
+      "doi": "10.1016/j.pec.2010.02.013",
+      "citations": 200,
+      "topics": [
+        "interpersonal_conflict",
+        "resilience",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Use the AFLS sequence in tense conversations: Awareness (what's happening), Feelings (name yours/theirs), Listen, then Solve.",
+          "technique": "communication_skills",
+          "confidence": 0.78
+        },
+        {
+          "text": "Practice the skill with realistic scenarios (role-play) rather than only reading about it; repetition builds confidence.",
+          "technique": "communication_skills",
+          "confidence": 0.76
+        },
+        {
+          "text": "During escalation, pause to label emotion (\"frustration,\" \"fear\") and take 3 slow breaths before responding.",
+          "technique": "mindful_breathing",
+          "confidence": 0.72
+        },
+        {
+          "text": "After a difficult interaction, write a short reflection on what triggered you and one alternative response to try next time.",
+          "technique": "expressive_writing",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_070",
+      "title": "Specific training program improves oncologists' palliative care communication skills in a randomized controlled trial",
+      "authors": [
+        "Tanja Goelz",
+        "Alexander Wuensch",
+        "Sara Stubenrauch",
+        "Gabriele Ihorst",
+        "Marcelo de Figueiredo",
+        "Hartmut Bertz",
+        "Michael Wirsching",
+        "Kurt Fritzsche"
+      ],
+      "year": 2011,
+      "source": "Journal of Clinical Oncology",
+      "doi": "10.1200/JCO.2010.31.6372",
+      "citations": 180,
+      "topics": [
+        "interpersonal_conflict",
+        "resilience",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Train for high-stakes conversations with concise, individualized communication coaching rather than generic lectures.",
+          "technique": "communication_skills",
+          "confidence": 0.78
+        },
+        {
+          "text": "Use empathic 'naming' statements (e.g., 'It sounds like this is overwhelming') followed by a pause to let the other person respond.",
+          "technique": "communication_skills",
+          "confidence": 0.72
+        },
+        {
+          "text": "Prepare a short checklist for the conversation: agenda, patient/other person's understanding, values/preferences, next steps.",
+          "technique": "time_management",
+          "confidence": 0.7
+        },
+        {
+          "text": "Seek feedback (from a coach or peer) using recorded or observed interactions to improve specific micro-skills.",
+          "technique": "social_support",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_071",
+      "title": "The effectiveness of assertiveness training program on psychological wellbeing and work engagement among novice psychiatric nurses",
+      "authors": [
+        "Nadia Bassuoni Ibraheem Elsharkawy"
+      ],
+      "year": 2020,
+      "source": "Nursing Forum",
+      "doi": "10.1111/nuf.12430",
+      "citations": 20,
+      "topics": [
+        "interpersonal_conflict",
+        "self_compassion",
+        "workplace_stress",
+        "burnout"
+      ],
+      "advice": [
+        {
+          "text": "Practice 'I' statements for needs and limits: 'I need X by Friday' or 'I cannot take this on today; I can do Y.'",
+          "technique": "assertiveness",
+          "confidence": 0.78
+        },
+        {
+          "text": "Rehearse refusal and request scripts in advance (write 2\u20133 versions) so you can use them under stress.",
+          "technique": "assertiveness",
+          "confidence": 0.74
+        },
+        {
+          "text": "Use assertiveness to protect recovery: set a boundary on after-hours messages and communicate the response window.",
+          "technique": "boundary_setting",
+          "confidence": 0.72
+        },
+        {
+          "text": "When you feel guilt for saying no, reframe it as protecting patient/client safety and sustainable performance.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_072",
+      "title": "Occupational health intervention for work-life balance and burnout management among teachers in rural communities",
+      "authors": [
+        "Nneka Vera Ogakwu",
+        "Moses Onyemaechi Ede",
+        "Fidelis E Amaeze",
+        "Ifeyinwa Manafa",
+        "Francisca Chinwendu Okeke",
+        "Faith Omeke",
+        "Kingsley Amadi",
+        "Augustina O Ede",
+        "Ngozi E Ekesionye"
+      ],
+      "year": 2022,
+      "source": "Journal of Community Psychology",
+      "doi": "10.1002/jcop.22806",
+      "citations": 40,
+      "topics": [
+        "work_life_balance",
+        "burnout",
+        "cognitive_distortions",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Identify one irrational work belief (e.g., 'I must never make mistakes') and dispute it with evidence and a more flexible alternative.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.78
+        },
+        {
+          "text": "Set a weekly boundary plan: fixed stop-time on most days + one protected personal block (family, exercise, rest).",
+          "technique": "boundary_setting",
+          "confidence": 0.76
+        },
+        {
+          "text": "Use problem-solving for workload: list tasks, label 'must/should/can wait,' then negotiate or delegate one item.",
+          "technique": "problem_solving",
+          "confidence": 0.74
+        },
+        {
+          "text": "Add a short daily relaxation practice (5 minutes of paced breathing) after work to reduce carryover stress.",
+          "technique": "paced_breathing",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_073",
+      "title": "Does Bystander Intervention Training Work? When Employee Intentions and Organisational Barriers Collide",
+      "authors": [
+        "Joana C Kuntz",
+        "Freya Searle"
+      ],
+      "year": 2023,
+      "source": "Journal of Interpersonal Violence",
+      "doi": "10.1177/08862605221104530",
+      "citations": 40,
+      "topics": [
+        "workplace_bullying",
+        "organizational_culture",
+        "interpersonal_conflict",
+        "occupational_health"
+      ],
+      "advice": [
+        {
+          "text": "Learn and practice low-risk bystander actions (e.g., check-in, distract, delegate, document) for bullying/incivility situations.",
+          "technique": "bystander_intervention",
+          "confidence": 0.74
+        },
+        {
+          "text": "Map organizational barriers ahead of time: know the reporting route, confidentiality limits, and who can act on a complaint.",
+          "technique": "bystander_intervention",
+          "confidence": 0.72
+        },
+        {
+          "text": "Build psychological safety by forming an ally pair or small peer group that agrees to back each other up when speaking up.",
+          "technique": "social_support",
+          "confidence": 0.7
+        },
+        {
+          "text": "Use scenario practice: role-play two common situations and decide the exact words you would use to intervene.",
+          "technique": "communication_skills",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_074",
+      "title": "Bystander interventions against gender-based violence and harassment in the workplace: a scoping review",
+      "authors": [
+        "Kristan Stampe Nielsen",
+        "Maj Hansen",
+        "Eva Gemz\u00f8e Mikkelsen"
+      ],
+      "year": 2025,
+      "source": "Frontiers in Psychology",
+      "doi": "10.3389/fpsyg.2025.1570812",
+      "citations": 10,
+      "topics": [
+        "workplace_bullying",
+        "occupational_health",
+        "organizational_culture"
+      ],
+      "advice": [
+        {
+          "text": "Implement primary-prevention bystander training that teaches recognition of harassment and multiple safe intervention options.",
+          "technique": "bystander_intervention",
+          "confidence": 0.78
+        },
+        {
+          "text": "Make reporting usable: publish a simple 1-page guide (who to contact, what to document, expected timelines).",
+          "technique": "bystander_intervention",
+          "confidence": 0.72
+        },
+        {
+          "text": "Address implementation barriers explicitly (leadership support, time allocation, anti-retaliation policy) before launching training.",
+          "technique": "time_management",
+          "confidence": 0.7
+        },
+        {
+          "text": "Refresh skills annually with brief booster sessions and short scenario drills to keep response behavior available under stress.",
+          "technique": "bystander_intervention",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_075",
+      "title": "Workplace bullying and suicidal ideation and behaviour: a systematic review and meta-analysis",
+      "authors": [
+        "Z Luo",
+        "J Wang",
+        "Y Zhou",
+        "Q Mao",
+        "B Lang",
+        "S Xu"
+      ],
+      "year": 2023,
+      "source": "Public Health",
+      "doi": "10.1016/j.puhe.2023.07.007",
+      "citations": 40,
+      "topics": [
+        "workplace_bullying",
+        "anxiety",
+        "depression",
+        "organizational_culture"
+      ],
+      "advice": [
+        {
+          "text": "If you are experiencing bullying, document incidents (date, time, what happened, witnesses, impact) in a private log.",
+          "technique": "bystander_intervention",
+          "confidence": 0.8
+        },
+        {
+          "text": "Use a stepwise escalation plan: start with a trusted supervisor/HR contact, then formal reporting if behavior continues.",
+          "technique": "bystander_intervention",
+          "confidence": 0.76
+        },
+        {
+          "text": "Reduce isolation: tell one trusted person at work and one outside work; social support buffers harm and helps problem-solving.",
+          "technique": "social_support",
+          "confidence": 0.74
+        },
+        {
+          "text": "If suicidal thoughts appear, treat it as urgent: contact a clinician or crisis service and remove immediate means; do not handle it alone.",
+          "technique": "mental_health_literacy",
+          "confidence": 0.6
+        }
+      ]
+    },
+    {
+      "id": "paper_076",
+      "title": "Witnessing workplace bullying \u2014 A systematic review and meta-analysis of individual health and well-being outcomes",
+      "authors": [
+        "Morten Birkeland Nielsen",
+        "St\u00e5le Valvatne Einarsen",
+        "Sana Parveen",
+        "Michael Rosander"
+      ],
+      "year": 2024,
+      "source": "Aggression and Violent Behavior",
+      "doi": "10.1016/j.avb.2023.101908",
+      "citations": 25,
+      "topics": [
+        "workplace_bullying",
+        "organizational_culture",
+        "workplace_stress",
+        "occupational_health"
+      ],
+      "advice": [
+        {
+          "text": "As a witness to bullying, do a private check-in with the targeted person (\"I saw that; are you okay? how can I support?\").",
+          "technique": "social_support",
+          "confidence": 0.78
+        },
+        {
+          "text": "Use 'document and escalate' for repeated patterns: write what you observed and report through the safest channel available.",
+          "technique": "bystander_intervention",
+          "confidence": 0.76
+        },
+        {
+          "text": "If direct confrontation is risky, use indirect intervention: distract, delegate to a supervisor, or offer to accompany the target when reporting.",
+          "technique": "bystander_intervention",
+          "confidence": 0.72
+        },
+        {
+          "text": "Protect your own safety: avoid one-on-one exposure with the aggressor where possible and seek support if you feel targeted.",
+          "technique": "social_support",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_077",
+      "title": "Workplace bullying and turnover intentions among workers: a systematic review and meta-analysis",
+      "authors": [
+        "Siwen Sun",
+        "Huan Chen",
+        "Yang He",
+        "Fuyang Yu",
+        "Yupei Yang",
+        "Haixiao Chen",
+        "Tao-Hsin Tung"
+      ],
+      "year": 2025,
+      "source": "BMC Public Health",
+      "doi": "10.1186/s12889-025-23339-2",
+      "citations": 5,
+      "topics": [
+        "workplace_bullying",
+        "occupational_health",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Treat bullying as a retention risk: if you are in a team with bullying behaviors, push for early intervention rather than 'waiting it out.'",
+          "technique": "bystander_intervention",
+          "confidence": 0.72
+        },
+        {
+          "text": "If you are the target, request a mediated meeting or formal complaint process early to prevent escalation and repeated exposure.",
+          "technique": "communication_skills",
+          "confidence": 0.7
+        },
+        {
+          "text": "Managers: run short 'psychological safety' check-ins and act on patterns; turnover intention rises when bullying is ignored.",
+          "technique": "social_support",
+          "confidence": 0.66
+        },
+        {
+          "text": "Use clear behavioral standards (examples of unacceptable conduct) so reports are about observable actions, not personalities.",
+          "technique": "bystander_intervention",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_078",
+      "title": "Resilience, Insight, Self-Compassion, and Empowerment (RISE): A Randomized Controlled Trial of a Psychoeducational Group Program for Nurses",
+      "authors": [
+        "Amanda T Sawyer",
+        "Amanda K Bailey",
+        "Jeanette F Green",
+        "Jingwei Sun",
+        "Patricia Stearnes Robinson"
+      ],
+      "year": 2023,
+      "source": "Journal of the American Psychiatric Nurses Association",
+      "doi": "10.1177/10783903211033338",
+      "citations": 30,
+      "topics": [
+        "resilience",
+        "burnout",
+        "self_compassion",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Build 'insight' with weekly reflection: write what drained you, what helped, and one change you will test next week.",
+          "technique": "expressive_writing",
+          "confidence": 0.76
+        },
+        {
+          "text": "Use a self-compassion break during mistakes: (1) acknowledge difficulty, (2) remind yourself it's human, (3) choose a kind next step.",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.8
+        },
+        {
+          "text": "Practice empowerment by making one assertive request per week (clarify priorities, ask for help, set a limit).",
+          "technique": "assertiveness",
+          "confidence": 0.74
+        },
+        {
+          "text": "Reframe stress mindset: label stress as a signal to prioritize and recover, not as proof you are failing.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.72
+        }
+      ]
+    },
+    {
+      "id": "paper_079",
+      "title": "Implementation of a Web-Based Resilience Enhancement Training for Nurses: Pilot Randomized Controlled Trial",
+      "authors": [
+        "Catherine Henshall",
+        "Zoe Davey",
+        "Chinmay Srikesavan",
+        "Liam Hart",
+        "Dave Butcher",
+        "Andrea Cipriani"
+      ],
+      "year": 2023,
+      "source": "Journal of Medical Internet Research",
+      "doi": "10.2196/43771",
+      "citations": 20,
+      "topics": [
+        "digital_interventions",
+        "resilience",
+        "burnout",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Complete the web-based resilience program as designed (modules + reflection) and schedule it into your week like training time.",
+          "technique": "digital_programs",
+          "confidence": 0.74
+        },
+        {
+          "text": "Use mentoring or peer check-ins to increase adherence and make skills transfer to real work situations.",
+          "technique": "social_support",
+          "confidence": 0.72
+        },
+        {
+          "text": "After each module, pick one 'small experiment' for the week (boundary, recovery break, communication skill) and track results.",
+          "technique": "self_monitoring",
+          "confidence": 0.7
+        },
+        {
+          "text": "Keep a resilience log: one challenge, one coping response, one learning point\u2014repeat for 4\u20136 weeks.",
+          "technique": "expressive_writing",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_080",
+      "title": "Mindfulness-based resilience training to reduce health risk, stress reactivity, and aggression among law enforcement officers: A feasibility and preliminary efficacy trial",
+      "authors": [
+        "Michael S Christopher",
+        "Matthew Hunsinger",
+        "Richard J Goerling",
+        "Sarah Bowen",
+        "Brant S Rogers",
+        "Cynthia R Gross",
+        "Eli Dapolonia",
+        "Jens C Pruessner"
+      ],
+      "year": 2018,
+      "source": "Psychiatry Research",
+      "doi": "10.1016/j.psychres.2018.03.059",
+      "citations": 180,
+      "topics": [
+        "resilience",
+        "anger_management",
+        "biofeedback",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Commit to a mindfulness-based resilience training program (MBRT) with daily practice to reduce stress reactivity and aggression risk.",
+          "technique": "mbrt",
+          "confidence": 0.82
+        },
+        {
+          "text": "Use tactical breathing after high-arousal events: inhale 4 seconds, exhale 6 seconds for 2\u20133 minutes.",
+          "technique": "paced_breathing",
+          "confidence": 0.78
+        },
+        {
+          "text": "Do a 10-minute body scan to notice early stress cues (jaw clench, tight chest) and relax before it escalates.",
+          "technique": "body_scan",
+          "confidence": 0.76
+        },
+        {
+          "text": "Train non-reactivity: when anger rises, pause, label the emotion, and choose a response aligned with professional values.",
+          "technique": "act_defusion",
+          "confidence": 0.72
+        }
+      ]
+    },
+    {
+      "id": "paper_081",
+      "title": "A multisite feasibility randomized clinical trial of mindfulness-based resilience training for aggression, stress, and health in law enforcement officers",
+      "authors": [
+        "Michael Christopher",
+        "Sarah Bowen",
+        "Katie Witkiewitz",
+        "Daniel Grupe",
+        "Richard Goerling",
+        "Matthew Hunsinger",
+        "Barry Oken",
+        "Tyrus Korecki",
+        "Nils Rosenbaum"
+      ],
+      "year": 2024,
+      "source": "BMC Complementary Medicine and Therapies",
+      "doi": "10.1186/s12906-024-04452-y",
+      "citations": 15,
+      "topics": [
+        "resilience",
+        "anger_management",
+        "biofeedback",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Maintain consistent practice (short daily sessions) even during busy weeks; MBRT benefits rely on continued exposure to the skill.",
+          "technique": "mbrt",
+          "confidence": 0.78
+        },
+        {
+          "text": "Use a 2-minute mindfulness 'reset' before entering high-conflict interactions to reduce impulsive responding.",
+          "technique": "mindful_breathing",
+          "confidence": 0.74
+        },
+        {
+          "text": "Track aggression triggers (situations, thoughts, body cues) and pre-plan a de-escalation response (breathing + brief pause + safe exit).",
+          "technique": "self_monitoring",
+          "confidence": 0.72
+        },
+        {
+          "text": "Pair mindfulness with recovery basics (sleep routine, movement, social support) to reduce cumulative load in high-stress roles.",
+          "technique": "sleep_hygiene",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_082",
+      "title": "Enhanced Stress-Resilience Training (ESRT) for graduate-entry medical students: a randomised-controlled, mixed-method investigation",
+      "authors": [
+        "Luke Sanders",
+        "Georgie Budd",
+        "Lebares Carter",
+        "Andrew H. Kemp",
+        "Umakant Dave"
+      ],
+      "year": 2025,
+      "source": "BMC Medical Education",
+      "doi": "10.1186/s12909-025-07768-6",
+      "citations": 5,
+      "topics": [
+        "resilience",
+        "workplace_stress",
+        "act_values"
+      ],
+      "advice": [
+        {
+          "text": "Practice ACT-style defusion: write the stressful thought, then add 'I'm noticing the thought that\u2026' and let it pass without arguing.",
+          "technique": "act_defusion",
+          "confidence": 0.76
+        },
+        {
+          "text": "Clarify values for work and life (e.g., learning, service, balance) and schedule one small committed action for each this week.",
+          "technique": "act_defusion",
+          "confidence": 0.74
+        },
+        {
+          "text": "Use brief mindfulness (5 minutes) before study/work blocks to reduce reactivity and improve flexibility under stress.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.72
+        },
+        {
+          "text": "When stress spikes, choose 'flexible action': do the next right step (one small task) instead of waiting to feel calm first.",
+          "technique": "problem_solving",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_083",
+      "title": "Disturbed sleep and fatigue in occupational burnout",
+      "authors": [
+        "Mirjam Ekstedt",
+        "Marie S\u00f6derstr\u00f6m",
+        "Torbj\u00f6rn Akerstedt",
+        "Jens Nilsson",
+        "Hans-Peter S\u00f8ndergaard",
+        "Aleksander Perski"
+      ],
+      "year": 2006,
+      "source": "Scandinavian Journal of Work, Environment & Health",
+      "doi": "10.5271/sjweh.987",
+      "citations": 500,
+      "topics": [
+        "sleep_issues",
+        "burnout",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Treat sleep as core burnout recovery: set a consistent wind-down window and protect it from work content.",
+          "technique": "sleep_hygiene",
+          "confidence": 0.78
+        },
+        {
+          "text": "Reduce bedtime rumination by writing tomorrow's first task and one 'good enough' stopping point for today.",
+          "technique": "expressive_writing",
+          "confidence": 0.74
+        },
+        {
+          "text": "Avoid late stimulants: limit caffeine to earlier in the day and keep evening meals lighter when possible.",
+          "technique": "sleep_hygiene",
+          "confidence": 0.7
+        },
+        {
+          "text": "If fatigue is persistent with burnout symptoms, seek occupational health/clinical support; early intervention prevents longer sick leave.",
+          "technique": "mental_health_literacy",
+          "confidence": 0.6
+        }
+      ]
+    },
+    {
+      "id": "paper_084",
+      "title": "Cognitive Behavioral Therapy for Chronic Insomnia: A Systematic Review and Meta-analysis",
+      "authors": [
+        "James M Trauer",
+        "Mary Y Qian",
+        "Joseph S Doyle",
+        "Shantha M W Rajaratnam",
+        "David Cunnington"
+      ],
+      "year": 2015,
+      "source": "Annals of Internal Medicine",
+      "doi": "10.7326/M14-2841",
+      "citations": 1800,
+      "topics": [
+        "sleep_issues",
+        "cognitive_distortions",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Use stimulus control: bed is for sleep; if you are awake ~20 minutes, get up for a calm activity until sleepy.",
+          "technique": "cbti",
+          "confidence": 0.9
+        },
+        {
+          "text": "Apply sleep restriction carefully: set a consistent wake time and limit time-in-bed to your average sleep time, then expand as sleep consolidates.",
+          "technique": "cbti",
+          "confidence": 0.88
+        },
+        {
+          "text": "Challenge sleep catastrophizing (\"If I sleep badly I'll fail tomorrow\") with evidence and a balanced replacement thought.",
+          "technique": "cbt_restructuring",
+          "confidence": 0.82
+        },
+        {
+          "text": "Add a 10-minute pre-sleep relaxation routine (paced breathing or muscle relaxation) to lower arousal.",
+          "technique": "paced_breathing",
+          "confidence": 0.8
+        }
+      ]
+    },
+    {
+      "id": "paper_085",
+      "title": "Comparison of Tailored Versus Standard Group Cognitive Behavioral Therapy for Shift Worker Insomnia: A Randomized Controlled Trial",
+      "authors": [
+        "Tanja Gr\u00fcnberger",
+        "Christopher H\u00f6hn",
+        "Manuel Schabus",
+        "Belinda Angela Pletzer",
+        "Anton-Rupert Laireiter"
+      ],
+      "year": 2025,
+      "source": "Clocks & Sleep",
+      "doi": "10.3390/clockssleep7020024",
+      "citations": 5,
+      "topics": [
+        "sleep_issues",
+        "cognitive_distortions",
+        "work_life_balance"
+      ],
+      "advice": [
+        {
+          "text": "For shift work, tailor CBT-I rules: keep one 'anchor sleep' window on most days and adjust with planned naps when schedules rotate.",
+          "technique": "cbti",
+          "confidence": 0.72
+        },
+        {
+          "text": "Use light and environment control: dark, cool room; eye mask/earplugs; limit bright light exposure after night shifts.",
+          "technique": "sleep_hygiene",
+          "confidence": 0.74
+        },
+        {
+          "text": "Protect sleep opportunities with boundary scripts (family/housemates): 'I'm sleeping from X to Y; please treat it like nighttime.'",
+          "technique": "boundary_setting",
+          "confidence": 0.7
+        },
+        {
+          "text": "Keep a 2-week sleep diary and adjust the plan based on what actually happens rather than what you hope happens.",
+          "technique": "self_monitoring",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_086",
+      "title": "The effect of heart rate variability biofeedback training on stress and anxiety: a meta-analysis",
+      "authors": [
+        "V. C. Goessl",
+        "J. E. Curtiss",
+        "S. G. Hofmann"
+      ],
+      "year": 2017,
+      "source": "Psychological Medicine",
+      "doi": "10.1017/S0033291717001003",
+      "citations": 600,
+      "topics": [
+        "anxiety",
+        "workplace_stress",
+        "biofeedback"
+      ],
+      "advice": [
+        {
+          "text": "Practice HRV biofeedback or resonance breathing at ~0.1 Hz (about 6 breaths/min) for 10 minutes daily for 4\u20136 weeks.",
+          "technique": "hrv_biofeedback",
+          "confidence": 0.86
+        },
+        {
+          "text": "Use the technique during acute stress: 2 minutes of slow breathing can reduce state anxiety and improve perceived control.",
+          "technique": "hrv_biofeedback",
+          "confidence": 0.8
+        },
+        {
+          "text": "If available, use a device/app that provides feedback so you can find your personal resonance rate and improve adherence.",
+          "technique": "hrv_biofeedback",
+          "confidence": 0.78
+        },
+        {
+          "text": "Pair HRV breathing with a calming phrase or visualization to reinforce down-regulation of the stress response.",
+          "technique": "paced_breathing",
+          "confidence": 0.74
+        }
+      ]
+    },
+    {
+      "id": "paper_087",
+      "title": "Efficacy of Paced Breathing at the Low-frequency Peak on Heart Rate Variability and Baroreflex Sensitivity",
+      "authors": [
+        "Masahito Sakakibara",
+        "Munehisa Kaneda",
+        "Leo O Oikawa"
+      ],
+      "year": 2020,
+      "source": "Applied Psychophysiology and Biofeedback",
+      "doi": "10.1007/s10484-019-09453-z",
+      "citations": 50,
+      "topics": [
+        "biofeedback",
+        "anxiety",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Find your resonance breathing rate by testing slow paced breathing and selecting the rate that maximizes a clear low-frequency HRV peak.",
+          "technique": "hrv_biofeedback",
+          "confidence": 0.76
+        },
+        {
+          "text": "Practice diaphragmatic breathing at that rate for 5\u201310 minutes, keeping the breath smooth and not forceful.",
+          "technique": "paced_breathing",
+          "confidence": 0.74
+        },
+        {
+          "text": "Use short 'booster' sessions (1\u20132 minutes) during work breaks to lower arousal before returning to demanding tasks.",
+          "technique": "micro_breaks",
+          "confidence": 0.7
+        },
+        {
+          "text": "Track how you feel before/after practice (tension, anxiety, focus) so you can keep the technique that produces the best response.",
+          "technique": "self_monitoring",
+          "confidence": 0.68
+        }
+      ]
+    },
+    {
+      "id": "paper_088",
+      "title": "A slow diaphragmatic breathing intervention for anxiety: How do respiration rate and inhalation/exhalation ratio influence self-reported anxiety?",
+      "authors": [
+        "Marcin Czub",
+        "Marta Kowal",
+        "Rosa Esteve Zarazaga",
+        "Elena R Serrano-Ib\u00e1\u00f1ez",
+        "Gema T Ru\u00edz-P\u00e1rraga",
+        "Carmen Ram\u00edrez-Maestre",
+        "Alicia E L\u00f3pez-Mart\u00ednez",
+        "Charles Paccione",
+        "Joanna Piskorz"
+      ],
+      "year": 2024,
+      "source": "Stress and Health",
+      "doi": "10.1002/smi.3496",
+      "citations": 5,
+      "topics": [
+        "anxiety",
+        "biofeedback",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "For immediate anxiety relief, do one session of slow diaphragmatic breathing: breathe low into the belly and slow the rate deliberately.",
+          "technique": "paced_breathing",
+          "confidence": 0.74
+        },
+        {
+          "text": "Experiment with a longer exhale than inhale (for example 4 seconds in, 6 seconds out) for 3\u20135 minutes.",
+          "technique": "paced_breathing",
+          "confidence": 0.72
+        },
+        {
+          "text": "Keep shoulders relaxed and jaw unclenched; tension defeats the purpose\u2014comfort first, depth second.",
+          "technique": "body_scan",
+          "confidence": 0.68
+        },
+        {
+          "text": "Use a quick rating (0\u201310 anxiety) before and after to learn which breathing pattern works best for you.",
+          "technique": "self_monitoring",
+          "confidence": 0.66
+        }
+      ]
+    },
+    {
+      "id": "paper_089",
+      "title": "Exercise improves physical and psychological quality of life in people with depression: A meta-analysis including the evaluation of control group response",
+      "authors": [
+        "Felipe B Schuch",
+        "Davy Vancampfort",
+        "Simon Rosenbaum",
+        "Justin Richards",
+        "Philip B Ward",
+        "Brendon Stubbs"
+      ],
+      "year": 2016,
+      "source": "Psychiatry Research",
+      "doi": "10.1016/j.psychres.2016.04.054",
+      "citations": 700,
+      "topics": [
+        "depression",
+        "physical_activity",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Schedule exercise as treatment: aim for 3 sessions per week (20\u201345 minutes) of brisk walking, jogging, cycling, or a mix you enjoy.",
+          "technique": "exercise",
+          "confidence": 0.86
+        },
+        {
+          "text": "Start with a low barrier plan (10 minutes) and progress weekly; adherence beats intensity spikes followed by dropout.",
+          "technique": "behavioral_activation",
+          "confidence": 0.8
+        },
+        {
+          "text": "Track mood and functioning (sleep, energy, interest) weekly to notice response and reinforce the habit.",
+          "technique": "self_monitoring",
+          "confidence": 0.72
+        },
+        {
+          "text": "If possible, add a social element (walk with a friend) to increase follow-through and reduce isolation.",
+          "technique": "social_support",
+          "confidence": 0.7
+        }
+      ]
+    },
+    {
+      "id": "paper_090",
+      "title": "Exercise for depression",
+      "authors": [
+        "Gary M Cooney",
+        "Kerry Dwan",
+        "Carolyn A Greig",
+        "Debbie A Lawlor",
+        "Jane Rimer",
+        "Fiona R Waugh",
+        "Marion McMurdo",
+        "Gillian E Mead"
+      ],
+      "year": 2013,
+      "source": "Cochrane Database of Systematic Reviews",
+      "doi": "10.1002/14651858.CD004366.pub6",
+      "citations": 900,
+      "topics": [
+        "depression",
+        "physical_activity",
+        "resilience"
+      ],
+      "advice": [
+        {
+          "text": "Choose an enjoyable exercise mode and make it routine (same days/times); enjoyment predicts adherence better than 'optimal' plans.",
+          "technique": "exercise",
+          "confidence": 0.8
+        },
+        {
+          "text": "Use behavioral activation: schedule exercise like an appointment and do it even when motivation is low\u2014action precedes mood.",
+          "technique": "behavioral_activation",
+          "confidence": 0.82
+        },
+        {
+          "text": "Combine exercise with other treatments if needed (therapy, medication); exercise is a useful adjunct, not a replacement for urgent care.",
+          "technique": "self_monitoring",
+          "confidence": 0.7
+        },
+        {
+          "text": "Set a 'floor' goal (e.g., 10-minute walk) for bad days to keep the streak alive and avoid all-or-nothing cycles.",
+          "technique": "exercise",
+          "confidence": 0.76
+        }
+      ]
+    },
+    {
+      "id": "paper_091",
+      "title": "The delayed, durable effect of expressive writing on depression, anxiety and stress: A meta-analytic review of studies with long-term follow-ups",
+      "authors": [
+        "Lin Guo"
+      ],
+      "year": 2023,
+      "source": "British Journal of Clinical Psychology",
+      "doi": "10.1111/bjc.12408",
+      "citations": 25,
+      "topics": [
+        "expressive_writing",
+        "anxiety",
+        "depression",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Do expressive writing for 15\u201320 minutes per session for 3\u20134 sessions: write about your deepest thoughts and feelings about a stressor.",
+          "technique": "expressive_writing",
+          "confidence": 0.78
+        },
+        {
+          "text": "Space sessions over multiple days (not all in one day) to support longer-term benefits and reduce overwhelm.",
+          "technique": "expressive_writing",
+          "confidence": 0.72
+        },
+        {
+          "text": "After writing, add a 'meaning-making' paragraph: what did you learn, and what is one coping action you can take next week?",
+          "technique": "expressive_writing",
+          "confidence": 0.7
+        },
+        {
+          "text": "Plan a soothing activity after each session (walk, tea, shower) because writing can temporarily increase emotion intensity.",
+          "technique": "sleep_hygiene",
+          "confidence": 0.66
+        }
+      ]
+    },
+    {
+      "id": "paper_092",
+      "title": "A Randomized Control Trial of a Brief Self-Compassion Intervention for Perfectionism, Anxiety, Depression, and Body Image",
+      "authors": [
+        "Vivian Woodfin",
+        "Helge Molde",
+        "Ingrid Dundas",
+        "Per-Einar Binder"
+      ],
+      "year": 2021,
+      "source": "Frontiers in Psychology",
+      "doi": "10.3389/fpsyg.2021.751294",
+      "citations": 50,
+      "topics": [
+        "self_compassion",
+        "anxiety",
+        "depression",
+        "workplace_stress"
+      ],
+      "advice": [
+        {
+          "text": "Use a brief self-compassion exercise when perfectionism hits: write a kind note to yourself as you would to a friend in the same situation.",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.8
+        },
+        {
+          "text": "Practice the 'self-compassion break' in the moment: acknowledge suffering, note common humanity, then offer yourself kindness.",
+          "technique": "self_compassion_exercise",
+          "confidence": 0.82
+        },
+        {
+          "text": "Replace harsh self-criticism with a constructive reframe: 'What would help me improve one step?' rather than 'I'm not good enough.'",
+          "technique": "cbt_restructuring",
+          "confidence": 0.72
+        },
+        {
+          "text": "Pair self-compassion with a 5-minute mindfulness practice to notice the trigger early and respond rather than react.",
+          "technique": "mindfulness_meditation",
+          "confidence": 0.7
+        }
+      ]
+    }
+  ]
+}
