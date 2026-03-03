@@ -19,9 +19,11 @@ services:
     restart: unless-stopped
 
   webhooks:
-    build: ./webhooks
+    build:
+      context: .
+      dockerfile: webhooks/Dockerfile
     ports:
-      - "8000:8000"
+      - "9000:8000"
     env_file:
       - ./webhooks/.env
     environment:
@@ -122,7 +124,7 @@ services:
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
