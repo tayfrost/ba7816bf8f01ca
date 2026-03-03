@@ -76,8 +76,6 @@ def test_list_companies_excludes_deleted_by_default(db_session):
     all_companies = crud.list_companies(include_deleted=True, session=db_session)
     assert sorted([c.name for c in all_companies]) == ["Aco", "Bco"]
 
-
-
 def test_update_company_name(db_session):
     c = crud.create_company("OldName", session=db_session)
     updated = crud.update_company(c.company_id, name="NewName", session=db_session)
