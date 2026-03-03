@@ -22,13 +22,15 @@ class PromptService:
             return tuple(map(int, match.groups()))
         return (0, 0, 0)
     
-    def get_latest_version(self, prompt_prefix: str = "system_prompt") -> Optional[str]:
+    def get_latest_version(self, prompt_prefix: str = "system_prompt", subfolder: Optional[str] = None) -> Optional[str]:
         """Find the latest version of a prompt by prefix."""
-        if not self.prompts_dir.exists():
+        search_dir = self.prompts_dir / subfolder if subfolder else self.prompts_dir
+        
+        if not search_dir.exists():
             return None
         
         prompt_files = [
-            f for f in self.prompts_dir.iterdir()
+            f for f in search_dir.iterdir()
             if f.is_file() and f.name.startswith(prompt_prefix)
         ]
         
@@ -38,16 +40,18 @@ class PromptService:
         latest = max(prompt_files, key=lambda f: self._parse_version(f.name))
         return latest.name
     
-    def load_prompt(self, filename: Optional[str] = None) -> str:
-        """Load a specific prompt or the latest version."""
-        if filename is None:
-            filename = self.get_latest_version()
-            if filename is None:
-                raise FileNotFoundError("No system prompts found")
+    def load_prompt(self, filename: Optional[str] = None, subfolder: Optional[str] = None) -> str:
+        """Load a specific prompt or the latest version from optional subfolder."""
+        search_dir = self.prompts_dir / subfolder if subfolder else self.prompts_dir
         
-        prompt_path = self.prompts_dir / filename
+        if filename is None:
+            filename = self.get_latest_version(subfolder=subfolder)
+            if filename is None:
+                raise FileNotFoundError(f"No prompts found in {search_dir}")
+        
+        prompt_path = search_dir / filename
         if not prompt_path.exists():
-            raise FileNotFoundError(f"Prompt file not found: {filename}")
+            raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
         
         return prompt_path.read_text(encoding="utf-8")
     

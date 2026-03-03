@@ -6,7 +6,7 @@ from typing import Literal
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from langchain_mistralai import ChatMistralAI
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 
@@ -20,9 +20,9 @@ app = FastAPI(title="SentinelAI Mental Health Assessment")
 
 # Initialize services
 prompt_service = PromptService()
-llm = ChatMistralAI(
-    model="mistral-large-latest",
-    api_key=os.getenv("MISTRAL_API_KEY"),
+llm = ChatOpenAI(
+    model=os.getenv("MODEL", "gpt-5-mini"),
+    api_key=os.getenv("OPENAI_API_KEY"),
     temperature=0.3
 )
 
@@ -32,16 +32,37 @@ class AnalyzeRequest(BaseModel):
     message: str
 
 
-def assess_risk(state: AgentState) -> AgentState:
-    """Assess if message indicates mental health risk."""
-    system_prompt = prompt_service.load_prompt()
+def redactor(state: AgentState) -> AgentState:
+    """Redact company-sensitive information while preserving employee mental health indicators."""
+    system_prompt = prompt_service.load_prompt(subfolder="redactor")
+    human_prompt = f"""Original message: "{state['raw_message']}"
+
+Respond with ONLY a JSON object:
+{{"redacted_message": "message with company info redacted"}}"""
     
     messages = [
         SystemMessage(content=system_prompt),
-        HumanMessage(content=f"""Analyze this message for mental health risk: "{state['raw_message']}"
+        HumanMessage(content=human_prompt)
+    ]
+    
+    response = llm.invoke(messages)
+    result = json.loads(response.content)
+    
+    state['raw_message'] = result['redacted_message']
+    return state
+
+
+def assess_risk(state: AgentState) -> AgentState:
+    """Assess if message indicates mental health risk."""
+    system_prompt = prompt_service.load_prompt(subfolder="assess_risk")
+    human_prompt = f"""Analyze this message for mental health risk: "{state['raw_message']}"
 
 Respond with ONLY a JSON object:
-{{"is_risk": true/false, "reasoning": "brief explanation"}}""")
+{{"is_risk": true/false, "reasoning": "brief explanation"}}"""
+    
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=human_prompt)
     ]
     
     response = llm.invoke(messages)
@@ -53,11 +74,8 @@ Respond with ONLY a JSON object:
 
 def grade_message(state: AgentState) -> AgentState:
     """Grade message across mental health dimensions."""
-    system_prompt = prompt_service.load_prompt()
-    
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=f"""Score this message on mental health dimensions (0-100): "{state['raw_message']}"
+    system_prompt = prompt_service.load_prompt(subfolder="grade_message")
+    human_prompt = f"""Score this message on mental health dimensions (0-100): "{state['raw_message']}"
 
 Respond with ONLY a JSON object:
 {{
@@ -67,7 +85,11 @@ Respond with ONLY a JSON object:
   "depression_indicators": 0-100,
   "anxiety_markers": 0-100,
   "isolation_tendency": 0-100
-}}""")
+}}"""
+    
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=human_prompt)
     ]
     
     response = llm.invoke(messages)
@@ -83,17 +105,18 @@ Respond with ONLY a JSON object:
 
 def generate_recommendations(state: AgentState) -> AgentState:
     """Generate HR recommendations based on assessment."""
-    system_prompt = prompt_service.load_prompt()
+    system_prompt = prompt_service.load_prompt(subfolder="generate_recommendations")
     scores = state['hr_report']['scores']
-    
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=f"""Based on message: "{state['raw_message']}"
+    human_prompt = f"""Based on message: "{state['raw_message']}"
 And scores: {json.dumps(scores)}
 
 Generate HR recommendations and detailed analysis response.
 Respond with JSON:
-{{"recommendations": ["rec1", "rec2"], "response": "detailed analysis text"}}""")
+{{"recommendations": ["rec1", "rec2"], "response": "detailed analysis text"}}"""
+    
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=human_prompt)
     ]
     
     response = llm.invoke(messages)
@@ -115,11 +138,13 @@ def should_continue(state: AgentState) -> Literal["grade", "end"]:
 # Build LangGraph workflow
 workflow = StateGraph(AgentState)
 
+workflow.add_node("redactor", redactor)
 workflow.add_node("assess_risk", assess_risk)
 workflow.add_node("grade_message", grade_message)
 workflow.add_node("generate_recommendations", generate_recommendations)
 
-workflow.set_entry_point("assess_risk")
+workflow.set_entry_point("redactor")
+workflow.add_edge("redactor", "assess_risk")
 workflow.add_conditional_edges(
     "assess_risk",
     should_continue,
@@ -143,8 +168,8 @@ async def root():
 @app.post("/analyze", response_model=AgentOutput)
 async def analyze_message(request: AnalyzeRequest):
     """Analyze message for mental health risks."""
-    if not os.getenv("MISTRAL_API_KEY"):
-        raise HTTPException(status_code=500, detail="MISTRAL_API_KEY not configured")
+    if not os.getenv("OPENAI_API_KEY"):
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
     
     try:
         # Initialize state
@@ -183,7 +208,7 @@ async def health_check():
     """Detailed health check with dependencies."""
     return {
         "status": "healthy",
-        "mistral_api_configured": bool(os.getenv("MISTRAL_API_KEY")),
+        "openai_api_configured": bool(os.getenv("OPENAI_API_KEY")),
         "prompt_service": "ready",
         "agent": "compiled"
     }
