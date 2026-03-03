@@ -54,6 +54,17 @@ services:
       - pgvector_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run sentinelai
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    volumes:
+      - ./cloudflared:/etc/cloudflared
+    depends_on:
+      - webhooks
+    restart: unless-stopped
   kg-mcp-server:
     build:
       context: .

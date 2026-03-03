@@ -1,32 +1,26 @@
-from fastapi import FastAPI, Request, HTTPException
+"""
+Main application file for the Slack webhook server.
+This file defines orchestration logic for handling incoming Slack events.
 
-from app.services.slack_service import verify_slack_signature
-from app.utils.message_utils import filter_message, store_in_db
+Ideally, this file will only have registered routes and high-level orchestration logic. The actual business logic
+should be delegated to services in the 'services' module, and data structures should be defined in the 'schemas' module.
+While endpoints should be in controllers folder.
+
+"""
+
+
+import logging
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  
+from fastapi import FastAPI
+from app.controllers.slack_controller import router as slack_router
+from app.controllers.gmail_controller import router as gmail_router
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
-
-
-@app.post("/slack/events")
-async def slack_events(request: Request):
-    body = await request.body()
-    headers = request.headers
-    
-    timestamp = headers.get("X-Slack-Request-Timestamp", "")
-    signature = headers.get("X-Slack-Signature", "")
-    
-    if not verify_slack_signature(body, timestamp, signature):
-        raise HTTPException(status_code=403, detail="Invalid signature")
-    
-    payload = await request.json()
-    
-    if payload.get("type") == "url_verification":
-        return {"challenge": payload.get("challenge")}
-    
-    if payload.get("event", {}).get("type") == "message": # v1 focuses only on messages, not reactions or edits
-        text = payload["event"].get("text", "")
-        print(text)
-        
-        if filter_message(text):
-            store_in_db(payload["event"])
-    
-    return {"ok": True}
+app.include_router(slack_router)
+app.include_router(gmail_router)
