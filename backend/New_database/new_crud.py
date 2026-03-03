@@ -1,0 +1,449 @@
+from backend.New_database import new_oop as model
+from sqlalchemy import select, and_
+from datetime import datetime, timezone
+from sqlalchemy.orm import Session as SASession
+from typing import Optional as optional
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
+
+
+engine = create_engine("postgresql+psycopg://postgres:postgres@localhost:5432/sentinelai", echo=True)
+Session = sessionmaker(bind=engine)
+
+VALID_ROLES = {"admin", "viewer", "biller"}
+VALID_USER_STATUS = {"active", "inactive"}
+
+# ~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+def get_company_id_by_name(name: str,*,include_deleted: bool = False,session: optional[SASession] = None) -> optional[int]:
+    """
+        Provide name of company, will return the company id
+    """
+    
+    name = (name or "").strip()
+    if not name:
+        return None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.Company.company_id).where(model.Company.name == name)
+        if not include_deleted:
+            stmt = stmt.where(model.Company.deleted_at.is_(None))
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+def get_company_name_by_id(company_id: int,*,session: optional[SASession] = None) -> optional[str]:
+    """"provide company id,
+        returns company name """
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.Company.name).where(model.Company.company_id == company_id)
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+def company_exists(company_id: int,*,include_deleted: bool = False,session: optional[SASession] = None) -> bool:
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.Company.company_id).where(model.Company.company_id == company_id)
+        if not include_deleted:
+            stmt = stmt.where(model.Company.deleted_at.is_(None))
+        return session.execute(stmt).scalar_one_or_none() is not None
+    finally:
+        if own_session:
+            session.close()
+
+def user_exists(company_id: int,user_id,*,include_deleted: bool = False,session: optional[SASession] = None) -> bool:
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.User.user_id).where(
+            model.User.company_id == company_id,
+            model.User.user_id == user_id,
+        )
+        if not include_deleted:
+            stmt = stmt.where(model.User.deleted_at.is_(None))
+        return session.execute(stmt).scalar_one_or_none() is not None
+    finally:
+        if own_session:
+            session.close()
+
+def is_company_admin(company_id: int,user_id,*,must_be_active_user: bool = True,session: optional[SASession] = None) -> bool:
+    """
+    Checks if user is an admin within the company.
+    role/status is on users table
+    can also check inactive admins via must_be_active_user = False
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.User.user_id).where(
+            model.User.company_id == company_id,
+            model.User.user_id == user_id,
+            model.User.role == "admin",
+        )
+        if must_be_active_user:
+            stmt = stmt.where(
+                model.User.status == "active",
+                model.User.deleted_at.is_(None),
+            )
+        return session.execute(stmt).scalar_one_or_none() is not None
+    finally:
+        if own_session:
+            session.close()
+
+def require_company_admin(company_id: int,user_id,*,session: optional[SASession] = None) -> None:
+    """
+    Convenience guard: raises ValueError if not admin.
+    """
+    if not is_company_admin(company_id, user_id, session=session):
+        raise ValueError("User is not an active admin for this company.")
+
+def is_company_member(company_id: int,user_id,*,must_be_active_user: bool = True,session: optional[SASession] = None) -> bool:
+    """
+        can also check if non active admin member via must_be_active_user = False
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.User.user_id).where(
+            model.User.company_id == company_id,
+            model.User.user_id == user_id,
+        )
+        if must_be_active_user:
+            stmt = stmt.where(
+                model.User.status == "active",
+                model.User.deleted_at.is_(None),
+            )
+        return session.execute(stmt).scalar_one_or_none() is not None
+    finally:
+        if own_session:
+            session.close()
+
+def get_google_mailbox_id_for_user(company_id: int,user_id,*,session: optional[SASession] = None) -> optional[int]:
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = (
+            select(model.GoogleMailbox.google_mailbox_id)
+            .where(
+                model.GoogleMailbox.company_id == company_id,
+                model.GoogleMailbox.user_id == user_id,
+            )
+            .order_by(model.GoogleMailbox.google_mailbox_id.desc())
+            .limit(1)
+        )
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+def get_google_email_for_user(company_id: int,user_id,*,session: optional[SASession] = None) -> optional[str]:
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = (
+            select(model.GoogleMailbox.email_address)
+            .where(
+                model.GoogleMailbox.company_id == company_id,
+                model.GoogleMailbox.user_id == user_id,
+            )
+            .order_by(model.GoogleMailbox.google_mailbox_id.desc())
+            .limit(1)
+        )
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+def get_slack_identity_for_user(company_id: int,user_id,*,session: optional[SASession] = None) -> list[tuple[str, str]]:
+    """
+    Returns list of (team_id, slack_user_id) linked to this user.
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.SlackAccount.team_id, model.SlackAccount.slack_user_id).where(
+            model.SlackAccount.company_id == company_id,
+            model.SlackAccount.user_id == user_id,
+        )
+        return list(session.execute(stmt).all())
+    finally:
+        if own_session:
+            session.close()
+
+def get_slack_workspace_id_by_team_id(team_id: str,*,session: optional[SASession] = None) -> optional[int]:
+    team_id = (team_id or "").strip()
+    if not team_id:
+        return None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.SlackWorkspace.slack_workspace_id).where(model.SlackWorkspace.team_id == team_id)
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+def slack_workspace_active(team_id: str,*,session: optional[SASession] = None) -> bool:
+    """
+    Active means installed and not revoked.
+    """
+    team_id = (team_id or "").strip()
+    if not team_id:
+        return False
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.SlackWorkspace.team_id).where(
+            model.SlackWorkspace.team_id == team_id,
+            model.SlackWorkspace.revoked_at.is_(None),
+        )
+        return session.execute(stmt).scalar_one_or_none() is not None
+    finally:
+        if own_session:
+            session.close()
+
+def google_mailbox_active_for_user(company_id: int,user_id,*,session: optional[SASession] = None) -> bool:
+    """
+     goole_mailboxes table will treat 'exists' as active.
+     later decision may add revoked_at, update this to check it
+    """
+    return get_google_mailbox_id_for_user(company_id, user_id, session=session) is not None
+
+def validate_role(role: str) -> None:
+    if role not in VALID_ROLES:
+        raise ValueError(f"Invalid role: {role}. Must be one of {sorted(VALID_ROLES)}")
+
+def validate_user_status(status: str) -> None:
+    if status not in VALID_USER_STATUS:
+        raise ValueError(f"Invalid status: {status}. Must be one of {sorted(VALID_USER_STATUS)}")
+
+
+# ====================== Subscription_plan =================
+# ~~~~~~~~~~~~~~~~~ subscription plan ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def create_subscription_plan(plan_name: str,price_pennies: int,seat_limit: int,currency: str = "GBP",session: optional[SASession] = None) -> model.SubscriptionPlan:
+    """
+    Create a subscription plan.
+
+    Raises:
+        ValueError: invalid inputs
+        RuntimeError: unique/constraint violations
+    """
+    plan_name = (plan_name or "").strip()
+    currency = (currency or "GBP").strip().upper()
+
+    if len(plan_name) < 2:
+        raise ValueError("plan_name must be at least 2 characters (after trimming).")
+    if price_pennies is None or int(price_pennies) < 0:
+        raise ValueError("price_pennies must be >= 0.")
+    if seat_limit is None or int(seat_limit) <= 0:
+        raise ValueError("seat_limit must be > 0.")
+    if len(currency) != 3:
+        raise ValueError("currency must be a 3-letter code like 'GBP'.")
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        existing = session.execute(
+            select(model.SubscriptionPlan).where(model.SubscriptionPlan.plan_name == plan_name)
+        ).scalar_one_or_none()
+        if existing:
+            raise RuntimeError(
+                f"Subscription plan '{plan_name}' already exists (plan_id={existing.plan_id})."
+            )
+
+        plan = model.SubscriptionPlan(
+            plan_name=plan_name,
+            price_pennies=int(price_pennies),
+            currency=currency,
+            seat_limit=int(seat_limit),
+        )
+        session.add(plan)
+
+        session.flush()
+        session.commit()
+
+        session.refresh(plan)
+        return plan
+
+    except ValueError:
+        raise
+    except RuntimeError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected create_subscription_plan: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
+def list_subscription_plans(session: optional[SASession] = None) -> list[model.SubscriptionPlan]:
+    """Return all plans ordered by price_pennies then seat_limit then plan_name."""
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        stmt = (
+            select(model.SubscriptionPlan)
+            .order_by(
+                model.SubscriptionPlan.price_pennies.asc(),
+                model.SubscriptionPlan.seat_limit.asc(),
+                model.SubscriptionPlan.plan_name.asc(),
+            )
+        )
+        return session.execute(stmt).scalars().all()
+    finally:
+        if own_session:
+            session.close()
+
+def get_subscription_plan_by_name(plan_name: str, session: optional[SASession] = None) -> optional[model.SubscriptionPlan]:
+    """Get a plan by name. Returns None if not found."""
+    plan_name = (plan_name or "").strip()
+    if not plan_name:
+        return None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        stmt = select(model.SubscriptionPlan).where(model.SubscriptionPlan.plan_name == plan_name)
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+def get_subscription_plan_by_id(plan_id: int,session: optional[SASession] = None) -> optional[model.SubscriptionPlan]:
+    """Get a plan by id. Returns None if not found."""
+    if plan_id is None:
+        return None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        return session.get(model.SubscriptionPlan, plan_id)
+    finally:
+        if own_session:
+            session.close()
+
+def update_subscription_plan(plan_id: int,*,plan_name: str | None = None,price_pennies: int | None = None,seat_limit: int | None = None,currency: str | None = None,session: optional[SASession] = None) -> optional[model.SubscriptionPlan]:
+    """
+    Update a plan by id. Returns updated plan, or None if not found.
+    Only updates fields you pass, others will be unchanged.
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        plan = session.get(model.SubscriptionPlan, plan_id)
+        if not plan:
+            return None
+
+        if plan_name is not None:
+            plan_name = plan_name.strip()
+            if len(plan_name) < 2:
+                raise ValueError("plan_name must be at least 2 characters (after trimming).")
+            plan.plan_name = plan_name
+
+        if price_pennies is not None:
+            if int(price_pennies) < 0:
+                raise ValueError("price_pennies must be >= 0.")
+            plan.price_pennies = int(price_pennies)
+
+        if seat_limit is not None:
+            if int(seat_limit) <= 0:
+                raise ValueError("seat_limit must be > 0.")
+            plan.seat_limit = int(seat_limit)
+
+        if currency is not None:
+            currency = currency.strip().upper()
+            if len(currency) != 3:
+                raise ValueError("currency must be a 3-letter code like 'GBP'.")
+            plan.currency = currency
+
+        session.commit()
+        session.refresh(plan)
+        return plan
+
+    except ValueError:
+        raise
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected update_subscription_plan: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
+def delete_subscription_plan(plan_id: int, session: optional[SASession] = None) -> bool:
+    """
+    Delete a plan by id.
+    Returns True if deleted, False if not found.
+
+    NOTE: Will fail if any subscriptions rows reference the plan (FK RESTRICT).
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        plan = session.get(model.SubscriptionPlan, plan_id)
+        if not plan:
+            return False
+
+        session.delete(plan)
+        session.commit()
+        return True
+
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(
+            f"DB rejected delete_subscription_plan (maybe plan is in use): {e.orig}"
+        ) from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
+
+
+
+
+
