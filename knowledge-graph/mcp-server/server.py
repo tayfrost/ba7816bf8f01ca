@@ -2,17 +2,56 @@
 SentinelAI Knowledge Graph MCP Server
 Exposes the evidence-based mental health knowledge graph as MCP tools
 for AI agents to query recommendations given a diagnosis.
+
+Transport: SSE (Server-Sent Events) — connect at http://<host>:<port>/sse
 """
 
 import json
+import logging
 import os
 import re
 from mcp.server.fastmcp import FastMCP
 
-PAPERS_PATH = os.environ.get(
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger("sentinelai-kg-mcp")
+
+HF_DATASET_REPO = os.environ.get("HF_DATASET_REPO", "")
+HF_DATASET_FILE = os.environ.get("HF_DATASET_FILE", "papers.json")
+
+LOCAL_DATA_PATH = os.environ.get(
     "KG_DATA_PATH",
     os.path.join(os.path.dirname(__file__), "..", "data", "papers.json"),
 )
+
+MCP_HOST = os.environ.get("MCP_HOST", "0.0.0.0")
+MCP_PORT = int(os.environ.get("MCP_PORT", "8001"))
+
+
+def _resolve_data_path() -> str:
+    """Resolve dataset path: HuggingFace Hub if configured, otherwise local file."""
+    if HF_DATASET_REPO:
+        try:
+            from huggingface_hub import hf_hub_download
+            path = hf_hub_download(
+                repo_id=HF_DATASET_REPO,
+                filename=HF_DATASET_FILE,
+                repo_type="dataset",
+            )
+            logger.info("Loaded dataset from HuggingFace: %s", HF_DATASET_REPO)
+            return path
+        except Exception as exc:
+            logger.warning("HF download failed (%s), falling back to local", exc)
+
+    if os.path.exists(LOCAL_DATA_PATH):
+        logger.info("Using local dataset: %s", LOCAL_DATA_PATH)
+        return LOCAL_DATA_PATH
+
+    raise FileNotFoundError(
+        f"No dataset found. Set HF_DATASET_REPO or ensure {LOCAL_DATA_PATH} exists."
+    )
 
 DISCLAIMER = (
     "This advice is based on peer-reviewed research and is not a "
@@ -32,8 +71,11 @@ CRISIS_KEYWORDS = re.compile(
 )
 
 
-def load_dataset():
-    with open(PAPERS_PATH, "r") as f:
+_DATASET: dict | None = None
+
+
+def _load_dataset(data_path: str) -> dict:
+    with open(data_path, "r") as f:
         data = json.load(f)
 
     topic_index = {t["id"]: t for t in data["topics"]}
@@ -69,8 +111,22 @@ def load_dataset():
     }
 
 
-DATASET = load_dataset()
+def get_dataset() -> dict:
+    """Lazy-load dataset on first access. Fail-fast but import-safe for tests."""
+    global _DATASET
+    if _DATASET is None:
+        data_path = _resolve_data_path()
+        _DATASET = _load_dataset(data_path)
+        logger.info(
+            "Dataset loaded: %d papers, %d advice items",
+            len(_DATASET["papers"]),
+            len(_DATASET["advice"]),
+        )
+    return _DATASET
 
+# Word-boundary regex version of topic keywords (improved over src/agent_integration.py
+# which uses simple substring matching). Kept separate to avoid coupling to Neo4j imports
+# and to provide stricter matching for the MCP server.
 TOPIC_KEYWORDS = {
     "workplace_stress": [
         "stress",         "stressed", "stressing", "pressure", "overwhelmed", "overwhelming", "workload",
@@ -229,6 +285,8 @@ def triage_crisis_risk(text: str) -> dict:
         Dict with crisis_detected flag and, if positive, emergency resources
         and strict instructions for the AI agent.
     """
+    text = text[:MAX_INPUT_LENGTH]
+
     if CRISIS_KEYWORDS.search(text):
         return {
             "crisis_detected": True,
@@ -307,7 +365,7 @@ def get_recommendation(
         }
 
     scored = []
-    for a in DATASET["advice"]:
+    for a in get_dataset()["advice"]:
         overlap = len(set(concerns) & set(a["advice_topics"]))
         if overlap > 0:
             scored.append((overlap, a["confidence"], a["paper_citations"], a))
@@ -315,7 +373,7 @@ def get_recommendation(
     scored.sort(key=lambda x: (x[0], x[1], x[2]), reverse=True)
     top = [x[3] for x in scored[:max_results]]
 
-    concern_names = [DATASET["topics"].get(c, {}).get("name", c) for c in concerns]
+    concern_names = [get_dataset()["topics"].get(c, {}).get("name", c) for c in concerns]
 
     return {
         "detected_concerns": concerns,
@@ -347,11 +405,11 @@ def get_recommendation_by_topic(
     """
     max_results = _clamp_results(max_results)
 
-    if topic_id not in DATASET["topics"]:
-        return {"error": f"Unknown topic_id '{topic_id}'", "valid_topic_ids": list(DATASET["topics"].keys())}
+    if topic_id not in get_dataset()["topics"]:
+        return {"error": f"Unknown topic_id '{topic_id}'", "valid_topic_ids": list(get_dataset()["topics"].keys())}
 
-    topic_info = DATASET["topics"][topic_id]
-    matching = [a for a in DATASET["advice"] if topic_id in a["advice_topics"]]
+    topic_info = get_dataset()["topics"][topic_id]
+    matching = [a for a in get_dataset()["advice"] if topic_id in a["advice_topics"]]
     top = matching[:max_results]
 
     return {
@@ -383,16 +441,16 @@ def get_recommendation_by_technique(
     """
     max_results = _clamp_results(max_results)
 
-    if technique_id not in DATASET["techniques"]:
+    if technique_id not in get_dataset()["techniques"]:
         return {
             "error": f"Unknown technique_id '{technique_id}'",
             "valid_technique_ids": [
-                {"id": k, "name": v["name"]} for k, v in DATASET["techniques"].items()
+                {"id": k, "name": v["name"]} for k, v in get_dataset()["techniques"].items()
             ],
         }
 
-    technique_info = DATASET["techniques"][technique_id]
-    matching = [a for a in DATASET["advice"] if a["technique_id"] == technique_id]
+    technique_info = get_dataset()["techniques"][technique_id]
+    matching = [a for a in get_dataset()["advice"] if a["technique_id"] == technique_id]
     top = matching[:max_results]
 
     return {
@@ -416,7 +474,7 @@ def list_topics() -> dict:
     """
     topics = [
         {"id": tid, "name": t["name"], "description": t["description"]}
-        for tid, t in DATASET["topics"].items()
+        for tid, t in get_dataset()["topics"].items()
     ]
     return {"topics": topics, "count": len(topics)}
 
@@ -432,17 +490,17 @@ def get_techniques_for_topic(topic_id: str) -> dict:
     Returns:
         Dict with topic info and list of techniques (id, name, description).
     """
-    if topic_id not in DATASET["topics"]:
-        return {"error": f"Unknown topic_id '{topic_id}'", "valid_topic_ids": list(DATASET["topics"].keys())}
+    if topic_id not in get_dataset()["topics"]:
+        return {"error": f"Unknown topic_id '{topic_id}'", "valid_topic_ids": list(get_dataset()["topics"].keys())}
 
     techniques = [
         {"id": tid, "name": t["name"], "description": t["description"]}
-        for tid, t in DATASET["techniques"].items()
+        for tid, t in get_dataset()["techniques"].items()
         if topic_id in t.get("topics", [])
     ]
 
     return {
-        "topic": DATASET["topics"][topic_id],
+        "topic": get_dataset()["topics"][topic_id],
         "techniques": techniques,
         "count": len(techniques),
     }
@@ -479,7 +537,7 @@ def search_papers(
     results = []
     query_lower = query.lower()[:MAX_INPUT_LENGTH] if query else ""
 
-    for paper in DATASET["papers"]:
+    for paper in get_dataset()["papers"]:
         if paper["citations"] < min_citations:
             continue
 
@@ -535,7 +593,7 @@ def get_paper_details(paper_id: str) -> dict:
         citations, topics, and all advice items with techniques and confidence.
     """
     paper = next(
-        (p for p in DATASET["papers"] if p["id"] == paper_id), None
+        (p for p in get_dataset()["papers"] if p["id"] == paper_id), None
     )
     if not paper:
         return {
@@ -552,15 +610,15 @@ def get_paper_details(paper_id: str) -> dict:
         "doi": paper.get("doi", "N/A"),
         "citations": paper["citations"],
         "topics": [
-            {"id": tid, "name": DATASET["topics"].get(tid, {}).get("name", tid)}
+            {"id": tid, "name": get_dataset()["topics"].get(tid, {}).get("name", tid)}
             for tid in paper["topics"]
         ],
         "advice": [
             {
                 "text": a["text"],
                 "technique_id": a["technique"],
-                "technique_name": DATASET["techniques"].get(a["technique"], {}).get("name", a["technique"]),
-                "technique_description": DATASET["techniques"].get(a["technique"], {}).get("description", ""),
+                "technique_name": get_dataset()["techniques"].get(a["technique"], {}).get("name", a["technique"]),
+                "technique_description": get_dataset()["techniques"].get(a["technique"], {}).get("description", ""),
                 "confidence": a["confidence"],
             }
             for a in paper["advice"]
@@ -581,7 +639,7 @@ def list_techniques() -> dict:
     """
     techniques = [
         {"id": tid, "name": t["name"], "description": t["description"], "addresses_topics": t["topics"]}
-        for tid, t in DATASET["techniques"].items()
+        for tid, t in get_dataset()["techniques"].items()
     ]
     return {"techniques": techniques, "count": len(techniques)}
 
@@ -594,33 +652,33 @@ def get_stats() -> dict:
         Dict with counts of papers, advice items, topics, techniques,
         total citations, top journals, top-cited papers, and advice distribution by topic.
     """
-    total_advice = len(DATASET["advice"])
-    total_papers = len(DATASET["papers"])
-    total_citations = sum(p["citations"] for p in DATASET["papers"])
+    total_advice = len(get_dataset()["advice"])
+    total_papers = len(get_dataset()["papers"])
+    total_citations = sum(p["citations"] for p in get_dataset()["papers"])
 
     sources = {}
-    for p in DATASET["papers"]:
+    for p in get_dataset()["papers"]:
         src = p.get("source", "Unknown")
         sources[src] = sources.get(src, 0) + 1
     top_sources = sorted(sources.items(), key=lambda x: x[1], reverse=True)[:10]
 
-    sorted_papers = sorted(DATASET["papers"], key=lambda x: x["citations"], reverse=True)[:5]
+    sorted_papers = sorted(get_dataset()["papers"], key=lambda x: x["citations"], reverse=True)[:5]
 
     topic_counts = {}
-    for adv in DATASET["advice"]:
+    for adv in get_dataset()["advice"]:
         for t in adv["advice_topics"]:
             topic_counts[t] = topic_counts.get(t, 0) + 1
 
     year_range = [
-        min(p["year"] for p in DATASET["papers"]),
-        max(p["year"] for p in DATASET["papers"]),
+        min(p["year"] for p in get_dataset()["papers"]),
+        max(p["year"] for p in get_dataset()["papers"]),
     ]
 
     return {
         "papers": total_papers,
         "advice_items": total_advice,
-        "topics": len(DATASET["topics"]),
-        "techniques": len(DATASET["techniques"]),
+        "topics": len(get_dataset()["topics"]),
+        "techniques": len(get_dataset()["techniques"]),
         "total_citations": total_citations,
         "avg_advice_per_paper": round(total_advice / total_papers, 1),
         "year_range": year_range,
@@ -629,13 +687,14 @@ def get_stats() -> dict:
             for p in sorted_papers
         ],
         "advice_by_topic": {
-            DATASET["topics"].get(tid, {}).get("name", tid): count
+            get_dataset()["topics"].get(tid, {}).get("name", tid): count
             for tid, count in sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)
         },
         "top_journals": [{"source": s, "papers": c} for s, c in top_sources],
-        "version": DATASET["metadata"]["version"],
+        "version": get_dataset()["metadata"]["version"],
     }
 
 
 if __name__ == "__main__":
-    mcp.run()
+    get_dataset()
+    mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT)
