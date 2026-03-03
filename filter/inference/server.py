@@ -3,7 +3,6 @@ from concurrent import futures
 import sys
 import os
 from pathlib import Path
-import numpy as np
 from dotenv import load_dotenv
 
 # Add parent and generated proto files to path
@@ -16,7 +15,15 @@ load_dotenv()
 from filter.v1 import filter_pb2
 from filter.v1 import filter_pb2_grpc
 import config
-from services.onnx_factory import load_onnx_model_and_tokenizer
+from inference_services.onnx_factory import load_onnx_model_and_tokenizer
+from inference_services.classification_utils import (
+    tokenize_message,
+    create_chunks,
+    prepare_chunk_inputs,
+    run_chunk_inference,
+    process_chunk_predictions,
+    aggregate_chunk_results
+)
 
 
 class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
@@ -53,12 +60,11 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             message = request.message
             print(f"[REQUEST] Message length: {len(message)} chars")
             
-            # Tokenize full message
-            encoding = self.tokenizer.encode(message, add_special_tokens=False)
-            tokens = encoding.ids
+            # Tokenize message
+            tokens = tokenize_message(self.tokenizer, message)
             print(f"[REQUEST] Tokenized into {len(tokens)} tokens")
             
-            # Handle empty or short messages
+            # Handle empty messages
             if len(tokens) == 0:
                 return filter_pb2.ClassifyResponse(
                     category="neutral",
@@ -69,104 +75,55 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
                     all_responses=""
                 )
             
-            # Sliding window with overlap
-            chunks = []
-            start = 0
-            while start < len(tokens):
-                end = min(start + self.max_length - 2, len(tokens))  # -2 for [CLS] and [SEP]
-                chunk = tokens[start:end]
-                chunks.append(chunk)
-                
-                if end >= len(tokens):
-                    break
-                start += (self.max_length - self.overlap - 2)
-            
+            # Create chunks with sliding window
+            chunks = create_chunks(tokens, self.max_length, self.overlap)
             print(f"[REQUEST] Split into {len(chunks)} chunks for processing")
             
-            # Run inference on each chunk
-            all_responses = []
-            max_category_conf = 0.0
-            max_category = "neutral"
-            max_severity_conf = 0.0
-            max_severity = "none"
-            max_risk_score = 0.0
-            
+            # Process each chunk
             category_labels = {v: k for k, v in config.CATEGORY_MAP.items()}
             severity_labels = {v: k for k, v in config.SEVERITY_MAP.items()}
             
-            for i, chunk in enumerate(chunks):
-                # Add special tokens
-                input_ids = [self.cls_token_id] + chunk + [self.sep_token_id]
-                attention_mask = [1] * len(input_ids)
-                
-                # Pad to max_length
-                padding_length = self.max_length - len(input_ids)
-                input_ids += [self.pad_token_id] * padding_length
-                attention_mask += [0] * padding_length
-                
-                # Convert to numpy arrays
-                input_ids_array = np.array([input_ids], dtype=np.int64)
-                attention_mask_array = np.array([attention_mask], dtype=np.int64)
-                
-                # Run inference
-                outputs = self.onnx_session.run(
-                    None,
-                    {
-                        "input_ids": input_ids_array,
-                        "attention_mask": attention_mask_array
-                    }
+            chunk_results = []
+            for chunk in chunks:
+                # Prepare inputs
+                input_ids, attention_mask = prepare_chunk_inputs(
+                    chunk,
+                    self.cls_token_id,
+                    self.sep_token_id,
+                    self.pad_token_id,
+                    self.max_length
                 )
                 
-                category_logits, severity_logits = outputs
+                # Run inference
+                category_logits, severity_logits = run_chunk_inference(
+                    self.onnx_session,
+                    input_ids,
+                    attention_mask
+                )
                 
-                # Get predictions
-                category_probs = self._softmax(category_logits[0])
-                severity_probs = self._softmax(severity_logits[0])
-                
-                category_idx = int(np.argmax(category_probs))
-                category_conf = float(category_probs[category_idx])
-                category_name = category_labels[category_idx]
-                
-                severity_idx = int(np.argmax(severity_probs))
-                severity_conf = float(severity_probs[severity_idx])
-                severity_name = severity_labels[severity_idx]
-                
-                # Calculate risk score (confidence if category is in risk categories)
-                is_risk_category = category_name in config.RISK_CATEGORIES
-                risk_score = category_conf if is_risk_category else 0.0
-                
-                # Store response
-                response_str = f"[Chunk {i+1}] Category: {category_name}({category_conf:.3f}), Severity: {severity_name}({severity_conf:.3f}), Risk: {risk_score:.3f}"
-                all_responses.append(response_str)
-                
-                # Update maximums
-                if risk_score > max_risk_score:
-                    max_risk_score = risk_score
-                    max_category = category_name
-                    max_category_conf = category_conf
-                    max_severity = severity_name
-                    max_severity_conf = severity_conf
-                elif risk_score == max_risk_score and category_conf > max_category_conf:
-                    max_category = category_name
-                    max_category_conf = category_conf
-                    max_severity = severity_name
-                    max_severity_conf = severity_conf
+                # Process predictions
+                result = process_chunk_predictions(
+                    category_logits,
+                    severity_logits,
+                    category_labels,
+                    severity_labels,
+                    config.RISK_CATEGORIES
+                )
+                chunk_results.append(result)
             
-            # Determine final risk status
-            is_risk = max_risk_score > self.threshold
+            # Aggregate results
+            final_result = aggregate_chunk_results(chunk_results, self.threshold)
             
-            # Combine all responses into single string
-            all_responses_text = " | ".join(all_responses)
-            
-            print(f"[RESPONSE] Classification complete: category={max_category}({max_category_conf:.3f}), severity={max_severity}({max_severity_conf:.3f}), is_risk={is_risk}")
+            print(f"[RESPONSE] Classification complete: category={final_result['category']}({final_result['category_confidence']:.3f}), "
+                  f"severity={final_result['severity']}({final_result['severity_confidence']:.3f}), is_risk={final_result['is_risk']}")
             
             return filter_pb2.ClassifyResponse(
-                category=max_category,
-                category_confidence=max_category_conf,
-                severity=max_severity,
-                severity_confidence=max_severity_conf,
-                is_risk=is_risk,
-                all_responses=all_responses_text
+                category=final_result["category"],
+                category_confidence=final_result["category_confidence"],
+                severity=final_result["severity"],
+                severity_confidence=final_result["severity_confidence"],
+                is_risk=final_result["is_risk"],
+                all_responses=final_result["all_responses"]
             )
             
         except Exception as e:
@@ -176,13 +133,6 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Error processing message: {str(e)}")
             return filter_pb2.ClassifyResponse()
-    
-    @staticmethod
-    def _softmax(x):
-        
-        """Compute softmax values."""
-        exp_x = np.exp(x - np.max(x))
-        return exp_x / exp_x.sum()
 
 
 def serve():

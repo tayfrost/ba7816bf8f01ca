@@ -21,8 +21,7 @@ RUN mkdir -p generated && \
 
 # Copy application code
 COPY filter/inference/ ./inference/
-COPY filter/services/onnx_factory.py ./services/
-RUN touch services/__init__.py
+COPY filter/inference_services/ ./inference_services/
 COPY filter/config.py .
 COPY filter/.env .
 COPY filter/main.py .
