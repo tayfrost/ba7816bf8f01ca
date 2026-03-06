@@ -77,7 +77,7 @@ services:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8001
       - KG_DATA_PATH=/app/data/papers.json
-    restart: unless-stopped
+    #restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8001))"]
       interval: 30s
@@ -124,7 +124,7 @@ services:
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "3002:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

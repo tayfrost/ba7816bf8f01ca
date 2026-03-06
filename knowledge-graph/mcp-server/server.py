@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import re
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 logging.basicConfig(
     level=logging.INFO,
@@ -268,6 +268,7 @@ mcp = FastMCP(
         "mental health support.'"
     ),
 )
+
 
 
 @mcp.tool()
@@ -698,4 +699,7 @@ def get_stats() -> dict:
 if __name__ == "__main__":
     import uvicorn
     get_dataset()
-    uvicorn.run(mcp.get_asgi_app(), host=MCP_HOST, port=MCP_PORT)
+    app = mcp.http_app()
+    uvicorn.run(app, host=MCP_HOST, port=MCP_PORT)
+    
+    
