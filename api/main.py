@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.middleware.error_handler import register_error_handlers
-from api.routers import auth, company, messages, slack, users
+from api.routers import auth, company, messages, slack, subscriptions, users
 
 app = FastAPI(title="SentinelAI API", version="0.1.0")
 register_error_handlers(app)
@@ -20,6 +20,7 @@ app.include_router(auth.router)
 app.include_router(company.router)
 app.include_router(messages.router)
 app.include_router(slack.router)
+app.include_router(subscriptions.router)
 app.include_router(users.router)
 
 
