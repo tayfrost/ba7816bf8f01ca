@@ -60,7 +60,7 @@ async def invite_user(
                 .where(User.company_id == company_id, User.status == "active")
             )
             current_count = count_result.scalar() or 0
-            if current_count >= plan.seat_limit:
+            if current_count >= plan.max_employees:
                 return None
 
     user = User(
