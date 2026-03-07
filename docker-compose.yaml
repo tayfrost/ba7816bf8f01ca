@@ -41,7 +41,7 @@ services:
       context: .
       dockerfile: api/Dockerfile
     ports:
-      - "8002:8000"
+      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
       - SECRET_KEY=change-me-in-production
