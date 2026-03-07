@@ -3,17 +3,34 @@
 import os
 from typing import List
 from fastmcp import Client
+from fastmcp.client.transports import StreamableHttpTransport
+from langchain_core.tools import StructuredTool
 
 
-async def load_mcp_tools() -> List:
-    """Load tools from KG MCP server via Streamable HTTP."""
+def mcp_to_tool(mcp_tool, client):
+    """Convert MCP tool metadata to a StructuredTool with an async callable."""
+    
+    async def call_tool(**kwargs):
+        # call the MCP server tool with provided args
+        return await client.call_tool(mcp_tool.name, kwargs)
+
+    return StructuredTool.from_function(
+        name=mcp_tool.name,
+        description=mcp_tool.description,
+        args_schema=mcp_tool.inputSchema,
+        coroutine=call_tool
+    )
+
+
+async def load_mcp_tools() -> list:
+    """Load MCP tools and convert them to StructuredTool instances with callable."""
     kg_url = os.getenv("KG_MCP_URL")
     if not kg_url:
         return []
     
     async with Client(kg_url) as client:
-        result = await client.list_tools()
-        return result.tools
+        mcp_tools = await client.list_tools()
+        return [mcp_to_tool(tool, client) for tool in mcp_tools]
 
 
 async def call_mcp_tool(tool_name: str, arguments: dict) -> dict:

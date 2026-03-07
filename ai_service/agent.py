@@ -1,21 +1,18 @@
 """Mental health risk assessment agent with LangGraph workflow."""
 
 import os
-import json
 import logging
 from typing import Literal
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from services.prompt_service import PromptService
-from services.mcp_service import load_mcp_tools
 from schema.agent_state import AgentState
 from schema.output import AgentOutput, MentalHealthScore
 
@@ -31,168 +28,16 @@ llm = ChatOpenAI(
     temperature=1
 )
 
+# Import state functions
+from states.redactor_state import redactor
+from states.assess_risk_state import assess_risk
+from states.grade_message_state import grade_message
+from states.generate_recommendations_state import generate_recommendations
+
 
 class AnalyzeRequest(BaseModel):
     """Request model for message analysis."""
     message: str
-
-
-async def redactor(state: AgentState) -> AgentState:
-    """Redact company-sensitive information while preserving employee mental health indicators."""
-    logger.info("[NODE: redactor] Starting redaction")
-    logger.debug(f"[NODE: redactor] Input state keys: {list(state.keys())}")
-    
-    try:
-        system_prompt = prompt_service.load_prompt(subfolder="redactor")
-        logger.info("[NODE: redactor] Prompt loaded successfully")
-    except Exception as e:
-        logger.error(f"[NODE: redactor] Failed to load redactor prompt: {e}")
-        raise
-    
-    human_prompt = f"""Original message: "{state['raw_message']}"
-
-Respond with ONLY a JSON object:
-{{"redacted_message": "message with company info redacted"}}"""
-    
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=human_prompt)
-    ]
-    
-    logger.info("[NODE: redactor] Calling LLM for redaction")
-    response = await llm.ainvoke(messages)
-    result = json.loads(response.content)
-    logger.info(f"[NODE: redactor] Redaction complete")
-    
-    state['raw_message'] = result['redacted_message']
-    logger.info("[NODE: redactor] → Transition to assess_risk")
-    return state
-
-
-async def assess_risk(state: AgentState) -> AgentState:
-    """Assess if message indicates mental health risk."""
-    logger.info("[NODE: assess_risk] Starting risk assessment")
-    logger.debug(f"[NODE: assess_risk] Input state keys: {list(state.keys())}")
-    
-    try:
-        system_prompt = prompt_service.load_prompt(subfolder="assess_risk")
-        logger.info("[NODE: assess_risk] Prompt loaded successfully")
-    except Exception as e:
-        logger.error(f"[NODE: assess_risk] Failed to load prompt: {e}")
-        raise
-    
-    human_prompt = f"""Analyze this message for mental health risk: "{state['raw_message']}"
-
-Respond with ONLY a JSON object:
-{{"is_risk": true/false, "reasoning": "brief explanation"}}"""
-    
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=human_prompt)
-    ]
-    
-    logger.info("[NODE: assess_risk] Calling LLM for risk assessment")
-    response = await llm.ainvoke(messages)
-    result = json.loads(response.content)
-    
-    state['is_confirmed_risk'] = result['is_risk']
-    logger.info(f"[NODE: assess_risk] Risk detected: {result['is_risk']}")
-    logger.info(f"[NODE: assess_risk] Reasoning: {result.get('reasoning', 'N/A')}")
-    
-    next_node = "grade_message" if result['is_risk'] else "END"
-    logger.info(f"[NODE: assess_risk] → Transition to {next_node}")
-    return state
-
-
-async def grade_message(state: AgentState) -> AgentState:
-    """Grade message across mental health dimensions."""
-    logger.info("[NODE: grade_message] Starting message grading")
-    logger.debug(f"[NODE: grade_message] Input state keys: {list(state.keys())}")
-    
-    try:
-        system_prompt = prompt_service.load_prompt(subfolder="grade_message")
-        logger.info("[NODE: grade_message] Prompt loaded successfully")
-    except Exception as e:
-        logger.error(f"[NODE: grade_message] Failed to load prompt: {e}")
-        raise
-    
-    human_prompt = f"""Score this message on mental health dimensions (0-100): "{state['raw_message']}"
-
-Respond with ONLY a JSON object:
-{{
-  "stress_level": 0-100,
-  "suicide_risk": 0-100,
-  "burnout_score": 0-100,
-  "depression_indicators": 0-100,
-  "anxiety_markers": 0-100,
-  "isolation_tendency": 0-100
-}}"""
-    
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=human_prompt)
-    ]
-    
-    logger.info("[NODE: grade_message] Calling LLM for scoring")
-    response = await llm.ainvoke(messages)
-    scores = json.loads(response.content)
-    
-    # Store scores in state for recommendations node
-    if state.get('hr_report') is None:
-        state['hr_report'] = {}
-    state['hr_report']['scores'] = scores
-    
-    logger.info(f"[NODE: grade_message] Scores: {scores}")
-    logger.info("[NODE: grade_message] → Transition to generate_recommendations")
-    return state
-
-
-async def generate_recommendations(state: AgentState) -> AgentState:
-    """Generate HR recommendations based on assessment with evidence-based advice from knowledge graph."""
-    logger.info("[NODE: generate_recommendations] Starting recommendations generation")
-    logger.debug(f"[NODE: generate_recommendations] Input state keys: {list(state.keys())}")
-    
-    try:
-        system_prompt = prompt_service.load_prompt(subfolder="generate_recommendations")
-        logger.info("[NODE: generate_recommendations] Prompt loaded successfully")
-    except Exception as e:
-        logger.error(f"[NODE: generate_recommendations] Failed to load prompt: {e}")
-        raise
-    
-    scores = state['hr_report']['scores']
-    raw_message = state['raw_message']
-    
-    # Load and bind MCP tools
-    logger.info("[NODE: generate_recommendations] Loading MCP tools")
-    kg_tools = await load_mcp_tools()
-    logger.info(f"[NODE: generate_recommendations] Loaded {len(kg_tools)} MCP tools")
-    
-    llm_with_tools = llm.bind_tools(kg_tools) if kg_tools else llm
-    
-    human_prompt = f"""Based on message: "{raw_message}"
-And scores: {json.dumps(scores)}
-
-Use available MCP tools to gather evidence-based recommendations.
-If crisis detected, prioritize crisis resources.
-Generate HR recommendations and detailed analysis response.
-Respond with JSON:
-{{"recommendations": ["rec1", "rec2"], "response": "detailed analysis text"}}"""
-    
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=human_prompt)
-    ]
-    
-    logger.info("[NODE: generate_recommendations] Calling LLM with bound MCP tools")
-    response = await llm_with_tools.ainvoke(messages)
-    result = json.loads(response.content)
-    
-    state['hr_report']['recommendations'] = result['recommendations']
-    state['hr_report']['response'] = result['response']
-    
-    logger.info(f"[NODE: generate_recommendations] Generated {len(result['recommendations'])} recommendations")
-    logger.info("[NODE: generate_recommendations] → Transition to END")
-    return state
 
 
 def should_continue(state: AgentState) -> Literal["grade", "end"]:

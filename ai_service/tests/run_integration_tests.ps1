@@ -9,10 +9,11 @@ Write-Host ""
 # Save original directory
 $originalDir = Get-Location
 
-# Navigate to ai_service directory
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$aiServicePath = Split-Path -Parent $scriptPath
-Set-Location $aiServicePath
+try {
+    # Navigate to ai_service directory
+    $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $aiServicePath = Split-Path -Parent $scriptPath
+    Set-Location $aiServicePath
 
 Write-Host "Working directory: $aiServicePath" -ForegroundColor Gray
 Write-Host ""
@@ -27,7 +28,7 @@ if (-not $env:VIRTUAL_ENV) {
     } else {
         Write-Host "✗ Virtual environment not found at $venvPath" -ForegroundColor Red
         Write-Host "Please create virtual environment or activate it manually" -ForegroundColor Yellow
-        exit 1
+        throw "Virtual environment not found"
     }
     Write-Host ""
 }
@@ -40,7 +41,7 @@ if ($LASTEXITCODE -ne 0) {
     pip install -r requirements.txt
     if ($LASTEXITCODE -ne 0) {
         Write-Host "✗ Failed to install dependencies" -ForegroundColor Red
-        exit 1
+        throw "Failed to install dependencies"
     }
     Write-Host "✓ Dependencies installed" -ForegroundColor Green
 } else {
@@ -57,7 +58,7 @@ try {
 } catch {
     Write-Host "✗ AI service not responding on port 8002" -ForegroundColor Red
     Write-Host "Please start Docker containers with: docker-compose up -d" -ForegroundColor Yellow
-    exit 1
+    throw "AI service not responding"
 }
 Write-Host ""
 
@@ -102,7 +103,9 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "✗ Some tests failed. Check logs above." -ForegroundColor Red
 }
 
-# Restore original directory
-Set-Location $originalDir
+} finally {
+    # Restore original directory
+    Set-Location $originalDir
+}
 
 exit $LASTEXITCODE
