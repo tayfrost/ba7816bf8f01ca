@@ -7,8 +7,8 @@ from api.models.company import Company
 from api.models.user import User
 
 
-async def create_company(db: AsyncSession, name: str) -> Company:
-    company = Company(name=name)
+async def create_company(db: AsyncSession, company_name: str, plan_id: int) -> Company:
+    company = Company(company_name=company_name, plan_id=plan_id)
     db.add(company)
     await db.flush()
     return company

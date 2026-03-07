@@ -11,7 +11,7 @@ router = APIRouter(prefix="/companies", tags=["companies"])
 
 @router.post("", response_model=CompanyRead, status_code=status.HTTP_201_CREATED)
 async def create_company(body: CompanyCreate, db: AsyncSession = Depends(get_db)):
-    company = await company_service.create_company(db, body.name)
+    company = await company_service.create_company(db, body.company_name, body.plan_id)
     await db.commit()
     return company
 

@@ -32,9 +32,10 @@ def create_access_token(data: dict) -> str:
 
 
 async def register_user(
-    db: AsyncSession, email: str, password: str, display_name: str, company_name: str
+    db: AsyncSession, email: str, password: str, display_name: str, company_name: str,
+    plan_id: int = 1,
 ) -> str:
-    company = await create_company(db, company_name)
+    company = await create_company(db, company_name, plan_id)
 
     user = User(
         company_id=company.company_id,
