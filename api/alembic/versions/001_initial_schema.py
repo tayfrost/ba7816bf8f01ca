@@ -19,38 +19,58 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.create_table(
-        "companies",
-        sa.Column("company_id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.PrimaryKeyConstraint("company_id"),
-        sa.UniqueConstraint("name"),
-    )
-
-    op.create_table(
-        "subscription_plans",
-        sa.Column("plan_id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("plan_name", sa.String(), nullable=False),
-        sa.Column("price_pennies", sa.BigInteger(), nullable=False),
-        sa.Column("currency", sa.String(3), nullable=False, server_default="GBP"),
-        sa.Column("seat_limit", sa.Integer(), nullable=False),
+        "subscription_plan",
+        sa.Column("plan_id", sa.BigInteger(), nullable=False),
+        sa.Column("plan_name", sa.Text(), nullable=False),
+        sa.Column("plan_cost_pennies", sa.BigInteger(), nullable=False),
+        sa.Column("currency", sa.CHAR(3), nullable=False, server_default=sa.text("'GBP'")),
+        sa.Column("max_employees", sa.BigInteger(), nullable=False),
+        sa.Column("stripe_price_id_monthly", sa.Text(), nullable=True),
+        sa.Column("stripe_price_id_yearly", sa.Text(), nullable=True),
+        sa.CheckConstraint("char_length(trim(plan_name)) > 1", name="ck_plan_name_len"),
+        sa.CheckConstraint("plan_cost_pennies >= 0", name="ck_plan_cost_nonneg"),
+        sa.CheckConstraint("max_employees > 0", name="ck_max_employees_pos"),
         sa.PrimaryKeyConstraint("plan_id"),
         sa.UniqueConstraint("plan_name"),
     )
 
     op.create_table(
-        "subscriptions",
-        sa.Column("subscription_id", sa.BigInteger(), autoincrement=True, nullable=False),
+        "companies",
         sa.Column("company_id", sa.BigInteger(), nullable=False),
         sa.Column("plan_id", sa.BigInteger(), nullable=False),
-        sa.Column("status", sa.String(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("company_name", sa.Text(), nullable=False),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("stripe_customer_id", sa.Text(), nullable=True),
+        sa.CheckConstraint("char_length(trim(company_name)) > 1", name="ck_company_name_len"),
+        sa.ForeignKeyConstraint(["plan_id"], ["subscription_plan.plan_id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("company_id"),
+        sa.UniqueConstraint("stripe_customer_id"),
+    )
+
+    op.create_table(
+        "subscriptions",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("company_id", sa.BigInteger(), nullable=False),
+        sa.Column("plan_id", sa.BigInteger(), nullable=False),
+        sa.Column("stripe_subscription_id", sa.Text(), nullable=True),
+        sa.Column("status", sa.Text(), nullable=False, server_default=sa.text("'incomplete'")),
+        sa.Column("interval", sa.Text(), nullable=False, server_default=sa.text("'month'")),
         sa.Column("current_period_start", sa.DateTime(timezone=True), nullable=True),
         sa.Column("current_period_end", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
-        sa.ForeignKeyConstraint(["plan_id"], ["subscription_plans.plan_id"]),
-        sa.PrimaryKeyConstraint("subscription_id"),
+        sa.Column("cancel_at_period_end", sa.Boolean(), default=False),
+        sa.Column("canceled_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint(
+            "status IN ('active','past_due','canceled','incomplete','trialing','unpaid')",
+            name="ck_subscription_status",
+        ),
+        sa.CheckConstraint("interval IN ('month','year')", name="ck_subscription_interval"),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["plan_id"], ["subscription_plan.plan_id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("stripe_subscription_id"),
     )
 
     op.create_table(
@@ -155,8 +175,44 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
+    op.create_table(
+        "payments",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("company_id", sa.BigInteger(), nullable=False),
+        sa.Column("stripe_payment_intent_id", sa.Text(), nullable=True),
+        sa.Column("stripe_invoice_id", sa.Text(), nullable=True),
+        sa.Column("amount_pennies", sa.BigInteger(), nullable=False),
+        sa.Column("currency", sa.CHAR(3), nullable=False, server_default=sa.text("'GBP'")),
+        sa.Column("status", sa.Text(), nullable=False, server_default=sa.text("'pending'")),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.CheckConstraint(
+            "status IN ('succeeded','pending','failed','refunded')",
+            name="ck_payment_status",
+        ),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("stripe_payment_intent_id"),
+        sa.UniqueConstraint("stripe_invoice_id"),
+    )
+
+    op.create_table(
+        "stripe_events",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("stripe_event_id", sa.Text(), nullable=False),
+        sa.Column("event_type", sa.Text(), nullable=False),
+        sa.Column("processed", sa.Boolean(), default=False),
+        sa.Column("payload", sa.Text(), nullable=True),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("stripe_event_id"),
+    )
+
 
 def downgrade() -> None:
+    op.drop_table("stripe_events")
+    op.drop_table("payments")
     op.drop_table("incident_scores")
     op.drop_table("messages")
     op.drop_table("google_mailboxes")
@@ -165,5 +221,5 @@ def downgrade() -> None:
     op.drop_table("auth_users")
     op.drop_table("users")
     op.drop_table("subscriptions")
-    op.drop_table("subscription_plans")
     op.drop_table("companies")
+    op.drop_table("subscription_plan")
