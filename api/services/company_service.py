@@ -4,7 +4,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.company import Company
-from api.models.user import User
+from api.models.company_role import SaasCompanyRole
 
 
 async def create_company(db: AsyncSession, company_name: str, plan_id: int) -> Company:
@@ -42,8 +42,11 @@ async def soft_delete_company(db: AsyncSession, company_id: int) -> Company | No
     if not company:
         return None
     company.deleted_at = datetime.now(timezone.utc)
+    # Mark all company roles as inactive
     await db.execute(
-        update(User).where(User.company_id == company_id).values(status="inactive")
+        update(SaasCompanyRole)
+        .where(SaasCompanyRole.company_id == company_id)
+        .values(status="inactive")
     )
     await db.flush()
     return company
