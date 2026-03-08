@@ -38,7 +38,7 @@ async def generate_recommendations(state: AgentState) -> AgentState:
     
     # Load and bind MCP tools
     logger.info("[NODE: generate_recommendations] Loading MCP tools")
-    kg_tools = await load_mcp_tools()
+    kg_tools = await load_mcp_tools(state['mcp_client'])
     logger.info(f"[NODE: generate_recommendations] Loaded {len(kg_tools)} MCP tools")
     
     llm_with_tools = llm.bind_tools(kg_tools) if kg_tools else llm

@@ -4,7 +4,7 @@ import os
 import logging
 from typing import Literal
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -13,8 +13,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from services.prompt_service import PromptService
+from services.mcp_service import get_mcp_client
 from schema.agent_state import AgentState
 from schema.output import AgentOutput, MentalHealthScore
+from schema.request import AnalyzeRequest
 
 load_dotenv()
 
@@ -28,11 +30,6 @@ from states.redactor_state import redactor
 from states.assess_risk_state import assess_risk
 from states.grade_message_state import grade_message
 from states.generate_recommendations_state import generate_recommendations
-
-
-class AnalyzeRequest(BaseModel):
-    """Request model for message analysis."""
-    message: str
 
 
 def should_continue(state: AgentState) -> Literal["grade", "end"]:
@@ -73,7 +70,7 @@ async def root():
 
 
 @app.post("/analyze", response_model=AgentOutput)
-async def analyze_message(request: AnalyzeRequest):
+async def analyze_message(request: AnalyzeRequest, mcp_client=Depends(get_mcp_client)):
     """Analyze message for mental health risks."""
     logger.info("="*80)
     logger.info(f"[API] New analyze request received")
@@ -86,12 +83,15 @@ async def analyze_message(request: AnalyzeRequest):
     
     try:
         # Initialize state
-        initial_state: AgentState = {"raw_message": request.message}
+        initial_state: AgentState = {"raw_message": request.message, "mcp_client": mcp_client}
         logger.info("[API] Starting agent workflow")
         
         # Run agent workflow
         result = await agent.ainvoke(initial_state)
         logger.info("[API] Agent workflow completed")
+        
+        # Remove non-serializable mcp_client from result
+        result.pop('mcp_client', None)
         
         # If no risk detected, return minimal response
         if not result.get('is_confirmed_risk'):
