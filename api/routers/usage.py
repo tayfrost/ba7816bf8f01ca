@@ -5,9 +5,8 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_current_user, get_db
-from api.models.message import IncidentScore, Message
-from api.models.user import User
+from api.dependencies import CurrentUser, get_current_user, get_db
+from api.models.flagged_incident import FlaggedIncident
 
 router = APIRouter(tags=["usage"])
 
@@ -33,7 +32,7 @@ async def get_usage(
     start: str = Query(..., description="Start date ISO format"),
     end: str = Query(..., description="End date ISO format"),
     metrics: str | None = Query(None, description="Comma-separated metric keys"),
-    user: User = Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     start_dt = datetime.fromisoformat(start)
@@ -43,48 +42,26 @@ async def get_usage(
     series_list = []
 
     if "messagesFlagged" in requested_metrics:
-        # Count flagged messages per day
+        # Count flagged incidents per day
         result = await db.execute(
             select(
-                func.date(Message.created_at).label("day"),
+                func.date(FlaggedIncident.created_at).label("day"),
                 func.count().label("cnt"),
             )
             .where(
-                Message.company_id == user.company_id,
-                Message.created_at >= start_dt,
-                Message.created_at <= end_dt,
+                FlaggedIncident.company_id == user.company_id,
+                FlaggedIncident.created_at >= start_dt,
+                FlaggedIncident.created_at <= end_dt,
             )
-            .group_by(func.date(Message.created_at))
-            .order_by(func.date(Message.created_at))
+            .group_by(func.date(FlaggedIncident.created_at))
+            .order_by(func.date(FlaggedIncident.created_at))
         )
         points = [SeriesPoint(date=str(row.day), value=row.cnt) for row in result.all()]
         series_list.append(Series(key="messagesFlagged", label="Messages flagged", points=points))
 
     if "riskScore" in requested_metrics:
-        # Average risk score per day (avg of max non-neutral scores)
-        result = await db.execute(
-            select(
-                func.date(Message.created_at).label("day"),
-                func.avg(
-                    func.greatest(
-                        func.coalesce(IncidentScore.stress_score, 0),
-                        func.coalesce(IncidentScore.burnout_score, 0),
-                        func.coalesce(IncidentScore.depression_score, 0),
-                        func.coalesce(IncidentScore.harassment_score, 0),
-                    )
-                ).label("avg_risk"),
-            )
-            .join(IncidentScore, IncidentScore.message_id == Message.message_id)
-            .where(
-                Message.company_id == user.company_id,
-                Message.created_at >= start_dt,
-                Message.created_at <= end_dt,
-            )
-            .group_by(func.date(Message.created_at))
-            .order_by(func.date(Message.created_at))
-        )
-        points = [SeriesPoint(date=str(row.day), value=round(float(row.avg_risk or 0), 2)) for row in result.all()]
-        series_list.append(Series(key="riskScore", label="Risk score", points=points))
+        # Placeholder — risk scoring from class_reason not yet quantified
+        series_list.append(Series(key="riskScore", label="Risk score", points=[]))
 
     if "overtimeIndex" in requested_metrics:
         # Placeholder — overtime tracking not yet implemented

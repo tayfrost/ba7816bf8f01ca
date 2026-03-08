@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_current_user, get_db
-from api.models.user import User
+from api.dependencies import CurrentUser, get_current_user, get_db
 from api.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
-from api.schemas.user import UserRead
+from api.schemas.user import UserRoleRead
 from api.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -14,7 +13,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     try:
         token = await auth_service.register_user(
-            db, body.email, body.password, body.name, body.company_name, body.plan_id
+            db, body.email, body.password, body.name, body.surname,
+            body.company_name, body.plan_id,
         )
         return TokenResponse(access_token=token)
     except Exception as e:
@@ -32,6 +32,6 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     return TokenResponse(access_token=token)
 
 
-@router.get("/me", response_model=UserRead)
-async def get_me(user: User = Depends(get_current_user)):
+@router.get("/me", response_model=UserRoleRead)
+async def get_me(user: CurrentUser = Depends(get_current_user)):
     return user

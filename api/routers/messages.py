@@ -1,73 +1,61 @@
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_current_user, get_db
-from api.models.message import IncidentScore, Message
-from api.models.user import User
-from api.schemas.message import IncidentScoreRead, MessageRead
+from api.dependencies import CurrentUser, get_current_user, get_db
+from api.models.flagged_incident import FlaggedIncident
+from api.schemas.incident import FlaggedIncidentRead
 
-router = APIRouter(prefix="/messages", tags=["messages"])
+router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 
 @router.get("/stats")
-async def message_stats(
-    user: User = Depends(get_current_user),
+async def incident_stats(
+    user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Count by severity
-    severity_result = await db.execute(
-        select(IncidentScore.predicted_severity, func.count())
-        .join(Message, IncidentScore.message_id == Message.message_id)
-        .where(Message.company_id == user.company_id)
-        .group_by(IncidentScore.predicted_severity)
+    # Count by class_reason
+    result = await db.execute(
+        select(FlaggedIncident.class_reason, func.count())
+        .where(FlaggedIncident.company_id == user.company_id)
+        .group_by(FlaggedIncident.class_reason)
     )
-    severity_counts = {row[0] or "unknown": row[1] for row in severity_result.all()}
+    reason_counts = {row[0] or "unknown": row[1] for row in result.all()}
 
-    # Count by category
-    category_result = await db.execute(
-        select(IncidentScore.predicted_category, func.count())
-        .join(Message, IncidentScore.message_id == Message.message_id)
-        .where(Message.company_id == user.company_id)
-        .group_by(IncidentScore.predicted_category)
-    )
-    category_counts = {row[0] or "unknown": row[1] for row in category_result.all()}
-
-    return {"by_severity": severity_counts, "by_category": category_counts}
+    total = sum(reason_counts.values())
+    return {"total": total, "by_reason": reason_counts}
 
 
-@router.get("", response_model=list[MessageRead])
-async def list_messages(
-    user: User = Depends(get_current_user),
+@router.get("", response_model=list[FlaggedIncidentRead])
+async def list_incidents(
+    user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ):
     result = await db.execute(
-        select(Message)
-        .where(Message.company_id == user.company_id)
-        .order_by(Message.created_at.desc())
+        select(FlaggedIncident)
+        .where(FlaggedIncident.company_id == user.company_id)
+        .order_by(FlaggedIncident.created_at.desc())
         .offset(skip)
         .limit(limit)
     )
     return list(result.scalars().all())
 
 
-@router.get("/{message_id}", response_model=MessageRead)
-async def get_message(
-    message_id: uuid.UUID,
-    user: User = Depends(get_current_user),
+@router.get("/{incident_id}", response_model=FlaggedIncidentRead)
+async def get_incident(
+    incident_id: int,
+    user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Message).where(
-            Message.message_id == message_id,
-            Message.company_id == user.company_id,
+        select(FlaggedIncident).where(
+            FlaggedIncident.incident_id == incident_id,
+            FlaggedIncident.company_id == user.company_id,
         )
     )
-    message = result.scalar_one_or_none()
-    if not message:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
-    return message
+    incident = result.scalar_one_or_none()
+    if not incident:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+    return incident

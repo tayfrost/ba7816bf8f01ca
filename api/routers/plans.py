@@ -2,9 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db, require_role
+from api.dependencies import CurrentUser, get_db, require_role
 from api.models.subscription_plan import SubscriptionPlan
-from api.models.user import User
 from api.schemas.plan import PlanCreate, PlanRead, PlanUpdate
 
 router = APIRouter(prefix="/plans", tags=["plans"])
@@ -27,7 +26,7 @@ async def get_plan(plan_id: int, db: AsyncSession = Depends(get_db)):
 @router.post("", response_model=PlanRead, status_code=status.HTTP_201_CREATED)
 async def create_plan(
     body: PlanCreate,
-    user: User = Depends(require_role("admin", "biller")),
+    user: CurrentUser = Depends(require_role("admin", "biller")),
     db: AsyncSession = Depends(get_db),
 ):
     plan = SubscriptionPlan(
@@ -48,7 +47,7 @@ async def create_plan(
 async def update_plan(
     plan_id: int,
     body: PlanUpdate,
-    user: User = Depends(require_role("admin", "biller")),
+    user: CurrentUser = Depends(require_role("admin", "biller")),
     db: AsyncSession = Depends(get_db),
 ):
     plan = await db.get(SubscriptionPlan, plan_id)
@@ -64,7 +63,7 @@ async def update_plan(
 @router.delete("/{plan_id}", status_code=status.HTTP_200_OK)
 async def delete_plan(
     plan_id: int,
-    user: User = Depends(require_role("admin", "biller")),
+    user: CurrentUser = Depends(require_role("admin", "biller")),
     db: AsyncSession = Depends(get_db),
 ):
     plan = await db.get(SubscriptionPlan, plan_id)

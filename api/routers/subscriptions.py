@@ -2,10 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_current_user, get_db, require_role
+from api.dependencies import CurrentUser, get_current_user, get_db, require_role
 from api.models.subscription import Subscription
 from api.models.subscription_plan import SubscriptionPlan
-from api.models.user import User
 from api.schemas.subscription import SubscriptionCreate, SubscriptionPlanRead, SubscriptionRead
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
@@ -19,7 +18,7 @@ async def list_plans(db: AsyncSession = Depends(get_db)):
 
 @router.get("/current", response_model=SubscriptionRead)
 async def get_current_subscription(
-    user: User = Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -37,7 +36,7 @@ async def get_current_subscription(
 @router.post("", response_model=SubscriptionRead, status_code=status.HTTP_201_CREATED)
 async def create_subscription(
     body: SubscriptionCreate,
-    user: User = Depends(require_role("biller")),
+    user: CurrentUser = Depends(require_role("biller")),
     db: AsyncSession = Depends(get_db),
 ):
     plan = await db.get(SubscriptionPlan, body.plan_id)
