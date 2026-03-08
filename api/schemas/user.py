@@ -1,21 +1,26 @@
-import uuid
-from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict
 
 
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    user_id: uuid.UUID
+    user_id: int
+    name: str
+    surname: str
+    email: str
+
+
+class UserRoleRead(BaseModel):
+    """User info combined with their role at a specific company."""
+    user_id: int
+    name: str
+    surname: str
+    email: str
     company_id: int
-    display_name: str | None = None
     role: str
     status: str
-    created_at: datetime
 
 
 class UserUpdate(BaseModel):
-    display_name: str | None = None
-    role: str | None = None
-    status: str | None = None
+    name: str | None = None
+    surname: str | None = None

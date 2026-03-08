@@ -5,6 +5,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: str
+    surname: str
     company_name: str
     plan_id: int = 1
 
