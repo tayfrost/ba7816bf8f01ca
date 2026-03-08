@@ -1,8 +1,10 @@
 """Message grading state node for the mental health assessment workflow."""
 
+import os
 import json
 import logging
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_openai import ChatOpenAI
 from schema.agent_state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -10,7 +12,14 @@ logger = logging.getLogger(__name__)
 
 async def grade_message(state: AgentState) -> AgentState:
     """Grade message across mental health dimensions."""
-    from agent import llm, prompt_service
+    from agent import prompt_service
+    
+    llm = ChatOpenAI(
+        model=os.getenv("MODEL", "gpt-5-nano"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+        use_responses_api=False,
+        temperature=1
+    )
     
     logger.info("[NODE: grade_message] Starting message grading")
     logger.debug(f"[NODE: grade_message] Input state keys: {list(state.keys())}")
@@ -24,7 +33,7 @@ async def grade_message(state: AgentState) -> AgentState:
     
     human_prompt = f"""Score this message on mental health dimensions (0-100): "{state['raw_message']}"
 
-Respond with ONLY a JSON object:
+Respond with ONLY a JSON object, which has to obtain all of these fields with integer values between 0 and 100, missing any field or providing non-integer values will be considered an error:
 {{
   "stress_level": 0-100,
   "suicide_risk": 0-100,
@@ -41,6 +50,7 @@ Respond with ONLY a JSON object:
     
     logger.info("[NODE: grade_message] Calling LLM for scoring")
     response = await llm.ainvoke(messages)
+    logger.info(f"[NODE: grade_message] LLM response (first 100 chars): {str(response.content)[:100]}")
     scores = json.loads(response.content)
     
     # Store scores in state for recommendations node

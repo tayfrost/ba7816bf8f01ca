@@ -22,11 +22,6 @@ app = FastAPI(title="SentinelAI Mental Health Assessment")
 
 # Initialize services
 prompt_service = PromptService()
-llm = ChatOpenAI(
-    model=os.getenv("MODEL", "gpt-5-nano"),
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=1
-)
 
 # Import state functions
 from states.redactor_state import redactor
@@ -112,6 +107,8 @@ async def analyze_message(request: AnalyzeRequest):
                 ),
                 response="No significant mental health risk detected."
             )
+            
+        logger.info(f"[API] Final response: {result}")
         
         # Return full assessment
         logger.info("[API] Risk confirmed, returning full assessment")

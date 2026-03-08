@@ -1,8 +1,10 @@
 """Redactor state node for the mental health assessment workflow."""
 
+import os
 import json
 import logging
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_openai import ChatOpenAI
 from schema.agent_state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -10,7 +12,14 @@ logger = logging.getLogger(__name__)
 
 async def redactor(state: AgentState) -> AgentState:
     """Redact company-sensitive information while preserving employee mental health indicators."""
-    from agent import llm, prompt_service
+    from agent import prompt_service
+    
+    llm = ChatOpenAI(
+        model=os.getenv("MODEL", "gpt-5-nano"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+        use_responses_api=False,
+        temperature=1
+    )
     
     logger.info("[NODE: redactor] Starting redaction")
     logger.debug(f"[NODE: redactor] Input state keys: {list(state.keys())}")
@@ -34,6 +43,7 @@ Respond with ONLY a JSON object:
     
     logger.info("[NODE: redactor] Calling LLM for redaction")
     response = await llm.ainvoke(messages)
+    logger.info(f"[NODE: redactor] LLM response (first 100 chars): {str(response.content)[:100]}")
     result = json.loads(response.content)
     logger.info(f"[NODE: redactor] Redaction complete")
     
