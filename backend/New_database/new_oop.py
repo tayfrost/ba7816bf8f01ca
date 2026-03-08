@@ -201,7 +201,7 @@ class GoogleMailbox(Base):
     email_address: Mapped[str] = mapped_column(CITEXT, nullable=False)
 
     token_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    last_history_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    last_history_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     watch_expiration: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     company: Mapped["Company"] = relationship(

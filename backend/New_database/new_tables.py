@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS google_mailboxes (
   user_id           UUID NOT NULL,
   email_address     CITEXT NOT NULL,
   token_json        JSONB NOT NULL,
-  last_history_id   BIGINT NULL,
+  last_history_id   TEXT NULL,
   watch_expiration  TIMESTAMPTZ NULL,
 
   CONSTRAINT fk_google_mailboxes_company_user

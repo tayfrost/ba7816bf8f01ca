@@ -165,7 +165,7 @@ Postgres extensions used:
 - `user_id` (UUID) — seat that owns this mailbox connection
 - `email_address` (CITEXT) — Gmail address of the connected mailbox
 - `token_json` (JSONB) — OAuth tokens/scopes/etc
-- `last_history_id` (BIGINT, nullable) — Gmail incremental sync cursor
+- `last_history_id` (TEXT, nullable) — Gmail incremental sync cursor (stored as text, incremented manually)
 - `watch_expiration` (TIMESTAMPTZ, nullable) — Gmail watch expiry
 
 **Constraints**
