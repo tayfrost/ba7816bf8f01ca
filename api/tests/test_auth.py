@@ -7,7 +7,8 @@ async def test_register_returns_token(client: AsyncClient):
     response = await client.post("/auth/register", json={
         "email": "test@example.com",
         "password": "securepassword123",
-        "name": "Test User",
+        "name": "Test",
+        "surname": "User",
         "company_name": "Test Corp",
         "plan_id": 1,
     })
@@ -23,7 +24,8 @@ async def test_login_works(client: AsyncClient):
     await client.post("/auth/register", json={
         "email": "login@example.com",
         "password": "securepassword123",
-        "name": "Login User",
+        "name": "Login",
+        "surname": "User",
         "company_name": "Login Corp",
         "plan_id": 1,
     })
@@ -44,7 +46,8 @@ async def test_login_fails_with_wrong_password(client: AsyncClient):
     await client.post("/auth/register", json={
         "email": "wrong@example.com",
         "password": "correctpassword",
-        "name": "Wrong Pass User",
+        "name": "Wrong",
+        "surname": "Pass",
         "company_name": "Wrong Corp",
         "plan_id": 1,
     })

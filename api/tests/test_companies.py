@@ -6,7 +6,8 @@ async def _register(client: AsyncClient, email: str, company_name: str) -> str:
     resp = await client.post("/auth/register", json={
         "email": email,
         "password": "testpassword123",
-        "name": "Test User",
+        "name": "Test",
+        "surname": "User",
         "company_name": company_name,
         "plan_id": 1,
     })
@@ -61,6 +62,6 @@ async def test_get_company_fails_after_soft_delete(client: AsyncClient):
     # Soft delete
     await client.delete("/companies/me", headers=_auth_headers(token))
 
-    # Try to get company — should fail (user is now inactive)
+    # Try to get company — should fail (role is now inactive)
     response = await client.get("/companies/me", headers=_auth_headers(token))
     assert response.status_code == 401

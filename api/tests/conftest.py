@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event
+from sqlalchemy import JSON, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.schema import CheckConstraint
 
@@ -25,17 +25,24 @@ def event_loop():
     loop.close()
 
 
-def _strip_check_constraints(target, connection, **kw):
-    """Remove PostgreSQL-specific CHECK constraints for SQLite testing."""
+def _strip_pg_specifics(target, connection, **kw):
+    """Remove PostgreSQL-specific constructs for SQLite testing."""
     if connection.dialect.name == "sqlite":
+        from sqlalchemy.dialects.postgresql import JSONB
+
         for table in target.tables.values():
+            # Strip CHECK constraints (PostgreSQL syntax)
             table.constraints = {
                 c for c in table.constraints if not isinstance(c, CheckConstraint)
             }
+            # Replace JSONB columns with plain JSON
+            for col in table.columns:
+                if isinstance(col.type, JSONB):
+                    col.type = JSON()
 
 
-# Strip check constraints before table creation on SQLite
-event.listen(Base.metadata, "before_create", _strip_check_constraints)
+# Strip PostgreSQL specifics before table creation on SQLite
+event.listen(Base.metadata, "before_create", _strip_pg_specifics)
 
 
 async def _seed_default_plan(session: AsyncSession):
