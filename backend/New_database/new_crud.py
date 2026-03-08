@@ -6,6 +6,7 @@ from typing import Optional as optional
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 import uuid
 
 
@@ -19,6 +20,36 @@ VALID_SUBSCRIPTION_STATUS = {"trialing", "active", "past_due", "canceled"}
 # ~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+def get_active_user_count(company_id: int, *, session: optional[SASession] = None) -> int:
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(func.count()).select_from(model.User).where(
+            model.User.company_id == int(company_id),
+            model.User.deleted_at.is_(None),
+            model.User.status == "active",
+        )
+        return int(session.execute(stmt).scalar_one())
+    finally:
+        if own_session:
+            session.close()
+
+def get_company_seat_limit(company_id: int, *, session: optional[SASession] = None) -> int | None:
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = (
+            select(model.SubscriptionPlan.seat_limit)
+            .join(model.Subscription, model.Subscription.plan_id == model.SubscriptionPlan.plan_id)
+            .where(model.Subscription.company_id == int(company_id))
+        )
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
 
 def get_company_id_by_name(name: str,*,include_deleted: bool = False,session: optional[SASession] = None) -> optional[int]:
     """
@@ -873,11 +904,12 @@ def delete_subscription(subscription_id: int,*,session: optional[SASession] = No
 
 
 # =============================  USERS TABLE ======================
-def create_user(company_id: int,*,role: str,status: str = "active",display_name: str | None = None,session: optional[SASession] = None) -> model.User:
+   
+def create_user(company_id: int, *, role: str, status: str = "active", display_name: str | None = None, session: optional[SASession] = None) -> model.User:
     """
-    Create a SaaS user (seat) within a company.
+        Create a SaaS user (seat) within a company.
 
-    Note: Users have no email column; login email lives in auth_users.
+        Note: Users have no email column; login email lives in auth_users.
     """
     role = (role or "").strip()
     status = (status or "").strip()
@@ -899,6 +931,30 @@ def create_user(company_id: int,*,role: str,status: str = "active",display_name:
         if not company or company.deleted_at is not None:
             raise ValueError(f"company_id={company_id} not found or deleted.")
 
+        subscription = session.execute(
+            select(model.Subscription).where(model.Subscription.company_id == int(company_id))
+        ).scalar_one_or_none()
+        if not subscription:
+            raise ValueError(f"company_id={company_id} does not have a subscription.")
+
+        plan = session.get(model.SubscriptionPlan, subscription.plan_id)
+        if not plan:
+            raise ValueError(f"Subscription plan for company_id={company_id} not found.")
+
+        active_user_count = session.execute(
+            select(func.count()).select_from(model.User).where(
+                model.User.company_id == int(company_id),
+                model.User.deleted_at.is_(None),
+                model.User.status == "active",
+            )
+        ).scalar_one()
+
+        if status == "active" and active_user_count >= plan.seat_limit:
+            raise RuntimeError(
+                f"Seat limit reached for company_id={company_id}: "
+                f"{active_user_count}/{plan.seat_limit} active users."
+            )
+
         user = model.User(
             company_id=int(company_id),
             role=role,
@@ -907,12 +963,14 @@ def create_user(company_id: int,*,role: str,status: str = "active",display_name:
         )
 
         session.add(user)
-        session.flush() 
+        session.flush()
         session.commit()
         session.refresh(user)
         return user
 
     except ValueError:
+        raise
+    except RuntimeError:
         raise
     except IntegrityError as e:
         session.rollback()
@@ -960,6 +1018,9 @@ def update_user(company_id: int,user_id: uuid.UUID,*,display_name: str | None = 
     """
     Update a user's mutable fields (display_name, role, status).
     Returns updated user or None if not found (or deleted).
+
+    Enforces company subscription seat_limit when changing a user
+    from non-active to active.
     """
     own_session = session is None
     if own_session:
@@ -991,6 +1052,40 @@ def update_user(company_id: int,user_id: uuid.UUID,*,display_name: str | None = 
             status = status.strip()
             if status not in VALID_USER_STATUS:
                 raise ValueError(f"status must be one of {sorted(VALID_USER_STATUS)}")
+
+            activating_user = (user.status != "active" and status == "active")
+
+            if activating_user:
+                subscription = session.execute(
+                    select(model.Subscription).where(
+                        model.Subscription.company_id == int(company_id)
+                    )
+                ).scalar_one_or_none()
+                if not subscription:
+                    raise ValueError(f"company_id={company_id} does not have a subscription.")
+
+                plan = session.get(model.SubscriptionPlan, subscription.plan_id)
+                if not plan:
+                    raise ValueError(
+                        f"Subscription plan for company_id={company_id} not found."
+                    )
+
+                active_user_count = session.execute(
+                    select(func.count())
+                    .select_from(model.User)
+                    .where(
+                        model.User.company_id == int(company_id),
+                        model.User.deleted_at.is_(None),
+                        model.User.status == "active",
+                    )
+                ).scalar_one()
+
+                if active_user_count >= plan.seat_limit:
+                    raise RuntimeError(
+                        f"Seat limit reached for company_id={company_id}: "
+                        f"{active_user_count}/{plan.seat_limit} active users."
+                    )
+
             user.status = status
 
         session.commit()
@@ -998,6 +1093,8 @@ def update_user(company_id: int,user_id: uuid.UUID,*,display_name: str | None = 
         return user
 
     except ValueError:
+        raise
+    except RuntimeError:
         raise
     except IntegrityError as e:
         session.rollback()
@@ -1008,6 +1105,8 @@ def update_user(company_id: int,user_id: uuid.UUID,*,display_name: str | None = 
     finally:
         if own_session:
             session.close()
+
+
 
 def soft_delete_user(company_id: int,user_id: uuid.UUID,*,session: optional[SASession] = None) -> bool:
     """
