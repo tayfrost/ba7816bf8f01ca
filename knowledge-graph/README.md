@@ -1,124 +1,134 @@
 # SentinelAI Knowledge Graph
 
-Research paper knowledge graph for the SentinelAI mental health wellness agent. Provides evidence-based, citation-backed advice for workplace mental health concerns.
+Evidence-based workplace mental health knowledge graph for the SentinelAI wellness agent. All advice is anchored to **92 peer-reviewed papers** with verifiable DOIs from JAMA, Cochrane, Annals of Internal Medicine, BJSM, PMC, Frontiers, and JMIR.
 
-## Overview
-
-The knowledge graph connects **30 research papers** from arXiv to **114 actionable advice items** across **13 mental health topics** and **17 evidence-based techniques**.
-
-### Graph Schema
+## Graph Schema
 
 ```
-(Topic) <-[:COVERS]- (Paper) <-[:SOURCED_FROM]- (Advice) -[:USES_TECHNIQUE]-> (Technique)
-                                                          (Technique) -[:ADDRESSES]-> (Topic)
+(Topic) <-[:COVERS]- (Paper) <-[:SOURCED_FROM]- (Advice) -[:USES_TECHNIQUE]-> (Technique) -[:ADDRESSES]-> (Topic)
 ```
 
-### How It Works
+Closed-loop ontology: every output traces back to a verified clinical source. See `docs/GRAPH_SCHEMA.md` for the full visual schema.
 
-1. **Concern Detection**: NLP keyword matching maps user input to topic IDs
-2. **Graph Query**: Cypher queries retrieve advice nodes linked to detected topics
-3. **Ranking**: Results sorted by confidence score and paper citation count
-4. **Response**: Formatted with advice text, source paper, and technique tags
+| Entity | Count | Description |
+|--------|-------|-------------|
+| Papers | 92 | DOI-verified research (10,000+ combined citations) |
+| Advice Items | 368 | Actionable, confidence-scored interventions |
+| Topics | 24 | Workplace mental health concern categories |
+| Techniques | 37 | Evidence-based intervention methods |
+| Tests | 63 | All passing (data integrity + agent + keywords) |
 
-## Files
+## Project Structure
 
 ```
 knowledge-graph/
-├── README.md                  # This file
-├── papers.json                # Research papers dataset (30 papers, 114 advice items)
-├── build_graph.py             # Neo4j graph builder + Cypher exporter
-├── import.cypher              # Generated Cypher import script (run build_graph.py first)
-├── agent_integration.py       # Agent ↔ knowledge graph interface
-├── api.py                     # FastAPI REST wrapper
-├── test_knowledge_graph.py    # Unit tests (45 tests)
-├── sample_queries.cypher      # 10 example Cypher queries
-├── docker-compose.yml         # Neo4j container config
-├── deploy.sh                  # Start → Import → Export → Test
-└── requirements.txt           # Python dependencies
+├── data/
+│   └── papers.json              # Core dataset (92 papers, 368 advice items)
+├── mcp-server/
+│   ├── server.py                # MCP server (SSE transport, port 8001)
+│   ├── Dockerfile               # Docker build for the MCP server
+│   ├── requirements.txt         # Python dependencies
+│   └── README.md                # MCP server deployment & connection docs
+├── src/
+│   ├── agent_integration.py     # NLP concern detection + graph query engine
+│   ├── api.py                   # FastAPI REST wrapper (5 endpoints)
+│   └── build_graph.py           # Neo4j Cypher generator
+├── tests/
+│   └── test_knowledge_graph.py  # 63 pytest tests
+├── docs/
+│   ├── GRAPH_SCHEMA.md          # Schema documentation
+│   └── graph_schema.html        # Interactive schema visualisation
+├── scripts/
+│   ├── deploy.sh                # One-command deployment
+│   ├── import.cypher            # Generated Neo4j import script
+│   └── sample_queries.cypher    # Example Cypher queries
+├── requirements.txt
+└── README.md
 ```
 
-## Quick Start
+## Quick Start (Docker)
 
-### Option 1: With Docker (recommended)
+The MCP server is defined in the **root `docker-compose.yaml`** — no local compose file.
 
 ```bash
-# Start Neo4j
-docker-compose up -d
+# From repo root
+docker compose up -d kg-mcp-server
 
-# Build graph and generate Cypher
-pip install -r requirements.txt
-python build_graph.py
-
-# Import to Neo4j
-cat import.cypher | docker exec -i sentinelai-neo4j cypher-shell -u neo4j -p sentinelai2025
-
-# Run tests
-python -m pytest test_knowledge_graph.py -v
+# MCP SSE endpoint available at:
+# http://localhost:8001/sse
 ```
 
-### Option 2: JSON Fallback (no Neo4j required)
+See [mcp-server/README.md](mcp-server/README.md) for full deployment docs, environment variables, and agent connection instructions.
 
-The agent works without Neo4j using the JSON dataset directly:
+## Quick Start (Local Development)
+
+### JSON Fallback (no Neo4j required)
 
 ```python
-from agent_integration import WellnessAgent
+from src.agent_integration import WellnessAgent
 
-agent = WellnessAgent()  # Auto-uses JSON fallback
-result = agent.get_advice("I'm feeling stressed and can't sleep")
+agent = WellnessAgent()
+result = agent.get_advice("I'm feeling burned out and can't sleep")
 print(agent.format_response(result))
 ```
 
-### Option 3: REST API
+### MCP Server (SSE)
 
 ```bash
-uvicorn api:app --host 0.0.0.0 --port 8000
-
-# Query
-curl -X POST http://localhost:8000/advice \
-  -H "Content-Type: application/json" \
-  -d '{"text": "I feel burned out", "max_results": 3}'
+cd knowledge-graph/mcp-server
+pip install -r requirements.txt
+python server.py
+# → SSE server at http://0.0.0.0:8001/sse
 ```
 
-### One-Command Deploy
+### With Neo4j (optional, dev profile)
 
 ```bash
-chmod +x deploy.sh
-./deploy.sh all
+# From repo root — starts Neo4j alongside other services
+docker compose --profile dev up -d neo4j
+python src/build_graph.py --neo4j
 ```
 
-## Database Export
+| Service | Port | Purpose |
+|---------|------|---------|
+| MCP Server | 8001 | AI agent tool calls (SSE) |
+| Neo4j Browser | 7474 | Graph visualization (dev only, `--profile dev`) |
+| Neo4j Bolt | 7687 | Database protocol (dev only) |
 
-For deployment, the Neo4j volume can be exported and shared:
+### API Endpoints (FastAPI wrapper)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/advice` | Get ranked advice for user concern |
+| GET | `/topics` | List all 24 topics |
+| GET | `/techniques/{topic_id}` | Techniques for a topic |
+| GET | `/stats` | Graph statistics |
+| GET | `/health` | Service health check |
+
+## Running Tests
 
 ```bash
-./deploy.sh export
-# Creates knowledge-graph-db.tar.gz
+cd knowledge-graph
+python -m pytest tests/ -v
 ```
 
-Upload the tar.gz to a public file sharing service and add the link here.
+## Dataset
 
-## Topics Covered
+The core dataset (`data/papers.json`) contains 92 peer-reviewed papers with 368 actionable advice items. It can optionally be hosted on HuggingFace Hub — see [mcp-server/README.md](mcp-server/README.md#dataset-source) for configuration.
 
-| Topic | Description |
-|-------|-------------|
-| Workplace Stress | Work demands, deadlines, organizational pressure |
-| Burnout | Chronic exhaustion, cynicism, reduced efficacy |
-| Anxiety | Excessive worry, nervousness, performance anxiety |
-| Depression | Low mood, hopelessness, loss of motivation |
-| Anger Management | Difficulty regulating anger in professional settings |
-| Sleep Issues | Insomnia, poor sleep quality, fatigue |
-| Work-Life Balance | Boundary maintenance between work and personal life |
-| Social Isolation | Loneliness, disconnection (esp. remote work) |
-| Emotional Regulation | Managing emotional responses professionally |
-| Resilience | Recovery from adversity and adaptation |
-| Mindfulness | Present-moment awareness practices |
-| Cognitive Distortions | Negative thinking patterns |
-| Interpersonal Conflict | Workplace relationship difficulties |
+## Key Sources
 
-## Techniques
-
-Deep Breathing, Progressive Muscle Relaxation, Mindfulness Meditation, CBT Restructuring, Journaling, Time Management, Boundary Setting, Social Support, Physical Activity, Sleep Hygiene, Gratitude Practice, Assertiveness Training, Problem-Solving Therapy, Guided Visualization, Self-Compassion, Micro-Breaks, Emotional Labeling.
+| Journal | Papers |
+|---------|--------|
+| JAMA Network Open / Internal Medicine | 3 |
+| Cochrane Database of Systematic Reviews | 2 |
+| Annals of Internal Medicine | 1 |
+| Cell Reports Medicine | 1 |
+| British Journal of Sports Medicine | 2 |
+| Journal of Medical Internet Research | 4 |
+| Frontiers (Psychology, Psychiatry, Sleep) | 10+ |
+| PMC / PLoS ONE | 15+ |
 
 ## Contributors
 
-- Vishal Thakwani (k24059655) - Knowledge Graph Design & Implementation
+- Vishal Thakwani (k24059655)

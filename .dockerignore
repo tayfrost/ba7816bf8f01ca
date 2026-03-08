@@ -1,0 +1,30 @@
+.git
+.DS_Store
+__pycache__
+*.pyc
+.venv
+venv
+node_modules
+*.log
+
+# Secrets
+**/.env
+**/.env.*
+
+# Other services (not needed for kg-mcp-server build)
+webhooks/
+filter/
+frontend/
+backend/
+ai_service/
+.mcp-debug-tools/
+
+# Data volumes
+pgvector_data/
+neo4j_data/
+
+# Build artifacts
+knowledge-graph/mcp-server/.venv
+knowledge-graph/mcp-server/__pycache__
+knowledge-graph/mcp-server/uv.lock
+knowledge-graph/mcp-server/.venv/

@@ -1,0 +1,81 @@
+{
+  "sentibert": {
+    "confusion_matrix": [
+      [
+        248,
+        23
+      ],
+      [
+        13,
+        416
+      ]
+    ],
+    "metrics": {
+      "accuracy": 0.9485714285714286,
+      "precision": 0.9476082004555809,
+      "recall": 0.9696969696969697,
+      "f1_score": 0.9585253456221199
+    },
+    "counts": {
+      "true_negatives": 248,
+      "false_positives": 23,
+      "false_negatives": 13,
+      "true_positives": 416
+    }
+  },
+  "keyword_baseline": {
+    "confusion_matrix": [
+      [
+        261,
+        10
+      ],
+      [
+        396,
+        33
+      ]
+    ],
+    "metrics": {
+      "accuracy": 0.42,
+      "precision": 0.7674418604651163,
+      "recall": 0.07692307692307693,
+      "f1_score": 0.1398305084745763
+    },
+    "counts": {
+      "true_negatives": 261,
+      "false_positives": 10,
+      "false_negatives": 396,
+      "true_positives": 33
+    }
+  },
+  "gemini_baseline": {
+    "confusion_matrix": [
+      [
+        256,
+        15
+      ],
+      [
+        74,
+        355
+      ]
+    ],
+    "metrics": {
+      "accuracy": 0.8728571428571429,
+      "precision": 0.9594594594594594,
+      "recall": 0.8275058275058275,
+      "f1_score": 0.8886107634543178
+    },
+    "counts": {
+      "true_negatives": 256,
+      "false_positives": 15,
+      "false_negatives": 74,
+      "true_positives": 355
+    }
+  },
+  "analysis": {
+    "accuracy_improvement_vs_keyword": 0.5285714285714287,
+    "recall_improvement_vs_keyword": 0.8927738927738929,
+    "description": "Binary classification: Risk (categories 2-6) vs No-Risk (0-1)",
+    "accuracy_improvement_vs_gemini": 0.07571428571428573,
+    "recall_improvement_vs_gemini": 0.14219114219114226
+  }
+}
