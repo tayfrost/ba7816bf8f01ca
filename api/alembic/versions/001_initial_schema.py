@@ -18,6 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # ── subscription_plan ──────────────────────────────────────────────
     op.create_table(
         "subscription_plan",
         sa.Column("plan_id", sa.BigInteger(), nullable=False),
@@ -34,6 +35,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("plan_name"),
     )
 
+    # ── companies ──────────────────────────────────────────────────────
     op.create_table(
         "companies",
         sa.Column("company_id", sa.BigInteger(), nullable=False),
@@ -48,6 +50,40 @@ def upgrade() -> None:
         sa.UniqueConstraint("stripe_customer_id"),
     )
 
+    # ── saas_user_data ─────────────────────────────────────────────────
+    op.create_table(
+        "saas_user_data",
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("surname", sa.Text(), nullable=False),
+        sa.Column("email", sa.Text(), nullable=False),
+        sa.Column("password_hash", sa.Text(), nullable=False),
+        sa.CheckConstraint("char_length(trim(name)) > 1", name="ck_saas_name_len"),
+        sa.CheckConstraint("char_length(trim(surname)) > 1", name="ck_saas_surname_len"),
+        sa.CheckConstraint(
+            "char_length(trim(email)) > 3 AND position('@' in trim(email)) > 1 "
+            "AND position('@' in trim(email)) < char_length(trim(email))",
+            name="ck_saas_email",
+        ),
+        sa.PrimaryKeyConstraint("user_id"),
+        sa.UniqueConstraint("email"),
+    )
+
+    # ── saas_company_roles ─────────────────────────────────────────────
+    op.create_table(
+        "saas_company_roles",
+        sa.Column("company_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.Column("role", sa.Text(), nullable=False),
+        sa.Column("status", sa.Text(), nullable=False),
+        sa.CheckConstraint("role IN ('admin','viewer','biller')", name="ck_company_role"),
+        sa.CheckConstraint("status IN ('active','inactive','removed')", name="ck_company_role_status"),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["user_id"], ["saas_user_data.user_id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("company_id", "user_id", "role"),
+    )
+
+    # ── subscriptions ──────────────────────────────────────────────────
     op.create_table(
         "subscriptions",
         sa.Column("id", sa.BigInteger(), nullable=False),
@@ -73,108 +109,85 @@ def upgrade() -> None:
         sa.UniqueConstraint("stripe_subscription_id"),
     )
 
-    op.create_table(
-        "users",
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.Column("company_id", sa.BigInteger(), nullable=False),
-        sa.Column("display_name", sa.String(), nullable=True),
-        sa.Column("role", sa.String(), nullable=False),
-        sa.Column("status", sa.String(), nullable=False, server_default="active"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
-        sa.PrimaryKeyConstraint("user_id"),
-        sa.UniqueConstraint("company_id", "user_id"),
-    )
-
-    op.create_table(
-        "auth_users",
-        sa.Column("auth_user_id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("company_id", sa.BigInteger(), nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("email", sa.String(), nullable=False),
-        sa.Column("password_hash", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
-        sa.ForeignKeyConstraint(["user_id"], ["users.user_id"]),
-        sa.PrimaryKeyConstraint("auth_user_id"),
-        sa.UniqueConstraint("email"),
-    )
-
+    # ── slack_workspaces ───────────────────────────────────────────────
     op.create_table(
         "slack_workspaces",
-        sa.Column("slack_workspace_id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("company_id", sa.BigInteger(), nullable=False),
-        sa.Column("team_id", sa.String(), nullable=False),
-        sa.Column("access_token", sa.String(), nullable=False),
-        sa.Column("installed_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
-        sa.PrimaryKeyConstraint("slack_workspace_id"),
+        sa.Column("team_id", sa.Text(), nullable=False),
+        sa.Column("access_token", sa.Text(), nullable=False),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("team_id"),
     )
 
+    # ── slack_users ────────────────────────────────────────────────────
     op.create_table(
-        "slack_accounts",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("team_id", sa.String(), nullable=False),
-        sa.Column("slack_user_id", sa.String(), nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("email", sa.String(), nullable=True),
-        sa.Column("company_id", sa.BigInteger(), nullable=False),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
-        sa.ForeignKeyConstraint(["team_id"], ["slack_workspaces.team_id"]),
-        sa.ForeignKeyConstraint(["user_id"], ["users.user_id"]),
+        "slack_users",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("team_id", sa.Text(), nullable=False),
+        sa.Column("slack_user_id", sa.Text(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("surname", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("status", sa.Text(), nullable=False),
+        sa.CheckConstraint("char_length(trim(name)) > 1", name="ck_slack_user_name_len"),
+        sa.CheckConstraint("char_length(trim(surname)) > 1", name="ck_slack_user_surname_len"),
+        sa.CheckConstraint("status IN ('active','inactive','removed')", name="ck_slack_user_status"),
+        sa.ForeignKeyConstraint(["team_id"], ["slack_workspaces.team_id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("team_id", "slack_user_id"),
+        sa.UniqueConstraint("team_id", "slack_user_id", name="uq_slack_users_team_user"),
     )
 
+    # ── flagged_incidents ──────────────────────────────────────────────
+    op.create_table(
+        "flagged_incidents",
+        sa.Column("incident_id", sa.BigInteger(), nullable=False),
+        sa.Column("company_id", sa.BigInteger(), nullable=False),
+        sa.Column("team_id", sa.Text(), nullable=False),
+        sa.Column("slack_user_id", sa.Text(), nullable=False),
+        sa.Column("message_ts", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("channel_id", sa.Text(), nullable=False),
+        sa.Column("raw_message_text", postgresql.JSONB(), nullable=False),
+        sa.Column("class_reason", sa.Text(), nullable=True),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["team_id"], ["slack_workspaces.team_id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["team_id", "slack_user_id"],
+            ["slack_users.team_id", "slack_users.slack_user_id"],
+            name="fk_flagged_incidents_tracker",
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("incident_id"),
+    )
+    op.create_index(
+        "idx_flagged_incidents_company_created_at",
+        "flagged_incidents",
+        ["company_id", "created_at"],
+    )
+    op.create_index(
+        "idx_flagged_incidents_team_user_created_at",
+        "flagged_incidents",
+        ["team_id", "slack_user_id", "created_at"],
+    )
+
+    # ── google_mailboxes ───────────────────────────────────────────────
     op.create_table(
         "google_mailboxes",
         sa.Column("google_mailbox_id", sa.BigInteger(), autoincrement=True, nullable=False),
         sa.Column("company_id", sa.BigInteger(), nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("email_address", sa.String(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=True),
+        sa.Column("email_address", sa.Text(), nullable=False),
         sa.Column("token_json", sa.Text(), nullable=True),
-        sa.Column("last_history_id", sa.String(), nullable=True),
+        sa.Column("last_history_id", sa.Text(), nullable=True),
         sa.Column("watch_expiration", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
-        sa.ForeignKeyConstraint(["user_id"], ["users.user_id"]),
+        sa.ForeignKeyConstraint(["user_id"], ["saas_user_data.user_id"]),
         sa.PrimaryKeyConstraint("google_mailbox_id"),
     )
 
-    op.create_table(
-        "messages",
-        sa.Column("message_id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.Column("company_id", sa.BigInteger(), nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("source", sa.String(), nullable=False),
-        sa.Column("sent_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("content_raw", postgresql.JSONB(), nullable=True),
-        sa.Column("conversation_id", sa.String(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
-        sa.ForeignKeyConstraint(["user_id"], ["users.user_id"]),
-        sa.PrimaryKeyConstraint("message_id"),
-    )
-
-    op.create_table(
-        "incident_scores",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("message_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("neutral_score", sa.Float(), nullable=True),
-        sa.Column("humor_sarcasm_score", sa.Float(), nullable=True),
-        sa.Column("stress_score", sa.Float(), nullable=True),
-        sa.Column("burnout_score", sa.Float(), nullable=True),
-        sa.Column("depression_score", sa.Float(), nullable=True),
-        sa.Column("harassment_score", sa.Float(), nullable=True),
-        sa.Column("suicidal_ideation_score", sa.Float(), nullable=True),
-        sa.Column("predicted_category", sa.String(), nullable=True),
-        sa.Column("predicted_severity", sa.String(), nullable=True),
-        sa.ForeignKeyConstraint(["message_id"], ["messages.message_id"]),
-        sa.PrimaryKeyConstraint("id"),
-    )
-
+    # ── payments ───────────────────────────────────────────────────────
     op.create_table(
         "payments",
         sa.Column("id", sa.BigInteger(), nullable=False),
@@ -196,6 +209,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("stripe_invoice_id"),
     )
 
+    # ── stripe_events ──────────────────────────────────────────────────
     op.create_table(
         "stripe_events",
         sa.Column("id", sa.BigInteger(), nullable=False),
@@ -213,13 +227,14 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("stripe_events")
     op.drop_table("payments")
-    op.drop_table("incident_scores")
-    op.drop_table("messages")
     op.drop_table("google_mailboxes")
-    op.drop_table("slack_accounts")
+    op.drop_index("idx_flagged_incidents_team_user_created_at", table_name="flagged_incidents")
+    op.drop_index("idx_flagged_incidents_company_created_at", table_name="flagged_incidents")
+    op.drop_table("flagged_incidents")
+    op.drop_table("slack_users")
     op.drop_table("slack_workspaces")
-    op.drop_table("auth_users")
-    op.drop_table("users")
     op.drop_table("subscriptions")
+    op.drop_table("saas_company_roles")
+    op.drop_table("saas_user_data")
     op.drop_table("companies")
     op.drop_table("subscription_plan")
