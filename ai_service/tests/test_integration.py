@@ -6,6 +6,7 @@ import time
 import json
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE_URL = "http://localhost:8002"
 TIMEOUT = 300  # 5 minutes for LLM + MCP tool calls
@@ -289,6 +290,59 @@ class TestDeployedService:
             log(f"✗ FAILED - Unexpected status code: {response.status_code}")
             log(f"Response: {response.text}")
             assert response.status_code == 200
+    
+    def test_concurrent_requests(self, wait_for_service):
+        """Test that system handles multiple simultaneous requests."""
+        log("\n" + "="*80)
+        log("TEST 8: Concurrent Request Handling")
+        log("="*80)
+        
+        messages = [
+            "I'm feeling stressed about deadlines",
+            "I can't sleep and feel exhausted all the time",
+            "I'm anxious about work performance"
+        ]
+        
+        log("Sending 3 concurrent analyze requests...")
+        log("-"*80)
+        
+        def send_request(msg):
+            start_time = time.time()
+            response = requests.post(
+                f"{BASE_URL}/analyze",
+                json={"message": msg},
+                timeout=TIMEOUT
+            )
+            elapsed = time.time() - start_time
+            return msg, response, elapsed
+        
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [executor.submit(send_request, msg) for msg in messages]
+            results = []
+            
+            for future in as_completed(futures):
+                msg, response, elapsed = future.result()
+                results.append((msg, response, elapsed))
+        
+        log(f"\n[CONCURRENT TEST RESULTS]")
+        log(f"All {len(results)} requests completed")
+        
+        all_passed = True
+        for i, (msg, response, elapsed) in enumerate(results, 1):
+            log(f"\nRequest {i}:")
+            log(f"  Message: {msg[:50]}...")
+            log(f"  Status: {response.status_code}")
+            log(f"  Time: {elapsed:.2f}s")
+            
+            if response.status_code == 200:
+                data = response.json()
+                log(f"  ✓ Success - Risk detected: {data.get('score', {}).get('stress_level', 0) > 0}")
+            else:
+                log(f"  ✗ Failed")
+                all_passed = False
+        
+        assert all_passed, "Not all concurrent requests succeeded"
+        log("\n✓ PASSED - All concurrent requests handled successfully")
     
     def test_analyze_validation_error(self, wait_for_service):
         """Test that invalid input is handled properly."""
