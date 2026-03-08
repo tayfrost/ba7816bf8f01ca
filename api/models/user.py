@@ -1,25 +1,28 @@
-import uuid
-from datetime import datetime
+from typing import Optional
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, UniqueConstraint, func, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import BigInteger, CheckConstraint, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from api.models.base import Base
 
 
-class User(Base):
-    __tablename__ = "users"
-    __table_args__ = (UniqueConstraint("company_id", "user_id"),)
+class SaasUserData(Base):
+    __tablename__ = "saas_user_data"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=text("gen_random_uuid()")
+    __table_args__ = (
+        CheckConstraint("char_length(trim(name)) > 1", name="ck_saas_name_len"),
+        CheckConstraint("char_length(trim(surname)) > 1", name="ck_saas_surname_len"),
+        CheckConstraint(
+            "char_length(trim(email)) > 3 AND position('@' in trim(email)) > 1 "
+            "AND position('@' in trim(email)) < char_length(trim(email))",
+            name="ck_saas_email",
+        ),
     )
-    company_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("companies.company_id"), nullable=False)
-    display_name: Mapped[str | None] = mapped_column(String, nullable=True)
-    role: Mapped[str] = mapped_column(String, nullable=False)  # admin, viewer, biller
-    status: Mapped[str] = mapped_column(String, nullable=False, default="active")  # active, inactive
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    company = relationship("Company", back_populates="users")
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    surname: Mapped[str] = mapped_column(Text, nullable=False)
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+
+    company_roles: Mapped[list["SaasCompanyRole"]] = relationship(back_populates="user")

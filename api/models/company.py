@@ -26,6 +26,8 @@ class Company(Base):
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True, unique=True)
 
     plan = relationship("SubscriptionPlan", lazy="selectin")
+    company_roles = relationship("SaasCompanyRole", back_populates="company", lazy="selectin")
     subscriptions = relationship("Subscription", back_populates="company", lazy="selectin")
-    users = relationship("User", back_populates="company", lazy="selectin")
+    workspaces = relationship("SlackWorkspace", back_populates="company", lazy="selectin")
+    flagged_incidents = relationship("FlaggedIncident", back_populates="company", lazy="selectin")
     payments = relationship("Payment", back_populates="company", lazy="selectin")

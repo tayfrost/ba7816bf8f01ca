@@ -1,8 +1,6 @@
-import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from api.models.base import Base
@@ -11,26 +9,35 @@ from api.models.base import Base
 class SlackWorkspace(Base):
     __tablename__ = "slack_workspaces"
 
-    slack_workspace_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    company_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("companies.company_id"), nullable=False)
-    team_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    access_token: Mapped[str] = mapped_column(String, nullable=False)
-    installed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    company_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("companies.company_id", ondelete="RESTRICT"), nullable=False,
+    )
+    team_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    access_token: Mapped[str] = mapped_column(Text, nullable=False)
 
-    company = relationship("Company", lazy="selectin")
-    accounts = relationship("SlackAccount", back_populates="workspace", lazy="selectin")
+    company = relationship("Company", back_populates="workspaces")
+    slack_users = relationship("SlackUser", back_populates="workspace", lazy="selectin")
 
 
-class SlackAccount(Base):
-    __tablename__ = "slack_accounts"
-    __table_args__ = (UniqueConstraint("team_id", "slack_user_id"),)
+class SlackUser(Base):
+    __tablename__ = "slack_users"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    team_id: Mapped[str] = mapped_column(String, ForeignKey("slack_workspaces.team_id"), nullable=False)
-    slack_user_id: Mapped[str] = mapped_column(String, nullable=False)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=True)
-    email: Mapped[str | None] = mapped_column(String, nullable=True)
-    company_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("companies.company_id"), nullable=False)
+    __table_args__ = (
+        CheckConstraint("char_length(trim(name)) > 1", name="ck_slack_user_name_len"),
+        CheckConstraint("char_length(trim(surname)) > 1", name="ck_slack_user_surname_len"),
+        CheckConstraint("status IN ('active','inactive','removed')", name="ck_slack_user_status"),
+        UniqueConstraint("team_id", "slack_user_id", name="uq_slack_users_team_user"),
+    )
 
-    workspace = relationship("SlackWorkspace", back_populates="accounts")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    team_id: Mapped[str] = mapped_column(
+        Text, ForeignKey("slack_workspaces.team_id", ondelete="RESTRICT"), nullable=False,
+    )
+    slack_user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    surname: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+
+    workspace = relationship("SlackWorkspace", back_populates="slack_users")
