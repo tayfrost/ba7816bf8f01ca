@@ -8,6 +8,7 @@ async def _register(client: AsyncClient, email: str, company_name: str) -> str:
         "password": "testpassword123",
         "name": "Test User",
         "company_name": company_name,
+        "plan_id": 1,
     })
     return resp.json()["access_token"]
 
@@ -27,7 +28,7 @@ async def test_get_company_info(client: AsyncClient):
     token = await _register(client, "comp2@test.com", "Test Company 2")
     response = await client.get("/companies/me", headers=_auth_headers(token))
     assert response.status_code == 200
-    assert response.json()["name"] == "Test Company 2"
+    assert response.json()["company_name"] == "Test Company 2"
 
 
 @pytest.mark.asyncio

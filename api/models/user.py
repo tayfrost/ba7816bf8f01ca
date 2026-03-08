@@ -13,7 +13,7 @@ class User(Base):
     __table_args__ = (UniqueConstraint("company_id", "user_id"),)
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=text("gen_random_uuid()")
     )
     company_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("companies.company_id"), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)

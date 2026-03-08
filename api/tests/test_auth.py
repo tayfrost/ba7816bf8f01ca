@@ -9,6 +9,7 @@ async def test_register_returns_token(client: AsyncClient):
         "password": "securepassword123",
         "name": "Test User",
         "company_name": "Test Corp",
+        "plan_id": 1,
     })
     assert response.status_code == 201
     data = response.json()
@@ -24,6 +25,7 @@ async def test_login_works(client: AsyncClient):
         "password": "securepassword123",
         "name": "Login User",
         "company_name": "Login Corp",
+        "plan_id": 1,
     })
 
     # Login
@@ -44,6 +46,7 @@ async def test_login_fails_with_wrong_password(client: AsyncClient):
         "password": "correctpassword",
         "name": "Wrong Pass User",
         "company_name": "Wrong Corp",
+        "plan_id": 1,
     })
 
     # Login with wrong password
