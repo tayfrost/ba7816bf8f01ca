@@ -232,7 +232,7 @@ TOPIC_REGEXES = {
 }
 
 
-def detect_concerns(text: str) -> list[str]:
+async def detect_concerns(text: str) -> list[str]:
     return [tid for tid, regex in TOPIC_REGEXES.items() if regex.search(text)]
 
 
@@ -272,7 +272,7 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-def triage_crisis_risk(text: str) -> dict:
+async def triage_crisis_risk(text: str) -> dict:
     """Check if user input contains crisis or self-harm indicators.
 
     CALL THIS FIRST before get_recommendation if the user's message mentions
@@ -318,7 +318,7 @@ def triage_crisis_risk(text: str) -> dict:
 
 
 @mcp.tool()
-def get_recommendation(
+async def get_recommendation(
     diagnosis: str,
     max_results: int = 5,
 ) -> dict:
@@ -342,13 +342,13 @@ def get_recommendation(
         source paper, DOI, citation count, technique, and technique description),
         and a medical disclaimer.
     """
-    crisis_check = triage_crisis_risk(diagnosis)
+    crisis_check = await triage_crisis_risk(diagnosis)
     if crisis_check.get("crisis_detected"):
         return crisis_check
 
     diagnosis = diagnosis[:MAX_INPUT_LENGTH]
     max_results = _clamp_results(max_results)
-    concerns = detect_concerns(diagnosis)
+    concerns = await detect_concerns(diagnosis)
 
     if not concerns:
         return {
@@ -387,7 +387,7 @@ def get_recommendation(
 
 
 @mcp.tool()
-def get_recommendation_by_topic(
+async def get_recommendation_by_topic(
     topic_id: str,
     max_results: int = 5,
 ) -> dict:
@@ -423,7 +423,7 @@ def get_recommendation_by_topic(
 
 
 @mcp.tool()
-def get_recommendation_by_technique(
+async def get_recommendation_by_technique(
     technique_id: str,
     max_results: int = 5,
 ) -> dict:
@@ -464,7 +464,7 @@ def get_recommendation_by_technique(
 
 
 @mcp.tool()
-def list_topics() -> dict:
+async def list_topics() -> dict:
     """List all 24 mental health topics available in the knowledge graph.
 
     Returns topic IDs, names, and descriptions. Use these IDs with
@@ -481,7 +481,7 @@ def list_topics() -> dict:
 
 
 @mcp.tool()
-def get_techniques_for_topic(topic_id: str) -> dict:
+async def get_techniques_for_topic(topic_id: str) -> dict:
     """Get all evidence-based techniques that address a specific mental health topic.
 
     Args:
@@ -508,7 +508,7 @@ def get_techniques_for_topic(topic_id: str) -> dict:
 
 
 @mcp.tool()
-def search_papers(
+async def search_papers(
     query: str = "",
     topic_id: str = "",
     technique_id: str = "",
@@ -583,7 +583,7 @@ def search_papers(
 
 
 @mcp.tool()
-def get_paper_details(paper_id: str) -> dict:
+async def get_paper_details(paper_id: str) -> dict:
     """Get full details of a specific research paper including all its advice items.
 
     Args:
@@ -629,7 +629,7 @@ def get_paper_details(paper_id: str) -> dict:
 
 
 @mcp.tool()
-def list_techniques() -> dict:
+async def list_techniques() -> dict:
     """List all 37 evidence-based techniques in the knowledge graph.
 
     Returns technique IDs, names, descriptions, and which topics they address.
@@ -646,7 +646,7 @@ def list_techniques() -> dict:
 
 
 @mcp.tool()
-def get_stats() -> dict:
+async def get_stats() -> dict:
     """Get overall statistics about the knowledge graph.
 
     Returns:
