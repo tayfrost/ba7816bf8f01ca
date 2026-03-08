@@ -14,7 +14,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     try:
         token = await auth_service.register_user(
-            db, body.email, body.password, body.name, body.company_name
+            db, body.email, body.password, body.name, body.company_name, body.plan_id
         )
         return TokenResponse(access_token=token)
     except Exception as e:

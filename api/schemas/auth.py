@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class RegisterRequest(BaseModel):
@@ -6,6 +6,7 @@ class RegisterRequest(BaseModel):
     password: str
     name: str
     company_name: str
+    plan_id: int = 1
 
 
 class LoginRequest(BaseModel):
