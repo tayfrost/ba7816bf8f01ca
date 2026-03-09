@@ -1,27 +1,27 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
 import SidebarLink from "../components/SidebarLink";
 import EmployeeCard from "../components/EmployeeCard";
 import { MOCK_EMPLOYEES } from "../state/employeesMock";
+import { useEmployeesData } from "../hooks/useEmployeesData";
 
 const BRAND_ORANGE = "var(--color-top)"; 
 const BRAND_DEEP = "var(--color-brand-deep)";
 
 export default function Employees() {
   const { signup, plan, integrations, reset } = useOnboarding();
-  const [searchTerm, setSearchTerm] = useState("");
 
   const connectedCount = useMemo(() => countConnected(integrations), [integrations]);
 
   const riskScore = useMemo(() => Math.min(100, 35 + connectedCount * 20), [connectedCount]);
 
-  const filteredEmployees = useMemo(() => {
-    return MOCK_EMPLOYEES.filter(emp => 
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.role.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => b.risk - a.risk);
-  }, [searchTerm]);
+  const {
+    employees,
+    stats,
+    searchTerm,
+    setSearchTerm,
+  } = useEmployeesData();
 
   return (
     <div style={{
@@ -74,6 +74,9 @@ export default function Employees() {
             </h1>
             <p style={{ opacity: 0.5, marginTop: "10px", fontWeight: "700", textTransform: "uppercase", fontSize: "12px", letterSpacing: "1px" }}>
               {plan} MEMBER • {connectedCount} ACTIVE SOURCES
+            </p>
+            <p style={{ opacity: 0.35, marginTop: "8px", fontWeight: "700", fontSize: "11px", letterSpacing: "1px" }}>
+              {stats.total} EMPLOYEES • {stats.watchlist} WATCHLIST • {stats.critical} CRITICAL
             </p>
           </div>
 
@@ -132,7 +135,7 @@ export default function Employees() {
           gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
           gap: "30px" 
         }}>
-          {filteredEmployees.map(emp => (
+          {employees.map(emp => (
             <div key={emp.id} style={{
               background: "rgba(255, 255, 255, 0.03)",
               border: "1px solid rgba(255, 255, 255, 0.08)",
@@ -141,17 +144,17 @@ export default function Employees() {
               backdropFilter: "blur(20px)"
             }}>
               <EmployeeCard 
-                fullName={emp.name}
+                fullName={emp.fullName}
                 role={emp.role}
-                riskScore={emp.risk}
-                flaggedCount={emp.flagged}
-                overtimeHours={emp.overtime}
+                riskScore={emp.riskScore}
+                flaggedCount={emp.flaggedCount}
+                overtimeHours={emp.overtimeHours}
               />
             </div>
           ))}
         </div>
 
-        {filteredEmployees.length === 0 && (
+        {employees.length === 0 && (
           <div style={{ textAlign: "center", marginTop: "100px", opacity: 0.2 }}>
             <h2 style={{ fontSize: "20px", fontWeight: "900", letterSpacing: "2px" }}>NO DIRECTORY MATCHES</h2>
           </div>
