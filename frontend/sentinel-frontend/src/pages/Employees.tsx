@@ -3,17 +3,10 @@ import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
 import SidebarLink from "../components/SidebarLink";
 import EmployeeCard from "../components/EmployeeCard";
+import { MOCK_EMPLOYEES } from "../state/employeesMock";
 
 const BRAND_ORANGE = "var(--color-top)"; 
 const BRAND_DEEP = "var(--color-brand-deep)";
-
-// Data derived from the "Flagged incidents" backend logic
-const MOCK_EMPLOYEES = [
-  { id: "u1", name: "Sarah Jenkins", role: "Senior Engineer", risk: 82, flagged: 14, overtime: 12 },
-  { id: "u2", name: "Marcus Chen", role: "Product Manager", risk: 15, flagged: 2, overtime: 4 },
-  { id: "u3", name: "Elena Rodriguez", role: "UX Designer", risk: 45, flagged: 7, overtime: 9 },
-  { id: "u4", name: "David Kim", role: "DevOps", risk: 91, flagged: 28, overtime: 22 },
-];
 
 export default function Employees() {
   const { signup, plan, integrations, reset } = useOnboarding();
