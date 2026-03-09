@@ -1,59 +1,120 @@
-const BRAND_ORANGE = "var(--color-top)";
+import EmployeeSources from "./employees/EmployeeSources";
+import EmployeeStatsRow from "./employees/EmployeeStatsRow";
+import EmployeeRiskMiniChart from "./employees/EmployeeRiskMiniChart";
 
-interface Props {
+type Point = {
+  date: string;
+  value: number;
+};
+
+type Props = {
   fullName: string;
   role: string;
-  riskScore: number;      // Calculated from messages_incidents
-  flaggedCount: number;   // From Incident_ID (PK) count
-  overtimeHours: number;  // Calculated from sent_at timestamps
-}
+  email: string;
+  team: string;
+  riskScore: number;
+  flaggedCount: number;
+  overtimeHours: number;
+  lastActive: string;
+  sources: ("slack" | "gmail" | "outlook")[];
+  trend: Point[];
+};
 
-export default function EmployeeCard({ fullName, role, riskScore, flaggedCount, overtimeHours }: Props) {
+export default function EmployeeCard({
+  fullName,
+  role,
+  email,
+  team,
+  riskScore,
+  flaggedCount,
+  overtimeHours,
+  lastActive,
+  sources,
+  trend,
+}: Props) {
   return (
-    <div style={{
-      background: "rgba(255, 255, 255, 0.03)", 
-      border: "1px solid rgba(255, 255, 255, 0.08)",
-      borderRadius: "35px",
-      padding: "30px",
-      backdropFilter: "blur(20px)",
-      color: "white"
-    }}>
-      <div style={{ marginBottom: "20px" }}>
-        <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "900", color: BRAND_ORANGE }}>
-          {fullName.toUpperCase()}
-        </h2>
-        <p style={{ margin: "4px 0 0 0", fontSize: "11px", fontWeight: "800", opacity: 0.4, letterSpacing: "1.5px" }}>
-          {role.toUpperCase()}
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "22px",
+            fontWeight: 900,
+            letterSpacing: "-0.5px",
+            color: "#fff",
+          }}
+        >
+          {fullName}
+        </h3>
+
+        <p
+          style={{
+            margin: "8px 0 0 0",
+            fontSize: "13px",
+            fontWeight: 700,
+            color: "rgba(255,255,255,0.58)",
+          }}
+        >
+          {role}
+        </p>
+
+        <p
+          style={{
+            margin: "6px 0 0 0",
+            fontSize: "12px",
+            fontWeight: 600,
+            color: "rgba(255,255,255,0.38)",
+          }}
+        >
+          {email}
         </p>
       </div>
 
-      <div style={{ marginBottom: "25px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-          <span style={{ fontSize: "10px", fontWeight: "900", opacity: 0.6 }}>RISK THREAT LEVEL</span>
-          <span style={{ fontSize: "10px", fontWeight: "900", color: BRAND_ORANGE }}>{riskScore}%</span>
-        </div>
-        <div style={{ width: "100%", height: "4px", background: "rgba(255,255,255,0.1)", borderRadius: "2px" }}>
-          <div style={{ width: `${riskScore}%`, height: "100%", background: BRAND_ORANGE, borderRadius: "2px", boxShadow: `0 0 10px ${BRAND_ORANGE}` }} />
-        </div>
+      <EmployeeSources sources={sources} />
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "10px",
+          padding: "14px 16px",
+          borderRadius: "18px",
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "11px",
+            fontWeight: 900,
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+            opacity: 0.45,
+          }}
+        >
+          Current risk
+        </span>
+
+        <span
+          style={{
+            fontSize: "24px",
+            fontWeight: 900,
+            color: "#fff",
+          }}
+        >
+          {riskScore}%
+        </span>
       </div>
 
-      {/* Backend Metrics Grid */}
-      <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "1fr 1fr", 
-        gap: "20px",
-        paddingTop: "20px",
-        borderTop: "1px solid rgba(255,255,255,0.05)"
-      }}>
-        <div>
-          <p style={{ fontSize: "10px", fontWeight: "900", opacity: 0.5, margin: "0 0 5px 0" }}>FLAGGED</p>
-          <p style={{ fontSize: "22px", fontWeight: "900", margin: 0 }}>{flaggedCount}</p>
-        </div>
-        <div>
-          <p style={{ fontSize: "10px", fontWeight: "900", opacity: 0.5, margin: "0 0 5px 0" }}>OVERTIME</p>
-          <p style={{ fontSize: "22px", fontWeight: "900", margin: 0 }}>{overtimeHours}h</p>
-        </div>
-      </div>
+      <EmployeeStatsRow
+        flaggedCount={flaggedCount}
+        overtimeHours={overtimeHours}
+        team={team}
+        lastActive={lastActive}
+      />
+
+      <EmployeeRiskMiniChart points={trend} />
     </div>
   );
 }

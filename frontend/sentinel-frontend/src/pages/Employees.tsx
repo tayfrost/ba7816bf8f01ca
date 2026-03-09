@@ -167,9 +167,14 @@ export default function Employees() {
               <EmployeeCard 
                 fullName={emp.fullName}
                 role={emp.role}
+                email={emp.email}
+                team={emp.team}
                 riskScore={emp.riskScore}
                 flaggedCount={emp.flaggedCount}
                 overtimeHours={emp.overtimeHours}
+                lastActive={emp.lastActive}
+                sources={emp.source}
+                trend={emp.trend}
               />
             </div>
           ))}
