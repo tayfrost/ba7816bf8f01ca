@@ -5,6 +5,8 @@ import SidebarLink from "../components/SidebarLink";
 import EmployeeCard from "../components/EmployeeCard";
 import { MOCK_EMPLOYEES } from "../state/employeesMock";
 import { useEmployeesData } from "../hooks/useEmployeesData";
+import EmployeesFilters from "../components/employees/EmployeesFilters";
+import RiskBadge from "../components/employees/RiskBadge";
 
 const BRAND_ORANGE = "var(--color-top)"; 
 const BRAND_DEEP = "var(--color-brand-deep)";
@@ -21,6 +23,12 @@ export default function Employees() {
     stats,
     searchTerm,
     setSearchTerm,
+    riskFilter,
+    setRiskFilter,
+    sourceFilter,
+    setSourceFilter,
+    sortBy,
+    setSortBy,
   } = useEmployeesData();
 
   return (
@@ -129,6 +137,15 @@ export default function Employees() {
           </div>
         </section>
 
+        <EmployeesFilters
+          riskFilter={riskFilter}
+          setRiskFilter={setRiskFilter}
+          sourceFilter={sourceFilter}
+          setSourceFilter={setSourceFilter}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+        />
+
         {/* EMPLOYEE DATA GRID */}
         <div style={{ 
           display: "grid", 
@@ -143,6 +160,10 @@ export default function Employees() {
               padding: "30px",
               backdropFilter: "blur(20px)"
             }}>
+              <div style={{ marginBottom: "10px" }}>
+                <RiskBadge score={emp.riskScore} />
+              </div>
+            
               <EmployeeCard 
                 fullName={emp.fullName}
                 role={emp.role}
