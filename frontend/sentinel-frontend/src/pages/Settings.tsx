@@ -7,6 +7,10 @@ import SectionCard from "../components/settings/SectionCard";
 import PaymentMethodsList from "../components/settings/PaymentMethodsList";
 import BillingHistoryTable from "../components/settings/BillingHistoryTable";
 
+import SecuritySettings from "../components/settings/SecuritySettings";
+import NotificationsPreferences from "../components/settings/NotificationsPreferences";
+import DangerZone from "../components/settings/DangerZone";
+
 import { MOCK_CARDS, MOCK_INVOICES } from "../state/settingsMock";
 
 const BRAND_ORANGE = "var(--color-top)";
@@ -203,6 +207,16 @@ export default function Settings() {
               MINIMUM 2 PAYMENT METHODS REQUIRED.
             </p>
           </SectionCard>
+
+          <SectionCard title="Security">
+            <SecuritySettings />
+          </SectionCard>
+          
+          <SectionCard title="Notifications">
+            <NotificationsPreferences />
+          </SectionCard>
+          
+          <DangerZone />
         </div>
       </main>
     </div>
