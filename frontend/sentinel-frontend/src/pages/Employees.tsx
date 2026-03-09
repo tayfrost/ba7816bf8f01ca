@@ -24,6 +24,8 @@ export default function Employees() {
   const {
     employees,
     stats,
+    status,
+    error,
     searchTerm,
     setSearchTerm,
     riskFilter,
@@ -117,6 +119,18 @@ export default function Employees() {
         flaggedMessages={stats.flagged}
         avgRisk={stats.avgRisk}
         />
+
+        {status === "loading" && (
+          <div style={{ marginBottom: 20, opacity: 0.75, fontWeight: 700 }}>
+            Loading employees...
+          </div>
+        )}
+        
+        {status === "error" && error && (
+          <div style={{ marginBottom: 20, color: BRAND_ORANGE, fontWeight: 800 }}>
+            {error}
+          </div>
+        )}
 
         <section style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ 
