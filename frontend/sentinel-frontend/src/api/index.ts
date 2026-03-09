@@ -1,4 +1,11 @@
+// Switch between real backend and mock data
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
+
+// Employees API
+import { getEmployees as realGetEmployees } from "./employees";
+import { getEmployees as mockGetEmployees } from "./mock/employees";
+
+export const getEmployees = USE_MOCKS ? mockGetEmployees : realGetEmployees;
 
 // Types
 export type { UsageQuery, UsageResponse, Series, SeriesPoint } from "./usage";
