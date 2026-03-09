@@ -64,7 +64,16 @@ export function useEmployeesData() {
     const high = MOCK_EMPLOYEES.filter((e) => getRiskLevel(e.riskScore) === "high").length;
     const watchlist = MOCK_EMPLOYEES.filter((e) => e.status === "watchlist" || e.status === "critical").length;
 
-    return { total, critical, high, watchlist };
+    const flagged = MOCK_EMPLOYEES.reduce((sum, e) => sum + e.flaggedCount, 0);
+    
+    const avgRisk =
+      total === 0
+        ? 0
+        : Math.round(
+          MOCK_EMPLOYEES.reduce((sum, e) => sum + e.riskScore, 0) / total
+        );
+
+    return { total, critical, high, watchlist, flagged, avgRisk };
   }, []);
 
   return {

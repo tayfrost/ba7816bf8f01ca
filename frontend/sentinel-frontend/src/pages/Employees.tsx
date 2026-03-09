@@ -7,6 +7,9 @@ import { MOCK_EMPLOYEES } from "../state/employeesMock";
 import { useEmployeesData } from "../hooks/useEmployeesData";
 import EmployeesFilters from "../components/employees/EmployeesFilters";
 import RiskBadge from "../components/employees/RiskBadge";
+import EmployeesSummaryTiles from "../components/employees/EmployeesSummaryTiles"
+import TopRiskEmployees from "../components/employees/TopRiskEmployees"
+import EmptyEmployees from "../components/employees/EmptyEmployees"
 
 const BRAND_ORANGE = "var(--color-top)"; 
 const BRAND_DEEP = "var(--color-brand-deep)";
@@ -108,6 +111,13 @@ export default function Employees() {
           </div>
         </header>
 
+        <EmployeesSummaryTiles
+        totalEmployees={stats.total}
+        highRiskEmployees={stats.high}
+        flaggedMessages={stats.flagged}
+        avgRisk={stats.avgRisk}
+        />
+
         <section style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ 
             display: "flex", 
@@ -146,6 +156,8 @@ export default function Employees() {
           setSortBy={setSortBy}
         />
 
+        <TopRiskEmployees employees={employees} />
+
         {/* EMPLOYEE DATA GRID */}
         <div style={{ 
           display: "grid", 
@@ -180,11 +192,7 @@ export default function Employees() {
           ))}
         </div>
 
-        {employees.length === 0 && (
-          <div style={{ textAlign: "center", marginTop: "100px", opacity: 0.2 }}>
-            <h2 style={{ fontSize: "20px", fontWeight: "900", letterSpacing: "2px" }}>NO DIRECTORY MATCHES</h2>
-          </div>
-        )}
+        {employees.length === 0 && <EmptyEmployees />}
 
       </main>
     </div>
