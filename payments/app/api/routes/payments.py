@@ -15,11 +15,15 @@ from app.schemas.schemas import (
     CheckoutSessionCreate,
     CheckoutSessionResponse,
     CustomerPortalResponse,
+    InvoiceResponse,
     MessageResponse,
     PaymentResponse,
+    RefundCreate,
+    RefundResponse,
     SubscriptionCancel,
     SubscriptionPlanResponse,
     SubscriptionResponse,
+    UpcomingInvoiceResponse,
 )
 from app.services.stripe_service import StripeService
 
@@ -118,6 +122,97 @@ async def list_payments(
         .limit(limit)
     )
     return result.scalars().all()
+
+
+# ── Invoices ──────────────────────────────────
+
+@router.get(
+    "/invoices/{company_id}",
+    response_model=list[InvoiceResponse],
+    summary="List all invoices for a company",
+)
+async def list_invoices(
+    company_id: int,
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns the company's invoice history directly from Stripe,
+    including PDF download links and hosted payment page URLs.
+    """
+    try:
+        return await StripeService.list_invoices(db, company_id, limit)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/invoices/{company_id}/upcoming",
+    response_model=UpcomingInvoiceResponse,
+    summary="Preview the next invoice (before it is charged)",
+)
+async def get_upcoming_invoice(company_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Shows exactly what Stripe will charge the company on the next billing cycle,
+    including line items and the billing period.
+    """
+    try:
+        return await StripeService.get_upcoming_invoice(db, company_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/invoices/{company_id}/{stripe_invoice_id}/send",
+    response_model=InvoiceResponse,
+    summary="Send (or resend) an open invoice by email",
+)
+async def send_invoice(
+    company_id: int,
+    stripe_invoice_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Triggers Stripe to send the invoice email to the customer.
+    Only works on invoices with status `open`.
+    Monthly subscription invoices are finalized and sent automatically by Stripe,
+    but this endpoint allows manual resend if needed.
+    """
+    try:
+        return await StripeService.send_invoice(db, company_id, stripe_invoice_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Refunds ───────────────────────────────────
+
+@router.post(
+    "/payments/{payment_id}/refund",
+    response_model=RefundResponse,
+    summary="Refund a payment (full or partial)",
+)
+async def refund_payment(
+    payment_id: int,
+    data: RefundCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Refund a specific payment by its internal DB ID.
+
+    - Omit `amount_pennies` for a **full refund**.
+    - Pass `amount_pennies` less than the original for a **partial refund**.
+    - `reason` must be one of: `duplicate`, `fraudulent`, `requested_by_customer`.
+    """
+    try:
+        result = await StripeService.create_refund(
+            db=db,
+            payment_id=payment_id,
+            amount_pennies=data.amount_pennies,
+            reason=data.reason,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Customer Portal ───────────────────────────
