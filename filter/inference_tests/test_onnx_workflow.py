@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
 from scripts.prepare_and_upload_onnx import prepare_and_upload_model
-from services.model_factory import load_onnx_model_and_tokenizer
+from inference_services.onnx_factory import load_onnx_model_and_tokenizer
 
 
 def test_conversion_and_upload():

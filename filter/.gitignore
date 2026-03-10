@@ -4,6 +4,7 @@
 # Tokenizer files
 models/tokenizer_files/
 models/tokenizer.json
+models/tokenizer/*
 
 # Generated gRPC files
 generated/filter/v1/filter_pb2.py

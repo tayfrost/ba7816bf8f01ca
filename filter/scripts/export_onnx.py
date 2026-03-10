@@ -19,7 +19,7 @@ from services.model_factory import load_production_model
 
 
 def export_to_onnx(
-    output_path: str = "models/sentibert_model.onnx",
+    output_path: str = "models/sentinelai_model.onnx",
     opset_version: int = 14,
 ):
     """
@@ -77,6 +77,12 @@ def export_to_onnx(
     
     print(f"✓ Model exported successfully to {output_file}")
     print(f"  File size: {output_file.stat().st_size / (1024**2):.2f} MB")
+    
+    # Export tokenizer
+    tokenizer_dir = output_file.parent / "tokenizer"
+    tokenizer_dir.mkdir(exist_ok=True)
+    tokenizer.save_pretrained(str(tokenizer_dir))
+    print(f"✓ Tokenizer saved to {tokenizer_dir}")
     
     return str(output_file)
 
