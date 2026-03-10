@@ -10,6 +10,7 @@ import BillingHistoryTable from "../components/settings/BillingHistoryTable";
 import SecuritySettings from "../components/settings/SecuritySettings";
 import NotificationsPreferences from "../components/settings/NotificationsPreferences";
 import DangerZone from "../components/settings/DangerZone";
+import IntegrationsPanel from "../components/settings/integrations/IntegrationsPanel";
 
 import { MOCK_CARDS, MOCK_INVOICES } from "../state/settingsMock";
 
@@ -214,6 +215,10 @@ export default function Settings() {
           
           <SectionCard title="Notifications">
             <NotificationsPreferences />
+          </SectionCard>
+
+          <SectionCard title="Connected Integrations">
+            <IntegrationsPanel />
           </SectionCard>
           
           <DangerZone />
