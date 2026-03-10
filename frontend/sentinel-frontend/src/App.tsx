@@ -10,6 +10,7 @@ import RequireOnboarding from "./guards/RequireOnboarding";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
 import EmployeeProfile from "./pages/EmployeeProfile";
+import RequireAuth from "./guards/RequireAuth";
 
 export default function App() {
   return (
@@ -23,45 +24,66 @@ export default function App() {
       <Route
         path="/connect-accounts"
         element={
-          <RequireOnboarding>
-            <ConnectAccounts />
-          </RequireOnboarding>
+          <RequireAuth>
+            <RequireOnboarding>
+              <ConnectAccounts />
+            </RequireOnboarding>
+          </RequireAuth>
         }
       />
 
       <Route
         path="/dashboard"
         element={
-          <RequireOnboarding>
-            <Dashboard />
-          </RequireOnboarding>
+          <RequireAuth>
+            <RequireOnboarding>
+              <Dashboard />
+            </RequireOnboarding>
+          </RequireAuth>
         }
       />
 
       <Route
-        path="/employees/:employeeID"
+        path="/employees"
         element={
-          <RequireOnboarding>
-            <EmployeeProfile />
-          </RequireOnboarding>
+          <RequireAuth>
+            <RequireOnboarding>
+              <Employees />
+            </RequireOnboarding>
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/employees/:employeeId"
+        element={
+          <RequireAuth>
+            <RequireOnboarding>
+              <EmployeeProfile />
+            </RequireOnboarding>
+          </RequireAuth>
         }
       />
       
       <Route
         path="/settings"
         element={
-        <RequireOnboarding>
-          <Settings />
-        </RequireOnboarding>
+          <RequireAuth>
+            <RequireOnboarding>
+              <Settings />
+            </RequireOnboarding>
+          </RequireAuth>
       }
     />
 
       <Route
         path="/usage"
         element={
-          <RequireOnboarding>
-            <Usage />
-          </RequireOnboarding>
+          <RequireAuth>
+            <RequireOnboarding>
+              <Usage />
+            </RequireOnboarding>
+          </RequireAuth>
         }
       />
 
