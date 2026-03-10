@@ -6,9 +6,9 @@ import type { RangePreset } from "../state/timeRange";
 import SimpleLineChart from "../components/SimpleLineChart";
 import { useDashboardData } from "../hooks/useDashboardData";
 import SidebarLink from "../components/SidebarLink";
+import DashboardHeader from "../components/dashboard/DashboardHeader";
 
 const BRAND_ORANGE = "var(--color-top)"; 
-const BRAND_DEEP = "var(--color-brand-deep)";
 
 export default function Dashboard() {
   const { signup, plan, integrations, reset } = useOnboarding();
@@ -73,35 +73,12 @@ export default function Dashboard() {
       {/* MAIN SECTION */}
       <main style={{ flexGrow: 1, padding: "50px 60px", overflowY: "auto", height: "100vh" }}>
         
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "50px" }}>
-          <div>
-            <h1 style={{ fontSize: "38px", fontWeight: "900", margin: 0, letterSpacing: "-1px" }}>
-              Welcome, <span style={{ color: BRAND_ORANGE, textShadow: `0 0 20px rgba(227, 141, 38, 0.3)` }}>{signup?.companyName}</span>
-            </h1>
-            <p style={{ opacity: 0.5, marginTop: "10px", fontWeight: "700", textTransform: "uppercase", fontSize: "12px", letterSpacing: "1px" }}>
-              {plan} MEMBER • {connectedCount} ACTIVE SOURCES
-            </p>
-          </div>
-
-          <div style={{
-            width: "140px",
-            height: "140px",
-            background: `linear-gradient(135deg, rgba(227, 141, 38, 0.3) 0%, ${BRAND_DEEP} 100%)`,
-            border: `2px solid ${BRAND_ORANGE}`,
-            borderRadius: "32px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            boxShadow: `0 0 40px rgba(227, 141, 38, 0.2)`,
-            position: "relative",
-            overflow: "hidden"
-          }}>
-            <div style={{ position: "absolute", top: -20, left: -20, width: 70, height: 70, background: BRAND_ORANGE, filter: "blur(45px)", opacity: 0.4 }} />
-            <span style={{ fontSize: "12px", fontWeight: "900", color: BRAND_ORANGE, letterSpacing: "2px", marginBottom: "4px", zIndex: 1 }}>RISK</span>
-            <span style={{ fontSize: "48px", fontWeight: "900", color: "#fff", zIndex: 1 }}>{riskScore}%</span>
-          </div>
-        </header>
+        <DashboardHeader
+          companyName={signup?.companyName}
+          plan={plan}
+          connectedCount={connectedCount}
+          riskScore={riskScore}
+        />
 
         <section style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", gap: "8px", background: "rgba(0,0,0,0.5)", padding: "6px", borderRadius: "50px", border: "1px solid rgba(255,255,255,0.08)" }}>
