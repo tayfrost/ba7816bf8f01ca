@@ -10,6 +10,9 @@ import DashboardHeader from "../components/dashboard/DashboardHeader";
 import RangeSelector from "../components/dashboard/RangeSelector";
 import ViewModeToggle from "../components/dashboard/ViewModeToggle";
 import CustomDateRange from "../components/dashboard/CustomDateRange";
+import MetricTabs from "../components/dashboard/MetricTabs";
+import MetricCarousel from "../components/dashboard/MetricCarousel";
+
 
 const BRAND_ORANGE = "var(--color-top)"; 
 
@@ -134,49 +137,20 @@ export default function Dashboard() {
               flexDirection: "column",
               alignItems: "center"
             }}>
-              <div style={{ display: "flex", gap: "12px", marginBottom: "40px", flexWrap: "wrap", justifyContent: "center" }}>
-                {metricSeries.map((s, idx) => (
-                  <button 
-                    key={s.key} 
-                    onClick={() => setActiveCatalogIndex(idx)}
-                    style={{
-                      padding: "10px 20px",
-                      borderRadius: "15px",
-                      border: activeCatalogIndex === idx ? `1px solid ${BRAND_ORANGE}` : "1px solid rgba(255,255,255,0.1)",
-                      background: activeCatalogIndex === idx ? `rgba(227, 141, 38, 0.2)` : "rgba(255,255,255,0.02)",
-                      color: activeCatalogIndex === idx ? BRAND_ORANGE : "rgba(255,255,255,0.5)",
-                      fontWeight: "800",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+              <MetricTabs
+                series={metricSeries}
+                activeIndex={activeCatalogIndex}
+                setActiveIndex={setActiveCatalogIndex}
+              />
        
               <SimpleLineChart points={metricSeries[activeCatalogIndex]?.points || []} width={850} height={400} />
             </div>
 
-            <div style={{ display: "flex", gap: "20px", overflowX: "auto", paddingBottom: "20px", marginTop: "20px" }}>
-              {metricSeries.filter((_, i) => i !== activeCatalogIndex).map((s) => (
-                <div key={s.key} style={{
-                  minWidth: "300px",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
-                  borderRadius: "24px",
-                  padding: "20px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  cursor: "pointer"
-                }} onClick={() => setActiveCatalogIndex(metricSeries.indexOf(s))}>
-                  <h4 style={{ fontSize: "12px", fontWeight: "900", margin: "0 0 15px 0", color: "rgba(255,255,255,0.6)" }}>{s.label}</h4>
-                  <SimpleLineChart points={s.points} width={260} height={100} />
-                </div>
-              ))}
-            </div>
+            <MetricCarousel
+              series={metricSeries}
+              activeIndex={activeCatalogIndex}
+              setActiveIndex={setActiveCatalogIndex}
+            />
           </div>
         ) : (
          
