@@ -12,6 +12,8 @@ import ViewModeToggle from "../components/dashboard/ViewModeToggle";
 import CustomDateRange from "../components/dashboard/CustomDateRange";
 import MetricTabs from "../components/dashboard/MetricTabs";
 import MetricCarousel from "../components/dashboard/MetricCarousel";
+import StatusBanner from "../components/dashboard/StatusBanner";
+import ChartPanel from "../components/dashboard/ChartPanel";
 
 
 const BRAND_ORANGE = "var(--color-top)"; 
@@ -107,44 +109,15 @@ export default function Dashboard() {
           />
         )}
 
-        {status === "loading" && (
-          <div style={{ marginBottom: 18, opacity: 0.8 }}>
-            Loading metrics…
-          </div>
-        )}
-        
-        {status === "error" && error && (
-          <div style={{ marginBottom: 18, opacity: 0.9, color: BRAND_ORANGE, fontWeight: 800 }}>
-            {error}
-          </div>
-        )}
-
-        {isMock && (
-          <div style={{ marginBottom: 18, opacity: 0.9, color: BRAND_ORANGE, fontWeight: 800 }}>
-            Showing mock data (mock mode enabled)
-          </div>
-        )}
+        <StatusBanner status={status} error={error} isMock={isMock} />
 
         {viewMode === "focused" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
-            <div style={{ 
-              background: "rgba(255, 255, 255, 0.03)", 
-              padding: "50px", 
-              borderRadius: "50px", 
-              border: "1px solid rgba(255,255,255,0.1)",
-              boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center"
-            }}>
-              <MetricTabs
-                series={metricSeries}
-                activeIndex={activeCatalogIndex}
-                setActiveIndex={setActiveCatalogIndex}
-              />
-       
-              <SimpleLineChart points={metricSeries[activeCatalogIndex]?.points || []} width={850} height={400} />
-            </div>
+            <ChartPanel
+              series={metricSeries}
+              activeIndex={activeCatalogIndex}
+              setActiveIndex={setActiveCatalogIndex}
+            />
 
             <MetricCarousel
               series={metricSeries}
