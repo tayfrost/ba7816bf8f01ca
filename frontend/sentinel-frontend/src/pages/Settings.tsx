@@ -16,8 +16,8 @@ import IntegrationsPanel from "../components/settings/integrations/IntegrationsP
 import { MOCK_CARDS, MOCK_INVOICES } from "../state/settingsMock";
 
 import { useCompany } from "../hooks/useCompany";
-
 import { useTeamUsers } from "../hooks/useTeamUsers";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 const BRAND_ORANGE = "var(--color-top)";
 
@@ -30,6 +30,12 @@ export default function Settings() {
   const { company, status, error, isUpdating, saveCompanyName } = useCompany();
   const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
   
+  const {
+    status: currentUserStatus,
+    user: currentUser,
+    error: currentUserError,
+  } = useCurrentUser();
+
   useEffect(() => {
     if (company?.company_name) {
       setCompanyNameDraft(company.company_name);
@@ -134,6 +140,18 @@ export default function Settings() {
           </div>
         )}
 
+        {currentUserStatus === "loading" && (
+          <div style={{ marginBottom: "20px", opacity: 0.7, fontWeight: 700 }}>
+            Loading current user...
+          </div>
+        )}
+        
+        {currentUserError && (
+          <div style={{ marginBottom: "20px", color: BRAND_ORANGE, fontWeight: 800 }}>
+            {currentUserError}
+          </div>
+        )}
+
         <div
           style={{
             display: "grid",
@@ -148,13 +166,75 @@ export default function Settings() {
               <div className="space-y-6">
                 <Input
                   label="Admin Full Name"
-                  defaultValue={signup?.adminName || ""}
+                  defaultValue={
+                    currentUser
+                      ? `${currentUser.name} ${currentUser.surname}`.trim()
+                      : signup?.adminName || ""
+                  }
                 />
 
                 <Input
                   label="Company Email"
-                  defaultValue={signup?.adminEmail || ""}
+                  defaultValue={currentUser?.email || signup?.adminEmail || ""}
                 />
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "14px",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "14px 18px",
+                      borderRadius: "18px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 900,
+                        letterSpacing: "1px",
+                        textTransform: "uppercase",
+                        opacity: 0.45,
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Role
+                    </div>
+                    <div style={{ fontSize: "14px", fontWeight: 800 }}>
+                      {currentUser?.role?.toUpperCase() || "UNKNOWN"}
+                    </div>
+                  </div>
+                  
+                  <div
+                    style={{
+                      padding: "14px 18px",
+                      borderRadius: "18px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 900,
+                        letterSpacing: "1px",
+                        textTransform: "uppercase",
+                        opacity: 0.45,
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Account Status
+                    </div>
+                    <div style={{ fontSize: "14px", fontWeight: 800 }}>
+                      {currentUser?.status?.toUpperCase() || "UNKNOWN"}
+                    </div>
+                  </div>
+                </div>
 
                 <Input
                   label="Company Name"
