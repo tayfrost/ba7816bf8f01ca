@@ -47,7 +47,6 @@ export default function Settings() {
     error: currentUserError,
   } = useCurrentUser();
 
-  const isViewer = currentUser?.role === "viewer";
   const isAdmin = currentUser?.role === "admin";
   const isBiller = currentUser?.role === "biller";
 
@@ -305,14 +304,17 @@ export default function Settings() {
               </div>
 
               {canManageBilling && (
-                <Button
-                  variant="ghost"
-                  className="!text-white border-white/20 hover:border-white/40"
-                >
-                  Change Plan for Next Cycle
-                </Button>
+                <>
+                  <Button
+                    variant="ghost"
+                    className="!text-white border-white/20 hover:border-white/40"
+                  >
+                    Change Plan for Next Cycle
+                  </Button>
+
+                  <BillingHistoryTable invoices={MOCK_INVOICES} />
+                </>
               )}
-              <BillingHistoryTable invoices={MOCK_INVOICES} />
             </SectionCard>
           </div>
 
