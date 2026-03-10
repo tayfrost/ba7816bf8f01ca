@@ -7,6 +7,9 @@ import SimpleLineChart from "../components/SimpleLineChart";
 import { useDashboardData } from "../hooks/useDashboardData";
 import SidebarLink from "../components/SidebarLink";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
+import RangeSelector from "../components/dashboard/RangeSelector";
+import ViewModeToggle from "../components/dashboard/ViewModeToggle";
+import CustomDateRange from "../components/dashboard/CustomDateRange";
 
 const BRAND_ORANGE = "var(--color-top)"; 
 
@@ -80,42 +83,25 @@ export default function Dashboard() {
           riskScore={riskScore}
         />
 
-        <section style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: "8px", background: "rgba(0,0,0,0.5)", padding: "6px", borderRadius: "50px", border: "1px solid rgba(255,255,255,0.08)" }}>
-            {["week", "month", "year", "all", "custom"].map((p) => (
-              <button 
-                key={p} 
-                onClick={() => setPreset(p as RangePreset)}
-                style={{
-                  padding: "10px 22px",
-                  borderRadius: "40px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: "900",
-                  fontSize: "11px",
-                  textTransform: "uppercase",
-                  background: preset === p ? BRAND_ORANGE : "transparent",
-                  color: preset === p ? "#1a011d" : "rgba(255,255,255,0.5)",
-                  transition: "all 0.3s ease",
-                  boxShadow: preset === p ? `0 0 20px rgba(227, 141, 38, 0.5)` : "none"
-                }}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: "flex", gap: "25px" }}>
-            <button onClick={() => setViewMode("focused")} style={{ background: "none", border: "none", color: viewMode === "focused" ? BRAND_ORANGE : "rgba(255,255,255,0.3)", fontWeight: "900", cursor: "pointer", fontSize: "12px", letterSpacing: "1px" }}>FOCUS</button>
-            <button onClick={() => setViewMode("grid")} style={{ background: "none", border: "none", color: viewMode === "grid" ? BRAND_ORANGE : "rgba(255,255,255,0.3)", fontWeight: "900", cursor: "pointer", fontSize: "12px", letterSpacing: "1px" }}>GRID</button>
-          </div>
+        <section
+          style={{
+            marginBottom: "40px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <RangeSelector preset={preset} setPreset={setPreset} />
+          <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
         </section>
 
         {preset === "custom" && (
-          <div style={{ marginBottom: "30px", display: "flex", gap: "20px", background: "rgba(255,255,255,0.04)", padding: "15px 25px", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.1)", width: "fit-content" }}>
-            <label style={{ fontSize: "11px", fontWeight: "900", color: BRAND_ORANGE }}>START <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} style={{ background: "transparent", color: "#fff", border: "none", marginLeft: "10px", fontWeight: "bold", outline: "none" }} /></label>
-            <label style={{ fontSize: "11px", fontWeight: "900", color: BRAND_ORANGE }}>END <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} style={{ background: "transparent", color: "#fff", border: "none", marginLeft: "10px", fontWeight: "bold", outline: "none" }} /></label>
-          </div>
+          <CustomDateRange
+            customStart={customStart}
+            customEnd={customEnd}
+            setCustomStart={setCustomStart}
+            setCustomEnd={setCustomEnd}
+          />
         )}
 
         {status === "loading" && (
