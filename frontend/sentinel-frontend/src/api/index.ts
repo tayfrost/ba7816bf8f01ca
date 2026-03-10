@@ -47,3 +47,7 @@ export type { SignupPayload } from "./signup";
 export const register = realRegister;
 export const login = realLogin;
 export const getMe = realGetMe;
+
+export type { Plan } from "./plans";
+import { getPlans as realGetPlans } from "./plans";
+export const getPlans = realGetPlans;
