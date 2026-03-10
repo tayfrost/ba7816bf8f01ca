@@ -11,13 +11,16 @@ import EmployeesSummaryTiles from "../components/employees/EmployeesSummaryTiles
 import TopRiskEmployees from "../components/employees/TopRiskEmployees"
 import EmptyEmployees from "../components/employees/EmptyEmployees"
 import EmployeesTable from "../components/employees/EmployeesTable";
+import { useNavigate } from "react-router-dom";
 
 const BRAND_ORANGE = "var(--color-top)"; 
 const BRAND_DEEP = "var(--color-brand-deep)";
-const [directoryView, setDirectoryView] = useState<"cards" | "table">("cards");
 
 export default function Employees() {
   const { signup, plan, integrations, reset } = useOnboarding();
+
+  const [directoryView, setDirectoryView] = useState<"cards" | "table">("cards");
+  const navigate = useNavigate();
 
   const connectedCount = useMemo(() => countConnected(integrations), [integrations]);
 
@@ -218,14 +221,17 @@ export default function Employees() {
             {employees.map((emp) => (
               <div
                 key={emp.id}
+                onClick={() => navigate(`/employees/${emp.id}`)}
                 style={{
                   background: "rgba(255, 255, 255, 0.03)",
                   border: "1px solid rgba(255, 255, 255, 0.08)",
                   borderRadius: "35px",
                   padding: "30px",
                   backdropFilter: "blur(20px)",
+                  cursor: "pointer",
                 }}
               >
+
                 <div style={{ marginBottom: "10px" }}>
                   <RiskBadge score={emp.riskScore} />
                 </div>

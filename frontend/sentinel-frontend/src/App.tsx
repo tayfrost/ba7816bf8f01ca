@@ -9,6 +9,7 @@ import ConnectAccounts from "./pages/ConnectAccounts";
 import RequireOnboarding from "./guards/RequireOnboarding";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
+import EmployeeProfile from "./pages/EmployeeProfile";
 
 export default function App() {
   return (
@@ -38,10 +39,10 @@ export default function App() {
       />
 
       <Route
-        path="/employees"
+        path="/employees/:employeeID"
         element={
           <RequireOnboarding>
-            <Employees />
+            <EmployeeProfile />
           </RequireOnboarding>
         }
       />
