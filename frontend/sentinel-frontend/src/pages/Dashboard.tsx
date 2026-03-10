@@ -14,6 +14,7 @@ import MetricTabs from "../components/dashboard/MetricTabs";
 import MetricCarousel from "../components/dashboard/MetricCarousel";
 import StatusBanner from "../components/dashboard/StatusBanner";
 import ChartPanel from "../components/dashboard/ChartPanel";
+import EmptyMetricsState from "../components/dashboard/EmptyMetricsState";
 
 
 const BRAND_ORANGE = "var(--color-top)"; 
@@ -34,6 +35,10 @@ export default function Dashboard() {
   }, [preset, customStart, customEnd]);
 
   const { status, error, series: metricSeries, isMock } = useDashboardData(range);
+  const safeActiveIndex =
+    metricSeries.length === 0
+      ? 0
+      : Math.min(activeCatalogIndex, metricSeries.length - 1);
   const connectedCount = useMemo(() => countConnected(integrations), [integrations]);
   const riskScore = useMemo(() => Math.min(100, 35 + connectedCount * 20), [connectedCount]);
 
@@ -111,17 +116,19 @@ export default function Dashboard() {
 
         <StatusBanner status={status} error={error} isMock={isMock} />
 
-        {viewMode === "focused" ? (
+        {metricSeries.length === 0 ? (
+          <EmptyMetricsState />
+        ) : viewMode === "focused" ?(
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
             <ChartPanel
               series={metricSeries}
-              activeIndex={activeCatalogIndex}
+              activeIndex={safeActiveIndex}
               setActiveIndex={setActiveCatalogIndex}
             />
 
             <MetricCarousel
               series={metricSeries}
-              activeIndex={activeCatalogIndex}
+              activeIndex={safeActiveIndex}
               setActiveIndex={setActiveCatalogIndex}
             />
           </div>
