@@ -51,3 +51,15 @@ export const getMe = realGetMe;
 export type { Plan } from "./plans";
 import { getPlans as realGetPlans } from "./plans";
 export const getPlans = realGetPlans;
+
+export type { CompanyResponse } from "./companies";
+
+import {
+  getMyCompany as realGetMyCompany,
+  updateMyCompany as realUpdateMyCompany,
+  deleteMyCompany as realDeleteMyCompany,
+} from "./companies";
+
+export const getMyCompany = realGetMyCompany;
+export const updateMyCompany = realUpdateMyCompany;
+export const deleteMyCompany = realDeleteMyCompany;

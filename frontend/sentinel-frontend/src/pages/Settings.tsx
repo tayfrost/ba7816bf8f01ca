@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useOnboarding } from "../state/onboarding";
 import SidebarLink from "../components/SidebarLink";
 import Button from "../components/Button";
@@ -14,11 +15,22 @@ import IntegrationsPanel from "../components/settings/integrations/IntegrationsP
 
 import { MOCK_CARDS, MOCK_INVOICES } from "../state/settingsMock";
 
+import { useCompany } from "../hooks/useCompany";
+
 const BRAND_ORANGE = "var(--color-top)";
 
 export default function Settings() {
   const { signup, plan, reset } = useOnboarding();
   const planPrice = plan === "paid" ? "$29" : "$0";
+
+  const { company, status, error, isUpdating, saveCompanyName } = useCompany();
+  const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
+  
+  useEffect(() => {
+    if (company?.company_name) {
+      setCompanyNameDraft(company.company_name);
+    }
+  }, [company]);
 
   return (
     <div
@@ -106,6 +118,18 @@ export default function Settings() {
           </h1>
         </header>
 
+        {status === "loading" && (
+          <div style={{ marginBottom: "20px", opacity: 0.7, fontWeight: 700 }}>
+            Loading company details...
+          </div>
+        )}
+        
+        {error && (
+          <div style={{ marginBottom: "20px", color: BRAND_ORANGE, fontWeight: 800 }}>
+            {error}
+          </div>
+        )}
+
         <div
           style={{
             display: "grid",
@@ -130,15 +154,18 @@ export default function Settings() {
 
                 <Input
                   label="Company Name"
-                  defaultValue={signup?.companyName || ""}
+                  value={companyNameDraft}
+                  onChange={(e) => setCompanyNameDraft(e.target.value)}
                 />
 
                 <Button
                   variant="secondary"
                   className="!text-white !bg-white/20 hover:!bg-white/30 border-white/10"
                   style={{ width: "auto", padding: "12px 30px", marginTop: "10px" }}
+                  onClick={() => saveCompanyName(companyNameDraft)}
+                  disabled={isUpdating}
                 >
-                  Update Profile
+                  {isUpdating ? "Updating..." : "Update Profile"}
                 </Button>
               </div>
             </SectionCard>
