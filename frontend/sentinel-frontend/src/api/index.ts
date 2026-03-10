@@ -63,3 +63,7 @@ import {
 export const getMyCompany = realGetMyCompany;
 export const updateMyCompany = realUpdateMyCompany;
 export const deleteMyCompany = realDeleteMyCompany;
+
+export type { SlackUserResponse } from "./slack";
+import { getSlackUsers as realGetSlackUsers } from "./slack";
+export const getSlackUsers = realGetSlackUsers;
