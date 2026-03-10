@@ -32,11 +32,15 @@ export default function Settings() {
     busyUserId,
     changeRole,
     removeUser,
+    invite,
   } = useTeamUsers();
 
   const { company, status, error, isUpdating, saveCompanyName } = useCompany();
   const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
-  
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteSurname, setInviteSurname] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "biller" | "viewer">("viewer");
   const {
     status: currentUserStatus,
     user: currentUser,
@@ -344,6 +348,109 @@ export default function Settings() {
             {usersError && (
               <p style={{ color: BRAND_ORANGE }}>{usersError}</p>
             )}
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.3fr 1fr 1fr 0.8fr auto",
+                gap: "10px",
+                marginBottom: "20px",
+                paddingBottom: "20px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <input
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="email"
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  fontSize: "12px",
+                }}
+              />
+
+              <input
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="name"
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  fontSize: "12px",
+                }}
+              />
+
+              <input
+                value={inviteSurname}
+                onChange={(e) => setInviteSurname(e.target.value)}
+                placeholder="surname"
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  fontSize: "12px",
+                }}
+              />
+
+              <select
+                value={inviteRole}
+                onChange={(e) =>
+                  setInviteRole(e.target.value as "admin" | "biller" | "viewer")
+                }
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                }}
+              >
+                <option value="viewer">VIEWER</option>
+                <option value="admin">ADMIN</option>
+                <option value="biller">BILLER</option>
+              </select>
+
+              <button
+                onClick={async () => {
+                  if (!inviteEmail || !inviteName || !inviteSurname) return;
+
+                  await invite({
+                    email: inviteEmail,
+                    name: inviteName,
+                    surname: inviteSurname,
+                    role: inviteRole,
+                  });
+
+                  setInviteEmail("");
+                  setInviteName("");
+                  setInviteSurname("");
+                  setInviteRole("viewer");
+                }}
+                style={{
+                  background: "rgba(227,141,38,0.18)",
+                  color: BRAND_ORANGE,
+                  border: "1px solid rgba(227,141,38,0.35)",
+                  borderRadius: "10px",
+                  padding: "10px 14px",
+                  fontSize: "11px",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                INVITE
+              </button>
+            </div>
             
             {users.map((user) => (
               <div

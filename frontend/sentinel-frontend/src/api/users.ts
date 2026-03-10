@@ -28,3 +28,21 @@ export async function deactivateUser(userId: number) {
     method: "DELETE",
   });
 }
+
+export async function inviteUser(params: {
+  email: string;
+  name: string;
+  surname: string;
+  role: "admin" | "biller" | "viewer";
+}): Promise<UserResponse> {
+  const query = new URLSearchParams({
+    email: params.email,
+    name: params.name,
+    surname: params.surname,
+    role: params.role,
+  });
+
+  return apiFetch<UserResponse>(`/users/invite?${query.toString()}`, {
+    method: "POST",
+  });
+}

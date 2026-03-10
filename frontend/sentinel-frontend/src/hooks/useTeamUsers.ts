@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getUsers, updateUserRole, deactivateUser } from "../api";
 import type { UserResponse } from "../api";
+import { getUsers, updateUserRole, deactivateUser, inviteUser } from "../api";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -72,6 +72,26 @@ export function useTeamUsers() {
     }
   }
 
+  async function invite(params: {
+    email: string;
+    name: string;
+    surname: string;
+    role: "admin" | "biller" | "viewer";
+  }) {
+    setBusyUserId(-1);
+    setError(null);
+
+    try {
+      const created = await inviteUser(params);
+      setUsers((prev) => [...prev, created]);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to invite user.");
+    } finally {
+      setBusyUserId(null);
+    }
+  }
+
   return {
     users,
     status,
@@ -79,5 +99,6 @@ export function useTeamUsers() {
     busyUserId,
     changeRole,
     removeUser,
+    invite,
   };
 }

@@ -68,17 +68,6 @@ export type { SlackUserResponse } from "./slack";
 import { getSlackUsers as realGetSlackUsers } from "./slack";
 export const getSlackUsers = realGetSlackUsers;
 
-import {
-  getUsers as realGetUsers,
-  updateUserRole as realUpdateUserRole,
-  deactivateUser as realDeactivateUser,
-} from "./users";
-
-export const getUsers = realGetUsers;
-export const updateUserRole = realUpdateUserRole;
-export const deactivateUser = realDeactivateUser;
-export type { UserResponse } from "./users";
-
 export type { Incident, IncidentStats } from "./incidents";
 
 import {
@@ -88,3 +77,17 @@ import {
 
 export const getIncidents = realGetIncidents;
 export const getIncidentStats = realGetIncidentStats;
+
+export type { UserResponse } from "./users";
+
+import {
+  getUsers as realGetUsers,
+  updateUserRole as realUpdateUserRole,
+  deactivateUser as realDeactivateUser,
+  inviteUser as realInviteUser,
+} from "./users";
+
+export const getUsers = realGetUsers;
+export const updateUserRole = realUpdateUserRole;
+export const deactivateUser = realDeactivateUser;
+export const inviteUser = realInviteUser;
