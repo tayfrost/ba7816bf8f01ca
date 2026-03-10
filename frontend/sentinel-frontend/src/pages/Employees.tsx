@@ -252,7 +252,10 @@ export default function Employees() {
             ))}
           </div>
         ) : (
-          <EmployeesTable employees={employees} />
+          <EmployeesTable
+            employees={employees}
+            onSelectEmployee={(employeeId) => navigate(`/employees/${employeeId}`)}
+          />
         )}
 
         {employees.length === 0 && <EmptyEmployees />}

@@ -5,9 +5,10 @@ import EmployeeSources from "./EmployeeSources";
 
 type Props = {
   employees: Employee[];
+  onSelectEmployee: (employeeId: string) => void;
 };
 
-export default function EmployeesTable({ employees }: Props) {
+export default function EmployeesTable({ employees, onSelectEmployee }: Props) {
   return (
     <div
       style={{
@@ -44,6 +45,7 @@ export default function EmployeesTable({ employees }: Props) {
         {employees.map((employee, index) => (
           <div
             key={employee.id}
+            onClick={() => onSelectEmployee(employee.id)}
             style={{
               display: "grid",
               gridTemplateColumns: "1.5fr 1fr 1fr 1.2fr 0.8fr 0.8fr",
@@ -54,6 +56,9 @@ export default function EmployeesTable({ employees }: Props) {
                 index === employees.length - 1
                   ? "none"
                   : "1px solid rgba(255,255,255,0.05)",
+              cursor: "pointer",
+              transition: "background 0.2s ease",
+              background: "rgba(255,255,255,0.01)",
             }}
           >
             <div>
