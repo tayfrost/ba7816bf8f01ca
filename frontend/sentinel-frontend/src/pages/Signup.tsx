@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Stepper from "../components/Stepper";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import AuthCard from "../components/AuthCard";
 import { useOnboarding } from "../state/onboarding";
+import { getPlans, register } from "../api";
 
 export default function Signup() {
   const navigate = useNavigate();
-
   const { setSignup, setPlan } = useOnboarding();
 
   const [searchParams] = useSearchParams();
@@ -17,39 +17,97 @@ export default function Signup() {
   const [companyName, setCompanyName] = useState("");
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  function handleContinue() {
-    if (!companyName || !adminName || !adminEmail) return;
+  const [planId, setPlanId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    setSignup({
-      companyName,
-      adminName,
-      adminEmail,
-    });
+  useEffect(() => {
+    async function loadPlans() {
+      try {
+        const plans = await getPlans();
 
-    if (selectedPlan) {
-      setPlan(selectedPlan);
+        if (plans.length === 0) {
+          setError("No plans are available right now.");
+          return;
+        }
 
-      // If paid → go to payment
-      if (selectedPlan === "paid") {
-        navigate("/payment");
-      } else {
-        // Free plan skips payment
-        navigate("/connect-accounts");
+        if (selectedPlan === "free") {
+          const freePlan =
+            plans.find((p) => p.plan_name.toLowerCase() === "free") ?? plans[0];
+          setPlanId(freePlan.plan_id);
+          return;
+        }
+
+        if (selectedPlan === "paid") {
+          const paidPlan =
+            plans.find((p) => p.plan_name.toLowerCase() !== "free") ?? plans[0];
+          setPlanId(paidPlan.plan_id);
+          return;
+        }
+
+        setPlanId(plans[0].plan_id);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load plans.");
       }
-
-      return;
     }
 
-    // If user came to signup without plan param, continue to plan selection
-    navigate("/plan");
+    loadPlans();
+  }, [selectedPlan]);
+
+  async function handleContinue() {
+    if (!companyName || !adminName || !adminEmail || !password || !planId) return;
+
+    setError(null);
+    setIsSubmitting(true);
+
+    const [firstName, ...rest] = adminName.trim().split(" ");
+    const surname = rest.join(" ") || "Admin";
+
+    try {
+      const res = await register({
+        email: adminEmail,
+        password,
+        name: firstName || "Admin",
+        surname,
+        company_name: companyName,
+        plan_id: planId,
+      });
+
+      localStorage.setItem("sentinel_access_token", res.access_token);
+
+      setSignup({
+        companyName,
+        adminName,
+        adminEmail,
+      });
+
+      if (selectedPlan) {
+        setPlan(selectedPlan);
+
+        if (selectedPlan === "paid") {
+          navigate("/payment");
+        } else {
+          navigate("/connect-accounts");
+        }
+        return;
+      }
+
+      navigate("/plan");
+    } catch (err) {
+      console.error(err);
+      setError("Registration failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <div className="min-h-screen pb-20 bg-transparent font-sans">
       <Stepper currentPath="/signup" />
 
-      {/* Hero Section */}
       <div className="flex flex-col items-center mt-16 mb-12">
         <img
           src="/logo-icon.png"
@@ -65,7 +123,6 @@ export default function Signup() {
 
       <AuthCard>
         <div className="space-y-6">
-
           <div className="text-center mb-8">
             <h2 className="text-3xl font-serif font-black text-brand-deep leading-tight">
               Create Your Account
@@ -97,16 +154,29 @@ export default function Signup() {
             onChange={(e) => setAdminEmail(e.target.value)}
           />
 
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Create a password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          {error && (
+            <p className="text-sm font-semibold text-red-600 text-center">
+              {error}
+            </p>
+          )}
+
           <div className="pt-4 space-y-6">
-            <Button variant="primary" onClick={handleContinue}>
-              Continue
+            <Button variant="primary" onClick={handleContinue} disabled={isSubmitting}>
+              {isSubmitting ? "Creating Account..." : "Continue"}
             </Button>
 
-            {/* Login Link Section */}
             <div className="text-center pt-2 border-t border-brand-deep/5">
               <p className="text-sm text-brand-deep/60">
                 Already have an account?{" "}
-                <button 
+                <button
                   onClick={() => navigate("/login")}
                   className="text-brand-deep font-bold hover:underline underline-offset-4"
                 >
