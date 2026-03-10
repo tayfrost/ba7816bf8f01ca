@@ -17,11 +17,15 @@ import { MOCK_CARDS, MOCK_INVOICES } from "../state/settingsMock";
 
 import { useCompany } from "../hooks/useCompany";
 
+import { useTeamUsers } from "../hooks/useTeamUsers";
+
 const BRAND_ORANGE = "var(--color-top)";
 
 export default function Settings() {
   const { signup, plan, reset } = useOnboarding();
   const planPrice = plan === "paid" ? "$29" : "$0";
+
+  const { users, status: usersStatus, error: usersError } = useTeamUsers();
 
   const { company, status, error, isUpdating, saveCompanyName } = useCompany();
   const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
@@ -242,6 +246,44 @@ export default function Settings() {
           
           <SectionCard title="Notifications">
             <NotificationsPreferences />
+          </SectionCard>
+
+          <SectionCard title="Team Members">
+            
+            {usersStatus === "loading" && (
+              <p style={{ opacity: 0.6 }}>Loading team members...</p>
+            )}
+            
+            {usersError && (
+              <p style={{ color: BRAND_ORANGE }}>{usersError}</p>
+            )}
+            
+            {users.map((user) => (
+              <div
+                key={user.user_id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "10px 0",
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 700 }}>
+                    {user.name} {user.surname}
+                  </div>
+                  
+                  <div style={{ fontSize: "12px", opacity: 0.6 }}>
+                    {user.email}
+                  </div>
+                </div>
+                
+                <div style={{ fontSize: "12px", fontWeight: 800 }}>
+                  {user.role.toUpperCase()}
+                </div>
+              </div>
+            ))}
+            
           </SectionCard>
 
           <SectionCard title="Connected Integrations">

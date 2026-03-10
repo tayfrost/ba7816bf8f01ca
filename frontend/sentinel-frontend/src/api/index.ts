@@ -67,3 +67,14 @@ export const deleteMyCompany = realDeleteMyCompany;
 export type { SlackUserResponse } from "./slack";
 import { getSlackUsers as realGetSlackUsers } from "./slack";
 export const getSlackUsers = realGetSlackUsers;
+
+import {
+  getUsers as realGetUsers,
+  updateUserRole as realUpdateUserRole,
+  deactivateUser as realDeactivateUser,
+} from "./users";
+
+export const getUsers = realGetUsers;
+export const updateUserRole = realUpdateUserRole;
+export const deactivateUser = realDeactivateUser;
+export type { UserResponse } from "./users";
