@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
 import SidebarLink from "../components/SidebarLink";
@@ -10,9 +10,11 @@ import RiskBadge from "../components/employees/RiskBadge";
 import EmployeesSummaryTiles from "../components/employees/EmployeesSummaryTiles"
 import TopRiskEmployees from "../components/employees/TopRiskEmployees"
 import EmptyEmployees from "../components/employees/EmptyEmployees"
+import EmployeesTable from "../components/employees/EmployeesTable";
 
 const BRAND_ORANGE = "var(--color-top)"; 
 const BRAND_DEEP = "var(--color-brand-deep)";
+const [directoryView, setDirectoryView] = useState<"cards" | "table">("cards");
 
 export default function Employees() {
   const { signup, plan, integrations, reset } = useOnboarding();
@@ -161,6 +163,38 @@ export default function Employees() {
           </div>
         </section>
 
+        <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+          <button
+            onClick={() => setDirectoryView("cards")}
+            style={{
+              padding: "10px 16px",
+              borderRadius: "14px",
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: directoryView === "cards" ? "rgba(227,141,38,0.2)" : "rgba(255,255,255,0.03)",
+              color: directoryView === "cards" ? BRAND_ORANGE : "rgba(255,255,255,0.6)",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            Card View
+          </button>
+          
+          <button
+            onClick={() => setDirectoryView("table")}
+            style={{
+              padding: "10px 16px",
+              borderRadius: "14px",
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: directoryView === "table" ? "rgba(227,141,38,0.2)" : "rgba(255,255,255,0.03)",
+              color: directoryView === "table" ? BRAND_ORANGE : "rgba(255,255,255,0.6)",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            Table View
+          </button>
+        </div>
+
         <EmployeesFilters
           riskFilter={riskFilter}
           setRiskFilter={setRiskFilter}
@@ -173,38 +207,47 @@ export default function Employees() {
         <TopRiskEmployees employees={employees} />
 
         {/* EMPLOYEE DATA GRID */}
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
-          gap: "30px" 
-        }}>
-          {employees.map(emp => (
-            <div key={emp.id} style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "35px",
-              padding: "30px",
-              backdropFilter: "blur(20px)"
-            }}>
-              <div style={{ marginBottom: "10px" }}>
-                <RiskBadge score={emp.riskScore} />
+        {directoryView === "cards" ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+              gap: "30px",
+            }}
+          >
+            {employees.map((emp) => (
+              <div
+                key={emp.id}
+                style={{
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: "35px",
+                  padding: "30px",
+                  backdropFilter: "blur(20px)",
+                }}
+              >
+                <div style={{ marginBottom: "10px" }}>
+                  <RiskBadge score={emp.riskScore} />
+                </div>
+                
+                <EmployeeCard
+                  fullName={emp.fullName}
+                  role={emp.role}
+                  email={emp.email}
+                  team={emp.team}
+                  riskScore={emp.riskScore}
+                  flaggedCount={emp.flaggedCount}
+                  overtimeHours={emp.overtimeHours}
+                  lastActive={emp.lastActive}
+                  sources={emp.source}
+                  trend={emp.trend}
+                />
               </div>
-            
-              <EmployeeCard 
-                fullName={emp.fullName}
-                role={emp.role}
-                email={emp.email}
-                team={emp.team}
-                riskScore={emp.riskScore}
-                flaggedCount={emp.flaggedCount}
-                overtimeHours={emp.overtimeHours}
-                lastActive={emp.lastActive}
-                sources={emp.source}
-                trend={emp.trend}
-              />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <EmployeesTable employees={employees} />
+        )}
 
         {employees.length === 0 && <EmptyEmployees />}
 
