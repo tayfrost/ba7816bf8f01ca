@@ -8,16 +8,17 @@ export function useTeamUsers() {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [busyUserId, setBusyUserId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setStatus("loading");
+      setError(null);
 
       try {
         const data = await getUsers();
-
         if (cancelled) return;
 
         setUsers(data);
@@ -39,27 +40,43 @@ export function useTeamUsers() {
   }, []);
 
   async function changeRole(userId: number, role: "admin" | "biller" | "viewer") {
-    await updateUserRole(userId, role);
+    setBusyUserId(userId);
+    setError(null);
 
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.user_id === userId ? { ...u, role } : u
-      )
-    );
+    try {
+      await updateUserRole(userId, role);
+
+      setUsers((prev) =>
+        prev.map((u) => (u.user_id === userId ? { ...u, role } : u))
+      );
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update user role.");
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   async function removeUser(userId: number) {
-    await deactivateUser(userId);
+    setBusyUserId(userId);
+    setError(null);
 
-    setUsers((prev) =>
-      prev.filter((u) => u.user_id !== userId)
-    );
+    try {
+      await deactivateUser(userId);
+      setUsers((prev) => prev.filter((u) => u.user_id !== userId));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to deactivate user.");
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   return {
     users,
     status,
     error,
+    busyUserId,
     changeRole,
     removeUser,
   };

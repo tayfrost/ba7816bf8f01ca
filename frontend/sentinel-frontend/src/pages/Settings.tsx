@@ -25,7 +25,14 @@ export default function Settings() {
   const { signup, plan, reset } = useOnboarding();
   const planPrice = plan === "paid" ? "$29" : "$0";
 
-  const { users, status: usersStatus, error: usersError } = useTeamUsers();
+  const {
+    users,
+    status: usersStatus,
+    error: usersError,
+    busyUserId,
+    changeRole,
+    removeUser,
+  } = useTeamUsers();
 
   const { company, status, error, isUpdating, saveCompanyName } = useCompany();
   const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
@@ -358,8 +365,47 @@ export default function Settings() {
                   </div>
                 </div>
                 
-                <div style={{ fontSize: "12px", fontWeight: 800 }}>
-                  {user.role.toUpperCase()}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <select
+                    value={user.role}
+                    onChange={(e) =>
+                      changeRole(
+                        user.user_id,
+                        e.target.value as "admin" | "biller" | "viewer"
+                      )
+                    }
+                    disabled={busyUserId === user.user_id}
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      color: "white",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      borderRadius: "10px",
+                      padding: "8px 10px",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    <option value="viewer">VIEWER</option>
+                    <option value="admin">ADMIN</option>
+                    <option value="biller">BILLER</option>
+                  </select>
+
+                  <button
+                    onClick={() => removeUser(user.user_id)}
+                    disabled={busyUserId === user.user_id}
+                    style={{
+                      background: "rgba(255,80,80,0.15)",
+                      color: "#ff8a8a",
+                      border: "1px solid rgba(255,80,80,0.25)",
+                      borderRadius: "10px",
+                      padding: "8px 12px",
+                      fontSize: "11px",
+                      fontWeight: 900,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {busyUserId === user.user_id ? "..." : "REMOVE"}
+                  </button>
                 </div>
               </div>
             ))}
