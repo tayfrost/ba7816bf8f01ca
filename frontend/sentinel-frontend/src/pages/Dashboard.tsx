@@ -10,11 +10,13 @@ import DashboardHeader from "../components/dashboard/DashboardHeader";
 import RangeSelector from "../components/dashboard/RangeSelector";
 import ViewModeToggle from "../components/dashboard/ViewModeToggle";
 import CustomDateRange from "../components/dashboard/CustomDateRange";
-import MetricTabs from "../components/dashboard/MetricTabs";
 import MetricCarousel from "../components/dashboard/MetricCarousel";
 import StatusBanner from "../components/dashboard/StatusBanner";
 import ChartPanel from "../components/dashboard/ChartPanel";
 import EmptyMetricsState from "../components/dashboard/EmptyMetricsState";
+import { useIncidents } from "../hooks/useIncidents";
+import IncidentStatsPanel from "../components/dashboard/IncidentStatsPanel";
+import RecentIncidentsFeed from "../components/dashboard/RecentIncidentsFeed";
 
 
 const BRAND_ORANGE = "var(--color-top)"; 
@@ -41,6 +43,13 @@ export default function Dashboard() {
       : Math.min(activeCatalogIndex, metricSeries.length - 1);
   const connectedCount = useMemo(() => countConnected(integrations), [integrations]);
   const riskScore = useMemo(() => Math.min(100, 35 + connectedCount * 20), [connectedCount]);
+
+  const {
+    status: incidentsStatus,
+    error: incidentsError,
+    incidents,
+    stats: incidentStats,
+  } = useIncidents();
 
   return (
     <div style={{
@@ -116,6 +125,12 @@ export default function Dashboard() {
 
         <StatusBanner status={status} error={error} isMock={isMock} />
 
+        {incidentsStatus === "error" && incidentsError && (
+          <div style={{ marginBottom: 18, opacity: 0.9, color: BRAND_ORANGE, fontWeight: 800 }}>
+            {incidentsError}
+          </div>
+        )}
+
         {metricSeries.length === 0 ? (
           <EmptyMetricsState />
         ) : viewMode === "focused" ?(
@@ -134,24 +149,56 @@ export default function Dashboard() {
           </div>
         ) : (
          
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "30px" }}>
+          <div 
+            style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", 
+              gap: "30px" 
+            }}
+          >
             {metricSeries.map((s) => (
-              <div key={s.key} style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "35px",
-                padding: "30px",
-                backdropFilter: "blur(20px)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center"
-              }}>
-                <h3 style={{ margin: "0 0 25px 0", fontSize: "16px", fontWeight: "900", color: "#fff", textTransform: "uppercase", letterSpacing: "1px" }}>{s.label}</h3>
+              <div 
+                key={s.key} 
+                style={{
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: "35px",
+                  padding: "30px",
+                  backdropFilter: "blur(20px)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <h3 
+                  style={{ 
+                    margin: "0 0 25px 0", 
+                    fontSize: "16px", 
+                    fontWeight: "900", 
+                    color: "#fff", 
+                    textTransform: "uppercase", 
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {s.label}
+                </h3>
                 <SimpleLineChart points={s.points} width={380} />
               </div>
             ))}
           </div>
         )}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "0.9fr 1.1fr",
+            gap: "30px",
+            marginTop: "40px",
+          }}
+        >
+          <IncidentStatsPanel stats={incidentStats} />
+          <RecentIncidentsFeed incidents={incidents} />
+        </div>
       </main>
     </div>
   );

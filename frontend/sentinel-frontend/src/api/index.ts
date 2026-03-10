@@ -78,3 +78,13 @@ export const getUsers = realGetUsers;
 export const updateUserRole = realUpdateUserRole;
 export const deactivateUser = realDeactivateUser;
 export type { UserResponse } from "./users";
+
+export type { Incident, IncidentStats } from "./incidents";
+
+import {
+  getIncidents as realGetIncidents,
+  getIncidentStats as realGetIncidentStats,
+} from "./incidents";
+
+export const getIncidents = realGetIncidents;
+export const getIncidentStats = realGetIncidentStats;
