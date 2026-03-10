@@ -47,6 +47,15 @@ export default function Settings() {
     error: currentUserError,
   } = useCurrentUser();
 
+  const isViewer = currentUser?.role === "viewer";
+  const isAdmin = currentUser?.role === "admin";
+  const isBiller = currentUser?.role === "biller";
+
+  const canManageCompany = isAdmin || isBiller;
+  const canManageTeam = isAdmin || isBiller;
+  const canManageBilling = isBiller;
+  const canManageIntegrations = isAdmin || isBiller;
+
   useEffect(() => {
     if (company?.company_name) {
       setCompanyNameDraft(company.company_name);
@@ -258,7 +267,7 @@ export default function Settings() {
                   className="!text-white !bg-white/20 hover:!bg-white/30 border-white/10"
                   style={{ width: "auto", padding: "12px 30px", marginTop: "10px" }}
                   onClick={() => saveCompanyName(companyNameDraft)}
-                  disabled={isUpdating}
+                  disabled={isUpdating || !canManageCompany}
                 >
                   {isUpdating ? "Updating..." : "Update Profile"}
                 </Button>
@@ -295,41 +304,44 @@ export default function Settings() {
                 </div>
               </div>
 
-              <Button
-                variant="ghost"
-                className="!text-white border-white/20 hover:border-white/40"
-              >
-                Change Plan for Next Cycle
-              </Button>
-
+              {canManageBilling && (
+                <Button
+                  variant="ghost"
+                  className="!text-white border-white/20 hover:border-white/40"
+                >
+                  Change Plan for Next Cycle
+                </Button>
+              )}
               <BillingHistoryTable invoices={MOCK_INVOICES} />
             </SectionCard>
           </div>
 
           {/* RIGHT COLUMN */}
-          <SectionCard title="Payment Methods">
-            <PaymentMethodsList cards={MOCK_CARDS} />
+          {canManageBilling && (
+            <SectionCard title="Payment Methods">
+              <PaymentMethodsList cards={MOCK_CARDS} />
 
-            {MOCK_CARDS.length < 3 && (
-              <Button
-                variant="secondary"
-                className="!text-white !bg-white/10 !border-dashed border-white/30 hover:!bg-white/20"
+              {MOCK_CARDS.length < 3 && (
+                <Button
+                  variant="secondary"
+                  className="!text-white !bg-white/10 !border-dashed border-white/30 hover:!bg-white/20"
+                >
+                  + Add New Payment Method
+                </Button>
+              )}
+
+              <p
+                style={{
+                  fontSize: "11px",
+                  opacity: 0.4,
+                  marginTop: "20px",
+                  textAlign: "center",
+                }}
               >
-                + Add New Payment Method
-              </Button>
-            )}
-
-            <p
-              style={{
-                fontSize: "11px",
-                opacity: 0.4,
-                marginTop: "20px",
-                textAlign: "center",
-              }}
-            >
-              MINIMUM 2 PAYMENT METHODS REQUIRED.
-            </p>
-          </SectionCard>
+                MINIMUM 2 PAYMENT METHODS REQUIRED.
+              </p>
+            </SectionCard>
+              )}
 
           <SectionCard title="Security">
             <SecuritySettings />
@@ -349,6 +361,7 @@ export default function Settings() {
               <p style={{ color: BRAND_ORANGE }}>{usersError}</p>
             )}
 
+            {canManageTeam && (
             <div
               style={{
                 display: "grid",
@@ -451,6 +464,7 @@ export default function Settings() {
                 INVITE
               </button>
             </div>
+            )}
             
             {users.map((user) => (
               <div
@@ -472,58 +486,73 @@ export default function Settings() {
                   </div>
                 </div>
                 
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <select
-                    value={user.role}
-                    onChange={(e) =>
-                      changeRole(
-                        user.user_id,
-                        e.target.value as "admin" | "biller" | "viewer"
-                      )
-                    }
-                    disabled={busyUserId === user.user_id}
-                    style={{
-                      background: "rgba(255,255,255,0.08)",
-                      color: "white",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      borderRadius: "10px",
-                      padding: "8px 10px",
-                      fontSize: "12px",
-                      fontWeight: 800,
-                    }}
-                  >
-                    <option value="viewer">VIEWER</option>
-                    <option value="admin">ADMIN</option>
-                    <option value="biller">BILLER</option>
-                  </select>
+                {canManageTeam ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <select
+                      value={user.role}
+                      onChange={(e) =>
+                        changeRole(
+                          user.user_id,
+                          e.target.value as "admin" | "biller" | "viewer"
+                        )
+                      }
+                      disabled={busyUserId === user.user_id}
+                      style={{
+                        background: "rgba(255,255,255,0.08)",
+                        color: "white",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        borderRadius: "10px",
+                        padding: "8px 10px",
+                        fontSize: "12px",
+                        fontWeight: 800,
+                      }}
+                    >
+                      <option value="viewer">VIEWER</option>
+                      <option value="admin">ADMIN</option>
+                      <option value="biller">BILLER</option>
+                    </select>
 
-                  <button
-                    onClick={() => removeUser(user.user_id)}
-                    disabled={busyUserId === user.user_id}
-                    style={{
-                      background: "rgba(255,80,80,0.15)",
-                      color: "#ff8a8a",
-                      border: "1px solid rgba(255,80,80,0.25)",
-                      borderRadius: "10px",
-                      padding: "8px 12px",
-                      fontSize: "11px",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {busyUserId === user.user_id ? "..." : "REMOVE"}
-                  </button>
-                </div>
+                    <button
+                      onClick={() => removeUser(user.user_id)}
+                      disabled={busyUserId === user.user_id}
+                      style={{
+                        background: "rgba(255,80,80,0.15)",
+                        color: "#ff8a8a",
+                        border: "1px solid rgba(255,80,80,0.25)",
+                        borderRadius: "10px",
+                        padding: "8px 12px",
+                        fontSize: "11px",
+                        fontWeight: 900,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {busyUserId === user.user_id ? "..." : "REMOVE"}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "12px", fontWeight: 800, opacity: 0.8}}>
+                    {user.role.toUpperCase()}
+                  </div>
+                )}
               </div>
             ))}
             
           </SectionCard>
 
-          <SectionCard title="Connected Integrations">
-            <IntegrationsPanel />
-          </SectionCard>
+          {canManageIntegrations ? (
+            <SectionCard title="Connected Integrations">
+              <IntegrationsPanel />
+            </SectionCard>
+          ) : (
+            <SectionCard title="Connected Integrations">
+              <p style={{ opacity: 0.7, lineHeight: 1.6 }}>
+              You have read-only access. Connected providers can be reviewed here, but only
+      admins and billers can modify integrations.
+              </p>
+            </SectionCard>
+          )}
           
-          <DangerZone />
+          {canManageBilling && <DangerZone />}
         </div>
       </main>
     </div>
