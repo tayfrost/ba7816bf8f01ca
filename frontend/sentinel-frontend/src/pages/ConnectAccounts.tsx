@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
 import LandingHeader from "../components/LandingHeader";
 import { useOnboarding } from "../state/onboarding";
@@ -25,53 +25,68 @@ function providerDesc(p: Provider) {
 
 export default function ConnectAccounts() {
   const nav = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const { integrations, setIntegrationConnected } = useOnboarding();
   const providers = useMemo<Provider[]>(() => ["slack", "gmail", "outlook"], []);
 
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [busyProvider, setBusyProvider] = useState<Provider | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const refreshIntegrations = useCallback(async () => {
+    setStatus("loading");
+    setError(null);
+
+    try {
+      const apiIntegrations = await getIntegrations();
+
+      apiIntegrations.forEach((integration) => {
+        setIntegrationConnected(integration.provider, integration.connected);
+      });
+
+      setStatus("success");
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+      setError("Failed to load integrations.");
+    }
+  }, [setIntegrationConnected]);
 
   useEffect(() => {
-    let cancelled = false;
+    refreshIntegrations();
+  }, [refreshIntegrations]);
 
-    async function loadIntegrations() {
-      setStatus("loading");
-      setError(null);
+  useEffect(() => {
+    const provider = searchParams.get("provider");
+    const oauthStatus = searchParams.get("status");
 
-      try {
-        const apiIntegrations = await getIntegrations();
-        if (cancelled) return;
-
-        apiIntegrations.forEach((integration) => {
-          setIntegrationConnected(integration.provider, integration.connected);
-        });
-
-        setStatus("success");
-      } catch (err) {
-        if (cancelled) return;
-        console.error(err);
-        setStatus("error");
-        setError("Failed to load integrations.");
-      }
+    if (provider && oauthStatus === "success") {
+      setNotice(`${providerTitle(provider as Provider)} connected successfully.`);
+      refreshIntegrations();
     }
 
-    loadIntegrations();
+    if (provider && oauthStatus === "error") {
+      setError(`${providerTitle(provider as Provider)} connection failed.`);
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [setIntegrationConnected]);
+    if (provider || oauthStatus) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, refreshIntegrations]);
 
   async function handleConnect(provider: Provider) {
     setBusyProvider(provider);
     setError(null);
+    setNotice(null);
 
     try {
       const { url } = await startIntegration(provider);
 
       if (url.startsWith("/mock-oauth/")) {
         setIntegrationConnected(provider, true);
+        setNotice(`${providerTitle(provider)} connected successfully.`);
         return;
       }
 
@@ -87,10 +102,12 @@ export default function ConnectAccounts() {
   async function handleDisconnect(provider: Provider) {
     setBusyProvider(provider);
     setError(null);
+    setNotice(null);
 
     try {
       await disconnectIntegration(provider);
       setIntegrationConnected(provider, false);
+      setNotice(`${providerTitle(provider)} disconnected.`);
     } catch (err) {
       console.error(err);
       setError(`Failed to disconnect ${providerTitle(provider)}.`);
@@ -122,6 +139,12 @@ export default function ConnectAccounts() {
           {status === "loading" && (
             <div className="mb-6 text-sm font-semibold text-brand-deep/70">
               Loading integrations...
+            </div>
+          )}
+
+          {notice && (
+            <div className="mb-6 text-sm font-semibold text-green-700">
+              {notice}
             </div>
           )}
 
