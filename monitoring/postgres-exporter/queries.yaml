@@ -1,0 +1,61 @@
+pg_sentinelai_incidents:
+  query: |
+    SELECT
+      count(*) AS total,
+      count(*) FILTER (WHERE created_at > now() - interval '1 hour') AS last_hour,
+      count(*) FILTER (WHERE created_at > now() - interval '24 hours') AS last_24h
+    FROM flagged_incidents
+  metrics:
+    - total:
+        usage: "GAUGE"
+        description: "Total flagged incidents"
+    - last_hour:
+        usage: "GAUGE"
+        description: "Flagged incidents in the last hour"
+    - last_24h:
+        usage: "GAUGE"
+        description: "Flagged incidents in last 24 hours"
+
+pg_sentinelai_companies:
+  query: |
+    SELECT
+      count(*) AS total,
+      count(*) FILTER (WHERE deleted_at IS NULL) AS active,
+      count(*) FILTER (WHERE deleted_at IS NOT NULL) AS deleted
+    FROM companies
+  metrics:
+    - total:
+        usage: "GAUGE"
+        description: "Total companies"
+    - active:
+        usage: "GAUGE"
+        description: "Active companies"
+    - deleted:
+        usage: "GAUGE"
+        description: "Soft-deleted companies"
+
+pg_sentinelai_users:
+  query: "SELECT count(*) AS total FROM saas_user_data"
+  metrics:
+    - total:
+        usage: "GAUGE"
+        description: "Total registered users"
+
+# might need to revisit this if we add more databases
+pg_sentinelai_db_size:
+  query: "SELECT pg_database_size('sentinelai') AS size_bytes"
+  metrics:
+    - size_bytes:
+        usage: "GAUGE"
+        description: "Database size in bytes"
+
+pg_sentinelai_connections:
+  query: |
+    SELECT count(*) AS active
+    FROM pg_stat_activity
+    WHERE datname = 'sentinelai'
+      AND state = 'active'
+  metrics:
+    - active:
+        usage: "GAUGE"
+        description: "Active database connections"
