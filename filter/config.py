@@ -44,8 +44,16 @@ LORA_TARGET_MODULES = ["query", "value"]
 
 # Hugging Face Configuration
 HF_REPO_ID = "OguzhanKOG/sentinelai-bert-filter"
+HF_DATASETS_REPO_ID = "OguzhanKOG/sentinelai-datasets"
 CHECKPOINT_FILENAME = "dual_head_classifier.pt"
 ADAPTERS_DIRNAME = "lora_adapters"
+
+# ONNX Configuration
+ONNX_MODEL_FILENAME = "sentinelai_model.onnx"
+ONNX_DATA_FILENAME = "sentinelai_model.onnx.data"
+TOKENIZER_DIRNAME = "tokenizer"
+TOKENIZER_FILENAME = "tokenizer.json"
+ONNX_CACHE_DIR = MODELS_DIR / "onnx_cache"
 
 # Training Hyperparameters (Defaults)
 BATCH_SIZE = 16
