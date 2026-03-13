@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "../state/onboarding";
 import SidebarLink from "../components/SidebarLink";
 import Button from "../components/Button";
@@ -23,6 +24,7 @@ const BRAND_ORANGE = "var(--color-top)";
 
 export default function Settings() {
   const { signup, plan, reset } = useOnboarding();
+  const navigate = useNavigate();
   const planPrice = plan === "paid" ? "$29" : "$0";
 
   const {
@@ -103,8 +105,6 @@ export default function Settings() {
         <nav style={{ flexGrow: 1 }}>
           <SidebarLink to="/dashboard" label="Dashboard" />
           <SidebarLink to="/employees" label="Employees" />
-          <SidebarLink to="/connect-accounts" label="Connected Accounts" />
-          <SidebarLink to="/usage" label="Usage Guide" />
           <SidebarLink to="/settings" label="Account Settings" end />
         </nav>
 
@@ -134,6 +134,24 @@ export default function Settings() {
           height: "100vh",
         }}
       >
+
+        <div style={{ position: "absolute", top: "50px", right: "60px", display: "flex", gap: "15px" }}>
+          <Button 
+            onClick={() => navigate("/connect-accounts")}
+            className="!bg-orange-500/20 !text-orange-400 !border-orange-500/40 !w-auto !px-6 !py-2 !text-xs"
+            variant="secondary"
+          >
+            CONNECT ACCOUNTS
+          </Button>
+          <Button 
+            onClick={() => navigate("/usage")}
+            className="!bg-orange-500/20 !text-orange-400 !border-orange-500/40 !w-auto !px-6 !py-2 !text-xs"
+            variant="secondary"
+          >
+            USAGE GUIDE
+          </Button>
+        </div>
+
         <header style={{ marginBottom: "50px" }}>
           <h1
             style={{
