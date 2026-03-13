@@ -8,3 +8,5 @@ python-dotenv
 onnxruntime
 huggingface_hub
 tqdm
+
+# Training dependencies (torch/transformers/peft) are optional for ONNX inference
