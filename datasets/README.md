@@ -10,6 +10,19 @@ tags:
 - sentinelai
 size_categories:
 - 1K<n<10K
+configs:
+- config_name: default
+  data_files:
+  - split: train
+    path: sentinelai_dataset_v0.3.csv
+- config_name: v0.2
+  data_files:
+  - split: train
+    path: sentinelai_dataset_v0.2.csv
+- config_name: v0.1
+  data_files:
+  - split: train
+    path: sentinelai_dataset_v0.1.csv
 ---
 
 # SentinelAI Datasets
