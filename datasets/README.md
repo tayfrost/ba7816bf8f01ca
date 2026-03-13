@@ -1,4 +1,20 @@
+---
+language:
+- en
+license: mit
+task_categories:
+- text-classification
+tags:
+- mental-health
+- workplace-wellbeing
+- sentinelai
+size_categories:
+- 1K<n<10K
+---
+
 # SentinelAI Datasets
+
+**Hosted Repository:** [huggingface.co/datasets/OguzhanKOG/sentinelai-datasets](https://huggingface.co/datasets/OguzhanKOG/sentinelai-datasets)
 
 Version: 0.3
 
