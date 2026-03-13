@@ -90,8 +90,6 @@ export default function EmployeeProfile() {
         <nav style={{ flexGrow: 1 }}>
           <SidebarLink to="/dashboard" label="Dashboard" />
           <SidebarLink to="/employees" label="Employees" />
-          <SidebarLink to="/connect-accounts" label="Connected Accounts" />
-          <SidebarLink to="/usage" label="Usage Guide" />
           <SidebarLink to="/settings" label="Account Settings" />
         </nav>
 
