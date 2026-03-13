@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+// src/hooks/useDashboardData.ts
+import { useEffect, useState } from "react";
 import type { DateRange } from "../state/timeRange";
+import { getUsage } from "../api";
+import type { Series } from "../api";
 import { makeAllSeries } from "../state/metricsMock";
-import { getUsage } from "../api/usage";
-import type { Series } from "../api/usage";
 
 type Status = "idle" | "loading" | "success" | "error";
+
+const IS_MOCK = import.meta.env.VITE_USE_MOCKS === "true";
 
 export function useDashboardData(range: DateRange) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [series, setSeries] = useState<Series[]>(() =>
-    makeAllSeries(range)
-  );
-
-  const mockSeries = useMemo(() => makeAllSeries(range), [range]);
+  const [series, setSeries] = useState<Series[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,11 +22,7 @@ export function useDashboardData(range: DateRange) {
       setError(null);
 
       try {
-        const res = await getUsage({
-          start: range.start,
-          end: range.end,
-        });
-
+        const res = await getUsage({ start: range.start, end: range.end });
         if (cancelled) return;
 
         setSeries(res.series);
@@ -35,10 +30,17 @@ export function useDashboardData(range: DateRange) {
       } catch (e) {
         if (cancelled) return;
 
-        // backend offline → fallback to mock
-        setSeries(mockSeries);
+        console.error(e);
+
+        if (IS_MOCK) {
+          setSeries(makeAllSeries(range));
+          setStatus("success");
+          return;
+        }
+
+        setSeries([]);
         setStatus("error");
-        setError("Backend unavailable – showing mock data.");
+        setError("Failed to load dashboard metrics.");
       }
     }
 
@@ -47,7 +49,7 @@ export function useDashboardData(range: DateRange) {
     return () => {
       cancelled = true;
     };
-  }, [range.start, range.end, mockSeries]);
+  }, [range.start, range.end, range.preset]);
 
-  return { status, error, series };
+  return { status, error, series, isMock: IS_MOCK };
 }
