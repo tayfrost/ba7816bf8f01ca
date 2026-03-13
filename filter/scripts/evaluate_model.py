@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
-from services.dataset_loader import load_dataset
+from services.dataset_loader import load_dataset, get_dataset_path
 from services.model_factory import load_production_model
 
 
@@ -217,7 +217,7 @@ def main():
 
     # Load dataset
     print("Loading test dataset...")
-    dataset_path = config.DATASETS_DIR / "sentinelai_dataset_v0.2.json"
+    dataset_path = get_dataset_path("sentinelai_dataset_v0.2.json")
     _, _, test_loader, _ = load_dataset(
         dataset_path=str(dataset_path),
         mix_datasets=True,  # Use same 7k mixed dataset as training

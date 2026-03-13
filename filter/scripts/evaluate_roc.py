@@ -25,7 +25,7 @@ from sklearn.metrics import auc, roc_curve
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
-from services.dataset_loader import load_dataset
+from services.dataset_loader import load_dataset, get_dataset_path
 from services.model_factory import load_production_model
 
 
@@ -114,7 +114,7 @@ def main():
     # 1. Load Data (SSOT)
     print("Loading test dataset...")
     _, _, test_loader, _ = load_dataset(
-        dataset_path=str(config.DATASETS_DIR / "sentinelai_dataset_v0.2.json"),
+        dataset_path=str(get_dataset_path("sentinelai_dataset_v0.2.json")),
         mix_datasets=True,
     )
 
