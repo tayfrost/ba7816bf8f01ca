@@ -21,10 +21,11 @@ from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
+from services.dataset_loader import get_dataset_path
 
 # Configuration
 CONFIG = {
-    "input_path": config.DATASETS_DIR / "sentinelai_dataset_v0.1.json",
+    "input_path": get_dataset_path("sentinelai_dataset_v0.1.json"),
     "output_path": config.DATASETS_DIR / "sentinelai_dataset_v0.2_augmented.json",
     "paraphrases_per_message": 2,
     "seed": config.SEED,
@@ -140,7 +141,7 @@ def main():
     random.seed(CONFIG["seed"])
 
     # Load original dataset
-    dataset_path = Path(__file__).parent / CONFIG["input_path"]
+    dataset_path = CONFIG["input_path"]
     print(f"\nLoading dataset from: {dataset_path}")
     data = load_dataset(str(dataset_path))
     print(f"Original dataset: {len(data)} examples")
@@ -168,7 +169,7 @@ def main():
     )
 
     # Save augmented dataset
-    output_path = Path(__file__).parent / CONFIG["output_path"]
+    output_path = CONFIG["output_path"]
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(augmented_data, f, indent=2)
 
