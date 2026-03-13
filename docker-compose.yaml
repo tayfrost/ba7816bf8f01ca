@@ -78,6 +78,7 @@ services:
       dockerfile: knowledge-graph/mcp-server/Dockerfile
     ports:
       - "8001:8001"
+      - "9102:9102"
     environment:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8001

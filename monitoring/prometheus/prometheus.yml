@@ -23,7 +23,7 @@ scrape_configs:
   - job_name: 'kg-mcp-server'
     metrics_path: /metrics
     static_configs:
-     - targets: ['kg-mcp-server:8001']
+     - targets: ['kg-mcp-server:9102']
 
   - job_name: 'postgres-exporter'
     static_configs:

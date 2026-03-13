@@ -11,6 +11,7 @@ import logging
 import os
 import re
 from mcp.server.fastmcp import FastMCP
+from metrics import track_tool_call
 
 logging.basicConfig(
     level=logging.INFO,
@@ -271,6 +272,7 @@ mcp = FastMCP(
 
 
 @mcp.tool()
+@track_tool_call("triage_crisis_risk")
 def triage_crisis_risk(text: str) -> dict:
     """Check if user input contains crisis or self-harm indicators.
 
@@ -317,6 +319,7 @@ def triage_crisis_risk(text: str) -> dict:
 
 
 @mcp.tool()
+@track_tool_call("get_recommendation")
 def get_recommendation(
     diagnosis: str,
     max_results: int = 5,
@@ -386,6 +389,7 @@ def get_recommendation(
 
 
 @mcp.tool()
+@track_tool_call("get_recommendation_by_topic")
 def get_recommendation_by_topic(
     topic_id: str,
     max_results: int = 5,
@@ -422,6 +426,7 @@ def get_recommendation_by_topic(
 
 
 @mcp.tool()
+@track_tool_call("get_recommendation_by_technique")
 def get_recommendation_by_technique(
     technique_id: str,
     max_results: int = 5,
@@ -463,6 +468,7 @@ def get_recommendation_by_technique(
 
 
 @mcp.tool()
+@track_tool_call("list_topics")
 def list_topics() -> dict:
     """List all 24 mental health topics available in the knowledge graph.
 
@@ -480,6 +486,7 @@ def list_topics() -> dict:
 
 
 @mcp.tool()
+@track_tool_call("get_techniques_for_topic")
 def get_techniques_for_topic(topic_id: str) -> dict:
     """Get all evidence-based techniques that address a specific mental health topic.
 
@@ -507,6 +514,7 @@ def get_techniques_for_topic(topic_id: str) -> dict:
 
 
 @mcp.tool()
+@track_tool_call("search_papers")
 def search_papers(
     query: str = "",
     topic_id: str = "",
@@ -582,6 +590,7 @@ def search_papers(
 
 
 @mcp.tool()
+@track_tool_call("get_paper_details")
 def get_paper_details(paper_id: str) -> dict:
     """Get full details of a specific research paper including all its advice items.
 
@@ -628,6 +637,7 @@ def get_paper_details(paper_id: str) -> dict:
 
 
 @mcp.tool()
+@track_tool_call("list_techniques")
 def list_techniques() -> dict:
     """List all 37 evidence-based techniques in the knowledge graph.
 
@@ -645,6 +655,7 @@ def list_techniques() -> dict:
 
 
 @mcp.tool()
+@track_tool_call("get_stats")
 def get_stats() -> dict:
     """Get overall statistics about the knowledge graph.
 
@@ -696,5 +707,7 @@ def get_stats() -> dict:
 
 
 if __name__ == "__main__":
+    from metrics import start_metrics_server
+    start_metrics_server()
     get_dataset()
     mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT)
