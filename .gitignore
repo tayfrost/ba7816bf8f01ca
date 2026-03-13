@@ -39,9 +39,11 @@ build/
 
 #database configs
 *.db
+
 # Big models
 *.pt
 
+lora_adapters/
 **/tokenizer/
 **/onnx_cache/
 *.onnx
