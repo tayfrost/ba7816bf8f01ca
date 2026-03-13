@@ -77,16 +77,18 @@ export function useTeamUsers() {
     name: string;
     surname: string;
     role: "admin" | "biller" | "viewer";
-  }) {
+  }): Promise<boolean> { 
     setBusyUserId(-1);
     setError(null);
 
     try {
       const created = await inviteUser(params);
       setUsers((prev) => [...prev, created]);
+      return true;
     } catch (err) {
       console.error(err);
       setError("Failed to invite user.");
+      return false;
     } finally {
       setBusyUserId(null);
     }

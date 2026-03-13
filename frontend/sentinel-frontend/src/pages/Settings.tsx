@@ -337,242 +337,245 @@ export default function Settings() {
           </div>
 
           {/* RIGHT COLUMN */}
-          {canManageBilling && (
-            <SectionCard title="Payment Methods">
-              <PaymentMethodsList cards={MOCK_CARDS} />
+          <div className="space-y-8">
+            {canManageBilling && (
+              <SectionCard title="Payment Methods">
+                <PaymentMethodsList cards={MOCK_CARDS} />
 
-              {MOCK_CARDS.length < 3 && (
-                <Button
-                  variant="secondary"
-                  className="!text-white !bg-white/10 !border-dashed border-white/30 hover:!bg-white/20"
+                {MOCK_CARDS.length < 3 && (
+                  <Button
+                    variant="secondary"
+                    className="!text-white !bg-white/10 !border-dashed border-white/30 hover:!bg-white/20"
+                  >
+                    + Add New Payment Method
+                  </Button>
+                )}
+
+                <p
+                  style={{
+                    fontSize: "11px",
+                    opacity: 0.4,
+                    marginTop: "20px",
+                    textAlign: "center",
+                  }}
                 >
-                  + Add New Payment Method
-                </Button>
-              )}
+                  MINIMUM 2 PAYMENT METHODS REQUIRED.
+                </p>
+              </SectionCard>
+                )}
 
-              <p
-                style={{
-                  fontSize: "11px",
-                  opacity: 0.4,
-                  marginTop: "20px",
-                  textAlign: "center",
-                }}
-              >
-                MINIMUM 2 PAYMENT METHODS REQUIRED.
-              </p>
+            <SectionCard title="Security">
+              <SecuritySettings />
             </SectionCard>
+            
+            <SectionCard title="Notifications">
+              <NotificationsPreferences />
+            </SectionCard>
+
+            <SectionCard title="Team Members">
+              
+              {usersStatus === "loading" && (
+                <p style={{ opacity: 0.6 }}>Loading team members...</p>
+              )}
+            
+              {usersError && (
+                <p style={{ color: BRAND_ORANGE }}>{usersError}</p>
               )}
 
-          <SectionCard title="Security">
-            <SecuritySettings />
-          </SectionCard>
-          
-          <SectionCard title="Notifications">
-            <NotificationsPreferences />
-          </SectionCard>
-
-          <SectionCard title="Team Members">
-            
-            {usersStatus === "loading" && (
-              <p style={{ opacity: 0.6 }}>Loading team members...</p>
-            )}
-            
-            {usersError && (
-              <p style={{ color: BRAND_ORANGE }}>{usersError}</p>
-            )}
-
-            {canManageTeam && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.3fr 1fr 1fr 0.8fr auto",
-                gap: "10px",
-                marginBottom: "20px",
-                paddingBottom: "20px",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <input
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="email"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: "10px",
-                  padding: "10px 12px",
-                  fontSize: "12px",
-                }}
-              />
-
-              <input
-                value={inviteName}
-                onChange={(e) => setInviteName(e.target.value)}
-                placeholder="name"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: "10px",
-                  padding: "10px 12px",
-                  fontSize: "12px",
-                }}
-              />
-
-              <input
-                value={inviteSurname}
-                onChange={(e) => setInviteSurname(e.target.value)}
-                placeholder="surname"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: "10px",
-                  padding: "10px 12px",
-                  fontSize: "12px",
-                }}
-              />
-
-              <select
-                value={inviteRole}
-                onChange={(e) =>
-                  setInviteRole(e.target.value as "admin" | "biller" | "viewer")
-                }
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: "10px",
-                  padding: "10px 12px",
-                  fontSize: "12px",
-                  fontWeight: 800,
-                }}
-              >
-                <option value="viewer">VIEWER</option>
-                <option value="admin">ADMIN</option>
-                <option value="biller">BILLER</option>
-              </select>
-
-              <button
-                onClick={async () => {
-                  if (!inviteEmail || !inviteName || !inviteSurname) return;
-
-                  await invite({
-                    email: inviteEmail,
-                    name: inviteName,
-                    surname: inviteSurname,
-                    role: inviteRole,
-                  });
-
-                  setInviteEmail("");
-                  setInviteName("");
-                  setInviteSurname("");
-                  setInviteRole("viewer");
-                }}
-                style={{
-                  background: "rgba(227,141,38,0.18)",
-                  color: BRAND_ORANGE,
-                  border: "1px solid rgba(227,141,38,0.35)",
-                  borderRadius: "10px",
-                  padding: "10px 14px",
-                  fontSize: "11px",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                INVITE
-              </button>
-            </div>
-            )}
-            
-            {users.map((user) => (
+              {canManageTeam && (
               <div
-                key={user.user_id}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "10px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  display: "grid",
+                  gridTemplateColumns: "1.3fr 1fr 1fr 0.8fr auto",
+                  gap: "10px",
+                  marginBottom: "20px",
+                  paddingBottom: "20px",
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
                 }}
               >
-                <div>
-                  <div style={{ fontWeight: 700 }}>
-                    {user.name} {user.surname}
+                <input
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="email"
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    fontSize: "12px",
+                  }}
+                />
+
+                <input
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  placeholder="name"
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    fontSize: "12px",
+                  }}
+                />
+
+                <input
+                  value={inviteSurname}
+                  onChange={(e) => setInviteSurname(e.target.value)}
+                  placeholder="surname"
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    fontSize: "12px",
+                  }}
+                />
+
+                <select
+                  value={inviteRole}
+                  onChange={(e) =>
+                    setInviteRole(e.target.value as "admin" | "biller" | "viewer")
+                  }
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    fontSize: "12px",
+                    fontWeight: 800,
+                  }}
+                >
+                  <option value="viewer">VIEWER</option>
+                  <option value="admin">ADMIN</option>
+                  <option value="biller">BILLER</option>
+                </select>
+
+                <button
+                  onClick={async () => {
+                    if (!inviteEmail || !inviteName || !inviteSurname) return;
+
+                    const ok = await invite({
+                      email: inviteEmail,
+                      name: inviteName,
+                      surname: inviteSurname,
+                      role: inviteRole,
+                    });
+
+                    if (ok) {
+                    setInviteEmail("");
+                    setInviteName("");
+                    setInviteSurname("");
+                    setInviteRole("viewer");
+                  }}}
+                  style={{
+                    background: "rgba(227,141,38,0.18)",
+                    color: BRAND_ORANGE,
+                    border: "1px solid rgba(227,141,38,0.35)",
+                    borderRadius: "10px",
+                    padding: "10px 14px",
+                    fontSize: "11px",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                >
+                  INVITE
+                </button>
+              </div>
+              )}
+              
+              {users.map((user) => (
+                <div
+                  key={user.user_id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "10px 0",
+                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700 }}>
+                      {user.name} {user.surname}
+                    </div>
+                    
+                    <div style={{ fontSize: "12px", opacity: 0.6 }}>
+                      {user.email}
+                    </div>
                   </div>
                   
-                  <div style={{ fontSize: "12px", opacity: 0.6 }}>
-                    {user.email}
-                  </div>
+                  {canManageTeam ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <select
+                        value={user.role}
+                        onChange={(e) =>
+                          changeRole(
+                            user.user_id,
+                            e.target.value as "admin" | "biller" | "viewer"
+                          )
+                        }
+                        disabled={busyUserId === user.user_id}
+                        style={{
+                          background: "rgba(255,255,255,0.08)",
+                          color: "white",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          borderRadius: "10px",
+                          padding: "8px 10px",
+                          fontSize: "12px",
+                          fontWeight: 800,
+                        }}
+                      >
+                        <option value="viewer">VIEWER</option>
+                        <option value="admin">ADMIN</option>
+                        <option value="biller">BILLER</option>
+                      </select>
+
+                      <button
+                        onClick={() => removeUser(user.user_id)}
+                        disabled={busyUserId === user.user_id}
+                        style={{
+                          background: "rgba(255,80,80,0.15)",
+                          color: "#ff8a8a",
+                          border: "1px solid rgba(255,80,80,0.25)",
+                          borderRadius: "10px",
+                          padding: "8px 12px",
+                          fontSize: "11px",
+                          fontWeight: 900,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {busyUserId === user.user_id ? "..." : "REMOVE"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: "12px", fontWeight: 800, opacity: 0.8}}>
+                      {user.role.toUpperCase()}
+                    </div>
+                  )}
                 </div>
-                
-                {canManageTeam ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <select
-                      value={user.role}
-                      onChange={(e) =>
-                        changeRole(
-                          user.user_id,
-                          e.target.value as "admin" | "biller" | "viewer"
-                        )
-                      }
-                      disabled={busyUserId === user.user_id}
-                      style={{
-                        background: "rgba(255,255,255,0.08)",
-                        color: "white",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: "10px",
-                        padding: "8px 10px",
-                        fontSize: "12px",
-                        fontWeight: 800,
-                      }}
-                    >
-                      <option value="viewer">VIEWER</option>
-                      <option value="admin">ADMIN</option>
-                      <option value="biller">BILLER</option>
-                    </select>
+              ))}
+              
+            </SectionCard>
 
-                    <button
-                      onClick={() => removeUser(user.user_id)}
-                      disabled={busyUserId === user.user_id}
-                      style={{
-                        background: "rgba(255,80,80,0.15)",
-                        color: "#ff8a8a",
-                        border: "1px solid rgba(255,80,80,0.25)",
-                        borderRadius: "10px",
-                        padding: "8px 12px",
-                        fontSize: "11px",
-                        fontWeight: 900,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {busyUserId === user.user_id ? "..." : "REMOVE"}
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: "12px", fontWeight: 800, opacity: 0.8}}>
-                    {user.role.toUpperCase()}
-                  </div>
-                )}
-              </div>
-            ))}
+            {canManageIntegrations ? (
+              <SectionCard title="Connected Integrations">
+                <IntegrationsPanel />
+              </SectionCard>
+            ) : (
+              <SectionCard title="Connected Integrations">
+                <p style={{ opacity: 0.7, lineHeight: 1.6 }}>
+                  You have read-only access. Connected providers can be reviewed here, but only
+          admins and billers can modify integrations.
+                </p>
+              </SectionCard>
+            )}
             
-          </SectionCard>
-
-          {canManageIntegrations ? (
-            <SectionCard title="Connected Integrations">
-              <IntegrationsPanel />
-            </SectionCard>
-          ) : (
-            <SectionCard title="Connected Integrations">
-              <p style={{ opacity: 0.7, lineHeight: 1.6 }}>
-              You have read-only access. Connected providers can be reviewed here, but only
-      admins and billers can modify integrations.
-              </p>
-            </SectionCard>
-          )}
-          
-          {canManageBilling && <DangerZone />}
+            {canManageBilling && <DangerZone />}
+          </div>
         </div>
       </main>
     </div>

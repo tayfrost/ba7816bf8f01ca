@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useOnboarding } from "../state/onboarding";
 import SidebarLink from "../components/SidebarLink";
-import { MOCK_EMPLOYEES } from "../state/employeesMock";
+import { useEmployeesData } from "../hooks/useEmployeesData";
 import EmployeeProfileHeader from "../components/employees/profile/EmployeeProfileHeader";
 import EmployeeWorkloadSummary from "../components/employees/profile/EmployeeWorkloadSummary";
 import EmployeeIncidentTimeline from "../components/employees/profile/EmployeeIncidentTimeline";
@@ -14,10 +14,46 @@ export default function EmployeeProfile() {
   const navigate = useNavigate();
   const { reset } = useOnboarding();
 
+  const { employees, status, error } = useEmployeesData();
+
   const employee = useMemo(
-    () => MOCK_EMPLOYEES.find((e) => e.id === employeeId),
-    [employeeId]
+    () => employees.find((e) => e.id === employeeId),
+    [employees, employeeId]
   );
+
+  if (status === "loading") {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
+          color: "white",
+          display: "grid",
+          placeItems: "center",
+          fontFamily: "'Outfit', 'Inter', sans-serif",
+        }}
+      >
+        Loading employee profile...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
+          color: "white",
+          display: "grid",
+          placeItems: "center",
+          fontFamily: "'Outfit', 'Inter', sans-serif",
+        }}
+      >
+        Failed to load employee profile.
+      </div>
+    );
+  }
 
   if (!employee) {
     return (
