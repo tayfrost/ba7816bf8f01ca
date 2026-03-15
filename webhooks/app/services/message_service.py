@@ -16,8 +16,10 @@ from google.auth.transport.requests import Request as GoogleRequest
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
  
-from app.services.filter_service import filter_message
+from app.services.filter_service import filter_message, FilterResult
 from app.services import db_service as db
+
+SEVERITY_MAP = {"none": 0, "early": 1, "middle": 2, "late": 3}
 
 from backend.New_database import new_oop as model
 from backend.New_database.new_crud import Session
@@ -55,9 +57,10 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
  
     logger.info(f"Processing Slack message team={team_id} user={slack_uid}")
  
-    if not filter_message(text):
+    result = filter_message(text)
+    if not result or not result.is_risk:
         return False
- 
+
     workspace = db.get_workspace_by_team_id(team_id)
     if not workspace:
         logger.warning(f"No active workspace for team_id={team_id}")
@@ -87,7 +90,13 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
         content_raw={"text": text},
         conversation_id=channel_id,
     )
- 
+
+    db.create_incident_scores(
+        incident.message_id,
+        predicted_category=result.category,
+        predicted_severity=SEVERITY_MAP.get(result.severity),
+    )
+
     logger.info(f"Slack incident stored id={incident.message_id} team={team_id} user={slack_uid}")
     return True
  
@@ -135,7 +144,8 @@ def process_gmail_event(payload: dict) -> bool:
         if not body:
             continue
  
-        if not filter_message(body):
+        result = filter_message(body)
+        if not result or not result.is_risk:
             continue
  
         headers = {
@@ -162,6 +172,13 @@ def process_gmail_event(payload: dict) -> bool:
             },
             conversation_id="gmail",
         )
+
+        db.create_incident_scores(
+            incident.message_id,
+            predicted_category=result.category,
+            predicted_severity=SEVERITY_MAP.get(result.severity),
+        )
+
         stored += 1
         logger.info(
             f"Gmail incident stored id={incident.message_id} {user_email} "
@@ -170,7 +187,7 @@ def process_gmail_event(payload: dict) -> bool:
  
     return stored > 0
  
- 
+#Need to talk ato db team about this
 def _get_mailbox_by_email_any_company(email_address: str):
 
     session = Session()
@@ -187,13 +204,7 @@ def _get_mailbox_by_email_any_company(email_address: str):
 # ── Gmail internals ───────────────────────────────────────────────
  
 def _fetch_new_messages(account, user_email: str) -> Tuple[list, str]:
-    """
-    Call the Gmail History API from account.last_history_id.
-    The refresh token inside account.token_json is used to obtain a fresh
-    access token automatically — it is never stored separately.
-    Returns (messages, latest_history_id).
-    Resets the cursor on a 404 (expired history window).
-    """
+
     try:
         creds = Credentials.from_authorized_user_info(
             json.loads(account.token_json) if isinstance(account.token_json, str)

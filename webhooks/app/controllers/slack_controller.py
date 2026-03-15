@@ -45,6 +45,24 @@ async def slack_oauth_callback(code: str = None, state: str = None):
         )
         data = response.json()
 
+    """
+    try:
+        process_slack_oauth(data)
+        return {"ok": True}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    if not state:
+        logger.warning("Slack OAuth callback missing state parameter")
+        raise HTTPException(status_code=400, detail="Missing company_id in state")
+    """
+    try:
+        company_id = int(state)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid company_id in state")
+
+    data["_company_id"] = company_id
+
     try:
         process_slack_oauth(data)
         return {"ok": True}
