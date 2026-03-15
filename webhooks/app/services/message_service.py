@@ -8,7 +8,6 @@ import json
 import base64
 import logging
 import re
-import uuid
 from typing import Optional, Tuple
 from datetime import datetime, timezone
  
@@ -19,6 +18,10 @@ from googleapiclient.errors import HttpError
  
 from app.services.filter_service import filter_message
 from app.services import db_service as db
+
+from backend.New_database import new_oop as model
+from backend.New_database.new_crud import Session
+from sqlalchemy import select
  
 logger = logging.getLogger(__name__)
  
@@ -27,7 +30,8 @@ GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/pubsub",
 ]
  
-
+ 
+# ── Slack ─────────────────────────────────────────────────────────
  
 def process_slack_message(payload: dict, timestamp: str) -> bool:
     """
@@ -61,38 +65,30 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
  
     company_id: int = workspace.company_id
  
-    #UPDATE HERE DIMAAAAAAAAA
-    synthetic_email = f"{slack_uid}.{team_id}@slack.internal"
-    user_id = db.ensure_viewer_seat(
-        company_id=company_id,
-        email_address=synthetic_email,
-        display_name=f"Slack user {slack_uid}",
-    )
- 
-    db.upsert_slack_account(
-        company_id=company_id,
-        team_id=team_id,
-        slack_user_id=slack_uid,
-        user_id=user_id,
-        display_name=None,
-        email=None,
-    )
+    existing_account = db.get_slack_account(team_id, slack_uid)
+    if existing_account:
+        user_id = existing_account.user_id
+    else:
+        user     = db.create_viewer_seat(company_id, display_name=f"Slack user {slack_uid}")
+        user_id  = user.user_id
+        db.create_slack_account(company_id, team_id, slack_uid, user_id)
+        logger.info(f"New viewer seat + slack_account created for {slack_uid} team={team_id}")
  
     try:
         sent_at = datetime.fromtimestamp(float(message_ts), tz=timezone.utc)
     except (ValueError, TypeError):
         sent_at = datetime.now(tz=timezone.utc)
  
-    db.create_flagged_incident(
-        company_id=company_id,
-        user_id=user_id,
+    incident = db.create_message_incident(
+        company_id,
+        user_id,
         source="slack",
         sent_at=sent_at,
         content_raw={"text": text},
         conversation_id=channel_id,
     )
  
-    logger.info(f"Slack incident stored team={team_id} user={slack_uid}")
+    logger.info(f"Slack incident stored id={incident.message_id} team={team_id} user={slack_uid}")
     return True
  
  
@@ -119,21 +115,19 @@ def process_gmail_event(payload: dict) -> bool:
         logger.warning("Pub/Sub notification missing emailAddress")
         return False
  
-    account = db.get_gmail_account_by_email(user_email)
+    account = _get_mailbox_by_email_any_company(user_email)
     if not account:
         logger.warning(f"No google_mailboxes row for {user_email}")
         return False
  
-    # First notification after watch setup — store baseline cursor and stop
     if not account.last_history_id:
         logger.info(f"First notification for {user_email}, storing baseline historyId")
-        db.update_gmail_history_id(user_email, notif_history_id)
+        db.set_google_mailbox_history_id(account.google_mailbox_id, notif_history_id)
         return False
  
     messages, latest_history_id = _fetch_new_messages(account, user_email)
  
-    # Always advance the cursor even if nothing passes the filter
-    db.update_gmail_history_id(user_email, latest_history_id)
+    db.set_google_mailbox_history_id(account.google_mailbox_id, latest_history_id)
  
     stored = 0
     for message in messages:
@@ -155,9 +149,9 @@ def process_gmail_event(payload: dict) -> bool:
         except (ValueError, TypeError):
             sent_at = datetime.now(tz=timezone.utc)
  
-        db.create_flagged_incident(
-            company_id=account.company_id,
-            user_id=str(account.user_id),   # UUID from google_mailboxes
+        incident = db.create_message_incident(
+            account.company_id,
+            account.user_id,
             source="gmail",
             sent_at=sent_at,
             content_raw={
@@ -170,11 +164,24 @@ def process_gmail_event(payload: dict) -> bool:
         )
         stored += 1
         logger.info(
-            f"Gmail incident stored {user_email} "
+            f"Gmail incident stored id={incident.message_id} {user_email} "
             f"subject={headers.get('Subject', '')!r}"
         )
  
     return stored > 0
+ 
+ 
+def _get_mailbox_by_email_any_company(email_address: str):
+
+    session = Session()
+    try:
+        return session.execute(
+            select(model.GoogleMailbox).where(
+                model.GoogleMailbox.email_address == email_address,
+            )
+        ).scalar_one_or_none()
+    finally:
+        session.close()
  
  
 # ── Gmail internals ───────────────────────────────────────────────
@@ -183,13 +190,15 @@ def _fetch_new_messages(account, user_email: str) -> Tuple[list, str]:
     """
     Call the Gmail History API from account.last_history_id.
     The refresh token inside account.token_json is used to obtain a fresh
-    access token automatically via google-auth — it is never stored.
+    access token automatically — it is never stored separately.
     Returns (messages, latest_history_id).
-    Resets the cursor and returns empty on a 404 (expired history window).
+    Resets the cursor on a 404 (expired history window).
     """
     try:
         creds = Credentials.from_authorized_user_info(
-            json.loads(account.token_json), GMAIL_SCOPES
+            json.loads(account.token_json) if isinstance(account.token_json, str)
+            else account.token_json,
+            GMAIL_SCOPES,
         )
         if creds.expired and creds.refresh_token:
             creds.refresh(GoogleRequest())
