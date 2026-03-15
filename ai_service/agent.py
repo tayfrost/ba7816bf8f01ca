@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
+from fastmcp import Client
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ async def root():
 
 
 @app.post("/analyze", response_model=AgentOutput)
-async def analyze_message(request: AnalyzeRequest, mcp_client=Depends(get_mcp_client)):
+async def analyze_message(request: AnalyzeRequest, mcp_client: Client = Depends(get_mcp_client)):
     """Analyze message for mental health risks."""
     logger.info("="*80)
     logger.info(f"[API] New analyze request received")
@@ -83,15 +84,15 @@ async def analyze_message(request: AnalyzeRequest, mcp_client=Depends(get_mcp_cl
     
     try:
         # Initialize state
-        initial_state: AgentState = {"raw_message": request.message, "mcp_client": mcp_client}
+        initial_state: AgentState = {"raw_message": request.message}
         logger.info("[API] Starting agent workflow")
         
         # Run agent workflow
-        result = await agent.ainvoke(initial_state)
+        result = await agent.ainvoke(
+            initial_state,
+            config={"configurable": {"mcp_client": mcp_client}}
+        )
         logger.info("[API] Agent workflow completed")
-        
-        # Remove non-serializable mcp_client from result
-        result.pop('mcp_client', None)
         
         # If no risk detected, return minimal response
         if not result.get('is_confirmed_risk'):

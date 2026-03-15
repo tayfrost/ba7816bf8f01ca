@@ -10,4 +10,3 @@ class AgentState(TypedDict, total=False):
     is_confirmed_risk: Optional[bool]
     retrieved_resources: Optional[list[dict]]
     hr_report: Optional[Dict[str, object]]     # Contains recommendations + detailed response
-    mcp_client: Optional[object]  # Per-request MCP client instance

@@ -1,20 +1,19 @@
 """Service for connecting to and loading tools from MCP servers."""
 
 import os
-from typing import List
+from typing import List, AsyncGenerator
 from fastmcp import Client
 from langchain_core.tools import StructuredTool
 
 
-async def get_mcp_client() -> Client:
+async def get_mcp_client() -> AsyncGenerator[Client, None]:
     """Factory function to create a new MCP client instance per request."""
     kg_url = os.getenv("KG_MCP_URL")
     if not kg_url:
         raise ValueError("KG_MCP_URL not configured")
 
-    client = Client(kg_url)
-    await client.__aenter__()
-    return client
+    async with Client(kg_url) as client:
+        yield client
 
 
 def mcp_to_tool(mcp_tool, client: Client):
