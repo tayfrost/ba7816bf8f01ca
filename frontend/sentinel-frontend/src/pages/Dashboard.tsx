@@ -17,6 +17,7 @@ import EmptyMetricsState from "../components/dashboard/EmptyMetricsState";
 import { useIncidents } from "../hooks/useIncidents";
 import IncidentStatsPanel from "../components/dashboard/IncidentStatsPanel";
 import RecentIncidentsFeed from "../components/dashboard/RecentIncidentsFeed";
+import IncidentModal from "../components/dashboard/IncidentModal"; // Added Import
 
 
 const BRAND_ORANGE = "var(--color-top)"; 
@@ -30,6 +31,8 @@ export default function Dashboard() {
   
   const [viewMode, setViewMode] = useState<"focused" | "grid">("focused");
   const [activeCatalogIndex, setActiveCatalogIndex] = useState(0);
+
+  const [selectedIncident, setSelectedIncident] = useState<any | null>(null);
 
   const range = useMemo(() => {
     if (preset === "custom") return computeRange("custom", { start: customStart, end: customEnd });
@@ -195,9 +198,20 @@ export default function Dashboard() {
           }}
         >
           <IncidentStatsPanel stats={incidentStats} />
-          <RecentIncidentsFeed incidents={incidents} />
+          {/* Updated to handle click */}
+          <RecentIncidentsFeed 
+            incidents={incidents} 
+            onIncidentClick={(incident) => setSelectedIncident(incident)} 
+          />
         </div>
       </main>
+
+      <IncidentModal
+        incident={selectedIncident}
+        isOpen={!!selectedIncident}
+        onClose={() => setSelectedIncident(null)}
+        advice="Sentinel AI analysis suggests this pattern of communication may involve sensitive credentials or internal keys. We recommend a proactive review of the user's recent file sharing activity and ensuring all shared links are appropriately restricted to internal domains."
+      />
     </div>
   );
 }
