@@ -24,6 +24,7 @@ COPY prompts/ ./prompts/
 COPY schema/ ./schema/
 COPY services/ ./services/
 COPY states/ ./states/
+COPY utils/ ./utils/
 
 EXPOSE 8001
 

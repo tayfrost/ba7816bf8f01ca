@@ -7,6 +7,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from schema.agent_state import AgentState
 from services.mcp_service import load_mcp_tools
+from utils.json_util import safe_json_loads
 
 
 logger = logging.getLogger(__name__)
@@ -125,7 +126,7 @@ Respond with JSON:
             logger.info(f"[NODE: generate_recommendations] Final response (first 100 chars): {content_text[:100]}")
 
             try:
-                result = json.loads(content_text)
+                result = safe_json_loads(content_text)
             except json.JSONDecodeError as e:
                 logger.error(f"[NODE: generate_recommendations] JSON decode failed: {e}")
                 raise RuntimeError("Failed to parse JSON from LLM response")
