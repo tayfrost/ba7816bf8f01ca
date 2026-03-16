@@ -238,4 +238,18 @@ Most foreign keys are **`ON DELETE RESTRICT`**, which means:
 One exception:
 - `incident_scores.message_id` is **`ON DELETE CASCADE`** so scores are removed automatically when an incident is deleted.
 
+
+## USES IMPORTANT PLEASE READ
+the crud.py files have a "session: optional[SASession] = None" parameter for most if not all functions. THIS IS FOR TESTING ONLY PLEASE DO NOT PASS IN OPTIONSL SESSIONS
+
+IN ORDER TO CORRECTLY ON BOARD USERS YOU MUST
+1) create a subscription plan
+2) create a company
+3) Have the company subscribe to a plan 
+4) Add users of that compnay
+5) connect the users mailboxes 
+
+TO LOOK AT THE DB DESIGN PLS REFERE TO THIS LINK
+https://docs.google.com/spreadsheets/d/15sU5jR5RN1UvCFWH77F3VLu21RcmtMl2y8YUn34Gc6I/edit?usp=sharing
+
 ---
