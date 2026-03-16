@@ -240,7 +240,7 @@ One exception:
 
 
 ## USES IMPORTANT PLEASE READ
-the crud.py files have a "session: optional[SASession] = None" parameter for most if not all functions. THIS IS FOR TESTING ONLY PLEASE DO NOT PASS IN OPTIONSL SESSIONS
+the crud.py files have a "session: optional[SASession] = None" parameter for most if not all functions. THIS IS FOR TESTING ONLY PLEASE DO NOT PASS IN OPTIONAL SESSIONS
 
 IN ORDER TO CORRECTLY ON BOARD USERS YOU MUST
 1) create a subscription plan
