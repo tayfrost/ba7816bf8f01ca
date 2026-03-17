@@ -12,6 +12,7 @@
 import os
 import sys
 from concurrent import futures
+from datetime import datetime
 from pathlib import Path
 
 # Add parent and generated proto files to path BEFORE other imports
@@ -72,8 +73,10 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         """Classify a message using sliding window approach."""
         print("[REQUEST] Received classification request")
         try:
-            message = request.message
-            print(f"[REQUEST] Message length: {len(message)} chars")
+            # Prepend timestamp at current time as context
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            message = f"[{now}] {request.message}"
+            print(f"[REQUEST] Message length: {len(message)} chars (context included)")
 
             # Tokenize message
             tokens = tokenize_message(self.tokenizer, message)
