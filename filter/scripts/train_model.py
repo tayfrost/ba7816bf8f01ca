@@ -308,7 +308,9 @@ def main() -> None:
     print(f"Model checkpoint saved to: {model_path}")
 
     # Save training log
-    log_path = model_dir / "training_log.json"
+    log_dir = config.LOGS_DIR
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "training_log.json"
     with open(log_path, "w", encoding="utf-8") as f:
         json.dump(training_log, f, indent=2)
     print(f"Training log saved to: {log_path}")
