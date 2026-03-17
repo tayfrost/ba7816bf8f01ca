@@ -154,8 +154,12 @@ def load_dataset(
             f"Mixed dataset: {len(data_v01)} v0.1 + {len(v02_indices)} v0.2 = {len(data)} total"
         )
     else:
-        # Ensure path is resolved (downloads if missing)
-        resolved_path = get_dataset_path(Path(dataset_path).name)
+        # Use the provided path directly if local, else resolve via helper
+        if Path(dataset_path).exists():
+            resolved_path = Path(dataset_path)
+        else:
+            resolved_path = get_dataset_path(Path(dataset_path).name)
+
         with open(resolved_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         print(f"Loaded dataset: {len(data)} examples from {resolved_path.name}")
