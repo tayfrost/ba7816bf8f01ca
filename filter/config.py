@@ -10,7 +10,13 @@ from pathlib import Path
 FILTER_DIR = Path(__file__).parent
 PROJECT_ROOT = FILTER_DIR.parent
 MODELS_DIR = FILTER_DIR / "models"
+LOGS_DIR = MODELS_DIR / "logs"
 EVAL_DIR = FILTER_DIR / "evaluation"
+RESULTS_DIR = EVAL_DIR / "results"
+IMAGES_DIR = RESULTS_DIR / "images"
+NOTEBOOKS_DIR = FILTER_DIR / "notebooks"
+NOTEBOOK_RESULTS_DIR = NOTEBOOKS_DIR / "results"
+NOTEBOOK_IMAGES_DIR = NOTEBOOK_RESULTS_DIR / "images"
 DATASETS_DIR = PROJECT_ROOT / "datasets"
 
 # Model Configuration
