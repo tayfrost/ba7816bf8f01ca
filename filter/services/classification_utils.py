@@ -39,16 +39,16 @@ def create_chunks(tokens: List[int], max_length: int, overlap: int) -> List[List
     start = 0
     # Reserve space for [CLS] and [SEP] tokens
     chunk_size = max_length - 2
-    
+
     while start < len(tokens):
         end = min(start + chunk_size, len(tokens))
         chunk = tokens[start:end]
         chunks.append(chunk)
-        
+
         if end >= len(tokens):
             break
         start += (chunk_size - overlap)
-    
+
     return chunks
 
 
@@ -75,16 +75,16 @@ def prepare_chunk_inputs(
     # Add special tokens
     input_ids = [cls_token_id] + chunk + [sep_token_id]
     attention_mask = [1] * len(input_ids)
-    
+
     # Pad to max_length
     padding_length = max_length - len(input_ids)
     input_ids += [pad_token_id] * padding_length
     attention_mask += [0] * padding_length
-    
+
     # Convert to numpy arrays
     input_ids_array = np.array([input_ids], dtype=np.int64)
     attention_mask_array = np.array([attention_mask], dtype=np.int64)
-    
+
     return input_ids_array, attention_mask_array
 
 
@@ -143,19 +143,19 @@ def process_chunk_predictions(
     # Get predictions
     category_probs = softmax(category_logits[0])
     severity_probs = softmax(severity_logits[0])
-    
+
     category_idx = int(np.argmax(category_probs))
     category_conf = float(category_probs[category_idx])
     category_name = category_labels[category_idx]
-    
+
     severity_idx = int(np.argmax(severity_probs))
     severity_conf = float(severity_probs[severity_idx])
     severity_name = severity_labels[severity_idx]
-    
+
     # Calculate risk score
     is_risk_category = category_name in risk_categories
     risk_score = category_conf if is_risk_category else 0.0
-    
+
     return {
         "category": category_name,
         "category_conf": category_conf,
@@ -181,10 +181,10 @@ def aggregate_chunk_results(
     """
     # Find chunk with highest risk score
     max_result = max(results, key=lambda r: (r["risk_score"], r["category_conf"]))
-    
+
     # Determine final risk status
     is_risk = max_result["risk_score"] > threshold
-    
+
     # Build response text
     all_responses = []
     for i, result in enumerate(results):
@@ -194,7 +194,7 @@ def aggregate_chunk_results(
             f"Risk: {result['risk_score']:.3f}"
         )
         all_responses.append(response_str)
-    
+
     return {
         "category": max_result["category"],
         "category_confidence": max_result["category_conf"],
