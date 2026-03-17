@@ -22,5 +22,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+from app.middleware.metrics import setup_metrics
+setup_metrics(app)
+
 app.include_router(slack_router)
 app.include_router(gmail_router)

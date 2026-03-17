@@ -20,3 +20,9 @@ from sentinelai_kg.tools import mcp
 if __name__ == "__main__":
     get_dataset()
     mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT)
+
+# Accepted `de225e387cb5582385427e1b3d080a42e7ae0c82` over `dev` incoming, due to modularisation.
+
+# Codeowner approves, no need to mix ai-agent (#14+) again.
+
+# - Reviewed by: k23175144

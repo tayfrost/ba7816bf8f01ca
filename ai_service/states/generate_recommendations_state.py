@@ -4,15 +4,17 @@ import os
 import json
 import logging
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from schema.agent_state import AgentState
 from services.mcp_service import load_mcp_tools
+from utils.json_util import safe_json_loads
 
 
 logger = logging.getLogger(__name__)
 
 
-async def generate_recommendations(state: AgentState) -> AgentState:
+async def generate_recommendations(state: AgentState, config: RunnableConfig) -> AgentState:
     """Generate HR recommendations based on assessment with evidence-based advice from knowledge graph."""
     from agent import prompt_service
     
@@ -38,7 +40,8 @@ async def generate_recommendations(state: AgentState) -> AgentState:
     
     # Load and bind MCP tools
     logger.info("[NODE: generate_recommendations] Loading MCP tools")
-    kg_tools = await load_mcp_tools()
+    mcp_client = config.get("configurable", {}).get("mcp_client")
+    kg_tools = await load_mcp_tools(mcp_client)
     logger.info(f"[NODE: generate_recommendations] Loaded {len(kg_tools)} MCP tools")
     
     llm_with_tools = llm.bind_tools(kg_tools) if kg_tools else llm
@@ -125,7 +128,7 @@ Respond with JSON:
             logger.info(f"[NODE: generate_recommendations] Final response (first 100 chars): {content_text[:100]}")
 
             try:
-                result = json.loads(content_text)
+                result = safe_json_loads(content_text)
             except json.JSONDecodeError as e:
                 logger.error(f"[NODE: generate_recommendations] JSON decode failed: {e}")
                 raise RuntimeError("Failed to parse JSON from LLM response")

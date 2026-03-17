@@ -26,8 +26,6 @@ services:
       - "9000:8000"
     env_file:
       - ./webhooks/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@pgvector:5432/sentinelai
     depends_on:
       - pgvector
     restart: unless-stopped
@@ -44,12 +42,22 @@ services:
       - pgvector
     restart: unless-stopped
 
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./api/.env
+    depends_on:
+      - pgvector
+    restart: unless-stopped
+
   pgvector:
     image: pgvector/pgvector:pg16
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=sentinelai
+    env_file:
+      - ./.env
     ports:
       - "5432:5432"
     volumes:
@@ -73,6 +81,7 @@ services:
       dockerfile: knowledge-graph/mcp-server/Dockerfile
     ports:
       - "8001:8001"
+      - "9102:9102"
     environment:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8001
@@ -92,8 +101,9 @@ services:
     ports:
       - "7474:7474"
       - "7687:7687"
+    env_file:
+      - ./.env.neo4j
     environment:
-      NEO4J_AUTH: neo4j/sentinelai2025
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_dbms_memory_heap_initial__size: 256m
       NEO4J_dbms_memory_heap_max__size: 512m
@@ -105,6 +115,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres-exporter
+    restart: unless-stopped
+    ports:
+      - "9187:9187"
+    env_file:
+      - ./.env
+    volumes:
+      - ./monitoring/postgres-exporter/queries.yaml:/etc/postgres-exporter/queries.yaml:ro
+    command:
+      - '--extend.query-path=/etc/postgres-exporter/queries.yaml'
+    depends_on:
+      - pgvector
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -118,6 +143,8 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
+    depends_on:
+      - postgres-exporter
 
   grafana:
     image: grafana/grafana:latest
@@ -128,9 +155,10 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    env_file:
+      - ./.env.grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
     depends_on:
       - prometheus

@@ -6,6 +6,7 @@ import logging
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from schema.agent_state import AgentState
+from utils.json_util import safe_json_loads
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ Respond with ONLY a JSON object, which has to obtain all of these fields with in
     logger.info("[NODE: grade_message] Calling LLM for scoring")
     response = await llm.ainvoke(messages)
     logger.info(f"[NODE: grade_message] LLM response (first 100 chars): {str(response.content)[:100]}")
-    scores = json.loads(response.content)
+    scores = safe_json_loads(response.content)
     
     # Store scores in state for recommendations node
     if state.get('hr_report') is None:

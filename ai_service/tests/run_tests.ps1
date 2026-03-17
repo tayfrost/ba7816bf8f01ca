@@ -1,5 +1,5 @@
-# SentinelAI Integration Test Runner
-# Runs integration tests against deployed Docker containers
+# SentinelAI Test Runner
+# Runs all tests from the tests directory
 
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host "SentinelAI Integration Tests" -ForegroundColor Cyan
@@ -62,13 +62,13 @@ try {
 }
 Write-Host ""
 
-# Run integration tests
+# Run all tests
 Write-Host "================================" -ForegroundColor Cyan
-Write-Host "Running Integration Tests..." -ForegroundColor Cyan
+Write-Host "Running All Tests..." -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
-python -m pytest tests/test_integration.py -v --tb=short
+python -m pytest tests -v --tb=short
 
 # Show results location
 Write-Host ""
@@ -79,7 +79,7 @@ Write-Host ""
 
 $resultsDir = Join-Path $aiServicePath "tests\test_results"
 if (Test-Path $resultsDir) {
-    $latestLog = Get-ChildItem $resultsDir -Filter "integration_test_*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $latestLog = Get-ChildItem $resultsDir -Filter "*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     $summaryFile = Join-Path $resultsDir "latest_test_summary.txt"
     
     if (Test-Path $summaryFile) {

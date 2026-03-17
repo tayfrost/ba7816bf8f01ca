@@ -2,7 +2,7 @@
 
 import pytest
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from agent import app, assess_risk, grade_message, generate_recommendations, should_continue
 from schema.agent_state import AgentState
@@ -29,22 +29,20 @@ class TestEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert "status" in data
-        assert "mistral_api_configured" in data
+        assert "openai_api_configured" in data
     
     @patch.dict(os.environ, {}, clear=True)
     def test_analyze_missing_api_key(self):
         """Test analyze endpoint fails without API key."""
         response = client.post("/analyze", json={"message": "test"})
         assert response.status_code == 500
-        assert "MISTRAL_API_KEY" in response.json()["detail"]
+        assert "OPENAI_API_KEY" in response.json()["detail"]
     
-    @patch.dict(os.environ, {"MISTRAL_API_KEY": "test_key"})
-    @patch("agent.llm")
-    def test_analyze_no_risk_message(self, mock_llm):
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("agent.agent.ainvoke", new_callable=AsyncMock)
+    def test_analyze_no_risk_message(self, mock_agent_ainvoke):
         """Test analyze with non-risk message."""
-        mock_response = MagicMock()
-        mock_response.content = '{"is_risk": false, "reasoning": "No indicators"}'
-        mock_llm.invoke.return_value = mock_response
+        mock_agent_ainvoke.return_value = {"is_confirmed_risk": False}
         
         response = client.post("/analyze", json={"message": "Great day at work!"})
         assert response.status_code == 200
@@ -53,17 +51,25 @@ class TestEndpoints:
         assert "response" in data
         assert data["response"] == "No significant mental health risk detected."
     
-    @patch.dict(os.environ, {"MISTRAL_API_KEY": "test_key"})
-    @patch("agent.llm")
-    def test_analyze_risk_message(self, mock_llm):
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("agent.agent.ainvoke", new_callable=AsyncMock)
+    def test_analyze_risk_message(self, mock_agent_ainvoke):
         """Test analyze with risk message."""
-        # Mock responses for assess_risk, grade_message, generate_recommendations
-        mock_responses = [
-            MagicMock(content='{"is_risk": true, "reasoning": "Stress indicators"}'),
-            MagicMock(content='{"stress_level": 75, "suicide_risk": 20, "burnout_score": 80, "depression_indicators": 45, "anxiety_markers": 60, "isolation_tendency": 35}'),
-            MagicMock(content='{"recommendations": ["EAP referral", "Manager check-in"], "response": "High stress detected. Recommend immediate support."}')
-        ]
-        mock_llm.invoke.side_effect = mock_responses
+        mock_agent_ainvoke.return_value = {
+            "is_confirmed_risk": True,
+            "hr_report": {
+                "scores": {
+                    "stress_level": 75,
+                    "suicide_risk": 20,
+                    "burnout_score": 80,
+                    "depression_indicators": 45,
+                    "anxiety_markers": 60,
+                    "isolation_tendency": 35,
+                },
+                "response": "High stress detected. Recommend immediate support.",
+                "recommendations": ["EAP referral", "Manager check-in"],
+            },
+        }
         
         response = client.post("/analyze", json={"message": "I'm completely burned out"})
         assert response.status_code == 200
@@ -77,57 +83,77 @@ class TestEndpoints:
 class TestWorkflowNodes:
     """Test LangGraph workflow nodes."""
     
-    @patch("agent.llm")
-    def test_assess_risk_node_positive(self, mock_llm):
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("states.assess_risk_state.ChatOpenAI")
+    async def test_assess_risk_node_positive(self, mock_chat_openai):
         """Test assess_risk node with risk detected."""
+        mock_llm_instance = MagicMock()
         mock_response = MagicMock()
         mock_response.content = '{"is_risk": true, "reasoning": "Burnout indicators"}'
-        mock_llm.invoke.return_value = mock_response
+        mock_llm_instance.ainvoke = AsyncMock(return_value=mock_response)
+        mock_chat_openai.return_value = mock_llm_instance
         
         state = AgentState(raw_message="I can't take it anymore")
-        result = assess_risk(state)
+        result = await assess_risk(state)
         
         assert result['is_confirmed_risk'] is True
     
-    @patch("agent.llm")
-    def test_assess_risk_node_negative(self, mock_llm):
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("states.assess_risk_state.ChatOpenAI")
+    async def test_assess_risk_node_negative(self, mock_chat_openai):
         """Test assess_risk node with no risk."""
+        mock_llm_instance = MagicMock()
         mock_response = MagicMock()
         mock_response.content = '{"is_risk": false, "reasoning": "Positive message"}'
-        mock_llm.invoke.return_value = mock_response
+        mock_llm_instance.ainvoke = AsyncMock(return_value=mock_response)
+        mock_chat_openai.return_value = mock_llm_instance
         
         state = AgentState(raw_message="Having a great day!")
-        result = assess_risk(state)
+        result = await assess_risk(state)
         
         assert result['is_confirmed_risk'] is False
     
-    @patch("agent.llm")
-    def test_grade_message_node(self, mock_llm):
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("states.grade_message_state.ChatOpenAI")
+    async def test_grade_message_node(self, mock_chat_openai):
         """Test grade_message node."""
+        mock_llm_instance = MagicMock()
         mock_response = MagicMock()
         mock_response.content = '{"stress_level": 65, "suicide_risk": 15, "burnout_score": 70, "depression_indicators": 40, "anxiety_markers": 50, "isolation_tendency": 25}'
-        mock_llm.invoke.return_value = mock_response
+        mock_llm_instance.ainvoke = AsyncMock(return_value=mock_response)
+        mock_chat_openai.return_value = mock_llm_instance
         
         state = AgentState(raw_message="Feeling stressed", is_confirmed_risk=True)
-        result = grade_message(state)
+        result = await grade_message(state)
         
         assert result['hr_report'] is not None
         assert result['hr_report']['scores']['stress_level'] == 65
         assert result['hr_report']['scores']['burnout_score'] == 70
     
-    @patch("agent.llm")
-    def test_generate_recommendations_node(self, mock_llm):
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("states.generate_recommendations_state.load_mcp_tools", new_callable=AsyncMock)
+    @patch("states.generate_recommendations_state.ChatOpenAI")
+    async def test_generate_recommendations_node(self, mock_chat_openai, mock_load_mcp_tools):
         """Test generate_recommendations node."""
+        mock_llm_instance = MagicMock()
         mock_response = MagicMock()
         mock_response.content = '{"recommendations": ["Contact EAP", "Schedule 1-on-1"], "response": "Moderate stress. Recommend intervention."}'
-        mock_llm.invoke.return_value = mock_response
+        mock_llm_instance.ainvoke = AsyncMock(return_value=mock_response)
+        mock_llm_instance.bind_tools.return_value = mock_llm_instance
+        mock_chat_openai.return_value = mock_llm_instance
+        mock_load_mcp_tools.return_value = []
         
         state = AgentState(
             raw_message="Overwhelmed with work",
             is_confirmed_risk=True,
-            hr_report={"scores": {"stress_level": 60}}
+            hr_report={"scores": {"stress_level": 60}},
+            mcp_client=MagicMock(),
         )
-        result = generate_recommendations(state)
+        result = await generate_recommendations(state)
         
         assert "recommendations" in result['hr_report']
         assert len(result['hr_report']['recommendations']) == 2
@@ -152,13 +178,11 @@ class TestSchemaValidation:
         response = client.post("/analyze", json={})
         assert response.status_code == 422  # Validation error
     
-    @patch.dict(os.environ, {"MISTRAL_API_KEY": "test_key"})
-    @patch("agent.llm")
-    def test_output_schema_validation(self, mock_llm):
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("agent.agent.ainvoke", new_callable=AsyncMock)
+    def test_output_schema_validation(self, mock_agent_ainvoke):
         """Test AgentOutput schema validation."""
-        mock_response = MagicMock()
-        mock_response.content = '{"is_risk": false, "reasoning": "test"}'
-        mock_llm.invoke.return_value = mock_response
+        mock_agent_ainvoke.return_value = {"is_confirmed_risk": False}
         
         response = client.post("/analyze", json={"message": "test"})
         assert response.status_code == 200
@@ -173,29 +197,37 @@ class TestSchemaValidation:
 class TestLLMConnectivity:
     """Test LLM connectivity."""
     
-    @patch.dict(os.environ, {"MISTRAL_API_KEY": "test_key"})
-    def test_llm_initialization(self):
-        """Test LLM is properly initialized."""
-        from agent import llm
-        assert llm is not None
-        assert llm.model == "mistral-large-latest"
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("states.assess_risk_state.ChatOpenAI")
+    async def test_llm_initialization(self, mock_chat_openai):
+        """Test OpenAI LLM client is initialized with expected config."""
+        mock_llm_instance = MagicMock()
+        mock_response = MagicMock()
+        mock_response.content = '{"is_risk": false, "reasoning": "test"}'
+        mock_llm_instance.ainvoke = AsyncMock(return_value=mock_response)
+        mock_chat_openai.return_value = mock_llm_instance
+
+        state = AgentState(raw_message="test message")
+        await assess_risk(state)
+
+        assert mock_chat_openai.called
+        kwargs = mock_chat_openai.call_args.kwargs
+        assert kwargs["model"] == os.getenv("MODEL", "gpt-5-nano")
+        assert kwargs["api_key"] == "test_key"
     
-    @patch.dict(os.environ, {"MISTRAL_API_KEY": "test_key"})
-    @patch("agent.ChatMistralAI")
-    def test_llm_invocation_structure(self, mock_mistral_class):
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
+    @patch("states.assess_risk_state.ChatOpenAI")
+    async def test_llm_invocation_structure(self, mock_openai_class):
         """Test LLM invocation with correct message structure."""
         mock_llm_instance = MagicMock()
         mock_response = MagicMock()
         mock_response.content = '{"is_risk": false, "reasoning": "test"}'
-        mock_llm_instance.invoke.return_value = mock_response
-        mock_mistral_class.return_value = mock_llm_instance
-        
-        # Import after mocking
-        import importlib
-        import agent as agent_module
-        importlib.reload(agent_module)
-        
+        mock_llm_instance.ainvoke = AsyncMock(return_value=mock_response)
+        mock_openai_class.return_value = mock_llm_instance
+
         state = AgentState(raw_message="test message")
-        result = agent_module.assess_risk(state)
+        await assess_risk(state)
         
-        assert mock_llm_instance.invoke.called
+        assert mock_llm_instance.ainvoke.called

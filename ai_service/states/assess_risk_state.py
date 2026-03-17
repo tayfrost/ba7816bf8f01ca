@@ -6,6 +6,7 @@ import logging
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from schema.agent_state import AgentState
+from utils.json_util import safe_json_loads
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ Respond with ONLY a JSON object:
     logger.info("[NODE: assess_risk] Calling LLM for risk assessment")
     response = await llm.ainvoke(messages)
     logger.info(f"[NODE: assess_risk] LLM response (first 100 chars): {str(response.content)[:100]}")
-    result = json.loads(response.content)
+    result = safe_json_loads(response.content)
     
     state['is_confirmed_risk'] = result['is_risk']
     logger.info(f"[NODE: assess_risk] Risk detected: {result['is_risk']}")
