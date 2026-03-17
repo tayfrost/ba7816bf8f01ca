@@ -79,9 +79,14 @@ class MentalHealthDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         item = self.data[idx]
 
+        # Interleave timestamp as context if available
+        message = item["message"]
+        if "timestamp" in item and item["timestamp"]:
+            message = f"[{item['timestamp']}] {message}"
+
         # Tokenize message
         encoding = self.tokenizer(
-            item["message"],
+            message,
             max_length=self.max_length,
             padding="max_length",
             truncation=True,
