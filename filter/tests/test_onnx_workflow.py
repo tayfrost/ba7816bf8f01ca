@@ -29,10 +29,10 @@ def test_conversion_and_upload():
 def test_inference():
     """Test ONNX model download and inference."""
     print("\n=== TEST 2: Download and Inference ===")
-    
+
     # Load ONNX model and tokenizer
     session, tokenizer = load_onnx_model_and_tokenizer()
-    
+
     # Prepare test input
     test_text = "I feel so overwhelmed with work lately."
     
@@ -43,7 +43,7 @@ def test_inference():
         truncation=True,
         return_tensors="np"
     )
-    
+
     # Run inference
     outputs = session.run(
         None,
@@ -52,15 +52,15 @@ def test_inference():
             "attention_mask": inputs["attention_mask"].astype(np.int64)
         }
     )
-    
+
     category_logits, severity_logits = outputs
     category_pred = np.argmax(category_logits, axis=1)[0]
     severity_pred = np.argmax(severity_logits, axis=1)[0]
-    
+
     # Map back to labels
     category_labels = {v: k for k, v in config.CATEGORY_MAP.items()}
     severity_labels = {v: k for k, v in config.SEVERITY_MAP.items()}
-    
+
     print(f"Input: '{test_text}'")
     print(f"Category: {category_labels[category_pred]}")
     print(f"Severity: {severity_labels[severity_pred]}")
