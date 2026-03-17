@@ -25,25 +25,31 @@ from services.model_factory import load_production_model
 
 @pytest.fixture
 def sample_data():
-    """Returns a list of sample dataset items."""
+    """Returns a list of sample dataset items with timestamps."""
     return [
         {
+            "id": 1,
             "message": "I am so stressed out with work.",
             "category": "stress",
             "stage": "early",
             "is_risk": 1,
+            "timestamp": "2024-05-20 09:00",
         },
         {
+            "id": 2,
             "message": "I am fine and happy.",
             "category": "neutral",
             "stage": "none",
             "is_risk": 0,
+            "timestamp": "2024-05-20 10:00",
         },
         {
+            "id": 3,
             "message": "I want to end it all.",
             "category": "suicidal_ideation",
             "stage": "late",
             "is_risk": 1,
+            "timestamp": "2024-05-20 11:00",
         },
     ]
 
