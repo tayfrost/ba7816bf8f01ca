@@ -6,7 +6,7 @@
   "median_token_length": 10,
   "mean_token_length": 10.7,
   "max_token_length": 33,
-  "messages_exceeding_128": 0,
+  "messages_exceeding_max": 0,
   "truncation_rate": 0.0,
   "category_balance": 0.26,
   "most_common_category": "neutral",
