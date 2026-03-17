@@ -212,8 +212,11 @@ def main():
     print(f"Using device: {device}\n")
 
     # Paths
-    output_dir = config.EVAL_DIR
-    output_dir.mkdir(exist_ok=True)
+    output_dir = config.RESULTS_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    images_dir = config.IMAGES_DIR
+    images_dir.mkdir(parents=True, exist_ok=True)
 
     # Load dataset
     print("Loading test dataset...")
@@ -306,7 +309,7 @@ def main():
         category_cm,
         category_labels,
         "Category Classification Confusion Matrix",
-        output_dir / "confusion_matrix_category.png",
+        images_dir / "confusion_matrix_category.png",
         figsize=(12, 10),
     )
 
@@ -318,7 +321,7 @@ def main():
         severity_cm,
         severity_labels,
         "Severity Classification Confusion Matrix",
-        output_dir / "confusion_matrix_severity.png",
+        images_dir / "confusion_matrix_severity.png",
         figsize=(8, 6),
     )
 

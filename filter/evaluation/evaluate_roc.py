@@ -154,7 +154,7 @@ def main():
     )
 
     # 6. Save Artifacts
-    plot_roc_curve(fpr, tpr, roc_auc, config.EVAL_DIR / "roc_curve.png")
+    plot_roc_curve(fpr, tpr, roc_auc, config.IMAGES_DIR / "roc_curve.png")
 
     results = {
         "roc_auc": float(roc_auc),
@@ -172,7 +172,7 @@ def main():
         },
     }
 
-    results_path = config.EVAL_DIR / "roc_evaluation_results.json"
+    results_path = config.RESULTS_DIR / "roc_evaluation_results.json"
     with open(results_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
     print(f"Results saved to: {results_path}")

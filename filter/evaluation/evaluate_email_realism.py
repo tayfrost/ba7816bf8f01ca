@@ -128,7 +128,7 @@ def main():
         "notes": "Evaluation on v0.3 email subset (IDs > 5000). OOD Check."
     }
 
-    output_path = config.EVAL_DIR / "email_realism_results.json"
+    output_path = config.RESULTS_DIR / "email_realism_results.json"
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output, f, indent=2)
 

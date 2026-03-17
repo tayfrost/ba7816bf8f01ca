@@ -135,8 +135,8 @@ def main():
 
     # Paths
     dataset_path = get_dataset_path("sentinelai_dataset_v0.2.json")
-    output_dir = config.EVAL_DIR
-    output_dir.mkdir(exist_ok=True)
+    output_dir = config.RESULTS_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Use raw text instead of tokenised tensors.
     with open(dataset_path, "r", encoding="utf-8") as f:
