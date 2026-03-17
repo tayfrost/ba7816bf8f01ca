@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import re
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 from metrics import track_tool_call
 
 logging.basicConfig(
@@ -233,7 +233,7 @@ TOPIC_REGEXES = {
 }
 
 
-def detect_concerns(text: str) -> list[str]:
+async def detect_concerns(text: str) -> list[str]:
     return [tid for tid, regex in TOPIC_REGEXES.items() if regex.search(text)]
 
 
@@ -271,9 +271,9 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool()
+
 @track_tool_call("triage_crisis_risk")
-def triage_crisis_risk(text: str) -> dict:
+async def triage_crisis_risk(text: str) -> dict:
     """Check if user input contains crisis or self-harm indicators.
 
     CALL THIS FIRST before get_recommendation if the user's message mentions
@@ -318,12 +318,8 @@ def triage_crisis_risk(text: str) -> dict:
     }
 
 
-@mcp.tool()
 @track_tool_call("get_recommendation")
-def get_recommendation(
-    diagnosis: str,
-    max_results: int = 5,
-) -> dict:
+async def get_recommendation(diagnosis: str, max_results: int = 5) -> dict:
     """Get ranked evidence-based recommendations for a mental health diagnosis or concern.
 
     PRIMARY TOOL. Given free-text describing a patient's symptoms, diagnosis, or
@@ -344,13 +340,13 @@ def get_recommendation(
         source paper, DOI, citation count, technique, and technique description),
         and a medical disclaimer.
     """
-    crisis_check = triage_crisis_risk(diagnosis)
+    crisis_check = await triage_crisis_risk(diagnosis)
     if crisis_check.get("crisis_detected"):
         return crisis_check
 
     diagnosis = diagnosis[:MAX_INPUT_LENGTH]
     max_results = _clamp_results(max_results)
-    concerns = detect_concerns(diagnosis)
+    concerns = await detect_concerns(diagnosis)
 
     if not concerns:
         return {
@@ -388,12 +384,8 @@ def get_recommendation(
     }
 
 
-@mcp.tool()
 @track_tool_call("get_recommendation_by_topic")
-def get_recommendation_by_topic(
-    topic_id: str,
-    max_results: int = 5,
-) -> dict:
+async def get_recommendation_by_topic(topic_id: str, max_results: int = 5) -> dict:
     """Get recommendations for a specific topic ID from the knowledge graph.
 
     Use list_topics first to see available topic IDs, then query directly by ID
@@ -425,12 +417,8 @@ def get_recommendation_by_topic(
     }
 
 
-@mcp.tool()
 @track_tool_call("get_recommendation_by_technique")
-def get_recommendation_by_technique(
-    technique_id: str,
-    max_results: int = 5,
-) -> dict:
+async def get_recommendation_by_technique(technique_id: str, max_results: int = 5) -> dict:
     """Get recommendations that use a specific therapeutic technique.
 
     Use this when the agent wants to recommend a particular intervention approach
@@ -467,9 +455,8 @@ def get_recommendation_by_technique(
     }
 
 
-@mcp.tool()
 @track_tool_call("list_topics")
-def list_topics() -> dict:
+async def list_topics() -> dict:
     """List all 24 mental health topics available in the knowledge graph.
 
     Returns topic IDs, names, and descriptions. Use these IDs with
@@ -485,9 +472,8 @@ def list_topics() -> dict:
     return {"topics": topics, "count": len(topics)}
 
 
-@mcp.tool()
 @track_tool_call("get_techniques_for_topic")
-def get_techniques_for_topic(topic_id: str) -> dict:
+async def get_techniques_for_topic(topic_id: str) -> dict:
     """Get all evidence-based techniques that address a specific mental health topic.
 
     Args:
@@ -513,15 +499,8 @@ def get_techniques_for_topic(topic_id: str) -> dict:
     }
 
 
-@mcp.tool()
 @track_tool_call("search_papers")
-def search_papers(
-    query: str = "",
-    topic_id: str = "",
-    technique_id: str = "",
-    min_citations: int = 0,
-    max_results: int = 10,
-) -> dict:
+async def search_papers(query: str = "", topic_id: str = "", technique_id: str = "", min_citations: int = 0, max_results: int = 10) -> dict:
     """Search research papers in the knowledge graph by keyword, topic, or technique.
 
     At least one of query, topic_id, or technique_id must be provided.
@@ -589,9 +568,8 @@ def search_papers(
     }
 
 
-@mcp.tool()
 @track_tool_call("get_paper_details")
-def get_paper_details(paper_id: str) -> dict:
+async def get_paper_details(paper_id: str) -> dict:
     """Get full details of a specific research paper including all its advice items.
 
     Args:
@@ -636,9 +614,8 @@ def get_paper_details(paper_id: str) -> dict:
     }
 
 
-@mcp.tool()
 @track_tool_call("list_techniques")
-def list_techniques() -> dict:
+async def list_techniques() -> dict:
     """List all 37 evidence-based techniques in the knowledge graph.
 
     Returns technique IDs, names, descriptions, and which topics they address.
@@ -654,9 +631,8 @@ def list_techniques() -> dict:
     return {"techniques": techniques, "count": len(techniques)}
 
 
-@mcp.tool()
 @track_tool_call("get_stats")
-def get_stats() -> dict:
+async def get_stats() -> dict:
     """Get overall statistics about the knowledge graph.
 
     Returns:
@@ -707,7 +683,9 @@ def get_stats() -> dict:
 
 
 if __name__ == "__main__":
+    import uvicorn
     from metrics import start_metrics_server
     start_metrics_server()
     get_dataset()
-    mcp.run(transport="sse", host=MCP_HOST, port=MCP_PORT)
+    app = mcp.http_app()
+    uvicorn.run(app, host=MCP_HOST, port=MCP_PORT)
