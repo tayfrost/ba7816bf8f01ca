@@ -5,8 +5,7 @@ Dima - what is this sentinelai.filter.v1
 
 import pytest
 import grpc
-#from sentinelai.filter.v1 import filter_pb2, filter_pb2_grpc
-from filter.v1 import filter_pb2, filter_pb2_grpc
+from sentinelai.filter.v1 import filter_pb2, filter_pb2_grpc
 from app.services.filter_service import filter_message, FILTER_SERVICE_HOST
 
 
