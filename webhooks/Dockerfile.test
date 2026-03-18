@@ -1,0 +1,49 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# ── System dependencies ───────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Python dependencies ───────────────────────────────────────────
+COPY webhooks/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir pytest pytest-asyncio httpx
+
+# ── Generate filter proto stubs ───────────────────────────────────
+# The test suite mocks gRPC calls but still imports filter_pb2 /
+# filter_pb2_grpc at collection time, so the generated files must exist.
+COPY protos/filter ./protos/filter
+RUN python -m grpc_tools.protoc \
+    -I./protos \
+    --python_out=. \
+    --grpc_python_out=. \
+    ./protos/filter/v1/filter.proto && \
+    touch filter/__init__.py && \
+    touch filter/v1/__init__.py
+
+# ── Application source ────────────────────────────────────────────
+COPY webhooks/ .
+
+# ── Stub out the backend DB package ──────────────────────────────
+# The unit tests monkeypatch all DB calls, but Python still needs to
+# import the module tree without error. We create empty stubs so
+# `from backend.New_database import new_crud` doesn't raise ImportError.
+RUN mkdir -p backend/New_database && \
+    touch backend/__init__.py && \
+    touch backend/New_database/__init__.py && \
+    printf 'Session = object\ndef create_user(*a, **kw): pass\ndef get_user_by_id(*a, **kw): pass\n' \
+        > backend/New_database/new_crud.py && \
+    printf '' > backend/New_database/new_crud_second_half.py && \
+    printf 'class User: pass\nclass GoogleMailbox: pass\nclass SlackWorkspace: pass\nclass SlackAccount: pass\nclass MessageIncident: pass\nclass IncidentScores: pass\n' \
+        > backend/New_database/new_oop.py
+
+# ── Test configuration ────────────────────────────────────────────
+COPY pytest.ini .
+COPY tests/ ./tests/
+
+# ── Entry point ───────────────────────────────────────────────────
+CMD ["pytest", "tests/", "-v", "--tb=short", \
+     "--ignore=tests/test_filter_integration.py"]
