@@ -29,12 +29,14 @@ def _make_user(**kw):
 
 
 def _make_mailbox(**kw):
-    return SimpleNamespace(
+    defaults = dict(
         google_mailbox_id=10, company_id=1, user_id=uuid.uuid4(),
-        email_address="emp@example.com", token_json={"token": "t"},
-        last_history_id=None, watch_expiration=None, **kw
+        email_address="emp@example.com",
+        token_json={"token": "t", "refresh_token": "r"},
+        last_history_id="100", watch_expiration=None,
     )
-
+    defaults.update(kw)
+    return SimpleNamespace(**defaults)
 
 def _make_workspace(**kw):
     return SimpleNamespace(

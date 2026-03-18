@@ -9,12 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ── Python dependencies ───────────────────────────────────────────
 COPY webhooks/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir pytest pytest-asyncio httpx
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Generate filter proto stubs ───────────────────────────────────
-# The test suite mocks gRPC calls but still imports filter_pb2 /
-# filter_pb2_grpc at collection time, so the generated files must exist.
 COPY protos/filter ./protos/filter
 RUN python -m grpc_tools.protoc \
     -I./protos \
@@ -26,24 +23,19 @@ RUN python -m grpc_tools.protoc \
 
 # ── Application source ────────────────────────────────────────────
 COPY webhooks/ .
+ENV PYTHONPATH=/app
 
 # ── Stub out the backend DB package ──────────────────────────────
-# The unit tests monkeypatch all DB calls, but Python still needs to
-# import the module tree without error. We create empty stubs so
-# `from backend.New_database import new_crud` doesn't raise ImportError.
 RUN mkdir -p backend/New_database && \
     touch backend/__init__.py && \
     touch backend/New_database/__init__.py && \
-    printf 'Session = object\ndef create_user(*a, **kw): pass\ndef get_user_by_id(*a, **kw): pass\n' \
+    printf 'class Session:\n    def __init__(self): pass\n    def execute(self, *a, **kw): return self\n    def scalar_one_or_none(self): return None\n    def close(self): pass\ndef create_user(*a, **kw): pass\ndef get_user_by_id(*a, **kw): pass\ndef list_companies(*a, **kw): return []\n' \
         > backend/New_database/new_crud.py && \
-    printf '' > backend/New_database/new_crud_second_half.py && \
-    printf 'class User: pass\nclass GoogleMailbox: pass\nclass SlackWorkspace: pass\nclass SlackAccount: pass\nclass MessageIncident: pass\nclass IncidentScores: pass\n' \
+    printf 'def create_google_mailbox(*a, **kw): pass\ndef get_google_mailbox_by_email(*a, **kw): pass\ndef update_google_mailbox_token(*a, **kw): pass\ndef set_google_mailbox_history_id(*a, **kw): pass\ndef update_google_mailbox_watch_expiration(*a, **kw): pass\ndef list_google_mailboxes_for_company(*a, **kw): return []\ndef create_workspace(*a, **kw): pass\ndef get_workspace_by_team_id(*a, **kw): pass\ndef update_workspace_token(*a, **kw): pass\ndef create_slack_account(*a, **kw): pass\ndef get_slack_account(*a, **kw): pass\ndef update_slack_account_email(*a, **kw): pass\ndef create_message_incident(*a, **kw): pass\ndef create_incident_scores(*a, **kw): pass\n' \
+        > backend/New_database/new_crud_second_half.py && \
+    printf 'class Company: pass\nclass User: pass\nclass GoogleMailbox: pass\nclass SlackWorkspace: pass\nclass SlackAccount: pass\nclass MessageIncident: pass\nclass IncidentScores: pass\n' \
         > backend/New_database/new_oop.py
 
-# ── Test configuration ────────────────────────────────────────────
-COPY pytest.ini .
-COPY tests/ ./tests/
-
 # ── Entry point ───────────────────────────────────────────────────
-CMD ["pytest", "tests/", "-v", "--tb=short", \
-     "--ignore=tests/test_filter_integration.py"]
+CMD ["pytest", "app/tests/", "-v", "--tb=short", \
+     "--ignore=app/tests/test_filter_integration.py"]

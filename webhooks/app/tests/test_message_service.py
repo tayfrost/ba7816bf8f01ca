@@ -57,20 +57,24 @@ def _make_slack_account(**kw):
 
 
 def _make_mailbox(**kw):
-    return SimpleNamespace(
+    defaults = dict(
         google_mailbox_id=10, company_id=1, user_id=uuid.uuid4(),
         email_address="emp@example.com",
         token_json={"token": "t", "refresh_token": "r"},
-        last_history_id="100", watch_expiration=None, **kw
+        last_history_id="100", watch_expiration=None,
     )
+    defaults.update(kw)
+    return SimpleNamespace(**defaults)
 
 
 def _make_incident(**kw):
-    return SimpleNamespace(
+    defaults = dict(
         message_id=uuid.uuid4(), company_id=1, user_id=uuid.uuid4(),
         source="slack", sent_at=_utcnow(), content_raw={},
-        conversation_id=None, **kw
+        conversation_id=None,
     )
+    defaults.update(kw)
+    return SimpleNamespace(**defaults)
 
 
 def _slack_payload(team_id="T123", user="U999", text="hello", channel="C1",

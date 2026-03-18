@@ -36,7 +36,7 @@ def slack_client(monkeypatch):
     from app.controllers.slack_controller import router
     app = FastAPI()
     app.include_router(router)
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app)
 
 
 @pytest.fixture()
@@ -50,7 +50,8 @@ def gmail_client(monkeypatch):
     from app.controllers.gmail_controller import router
     app = FastAPI()
     app.include_router(router)
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app)
+
 
 
 # ── Slack signature helper ────────────────────────────────────────
@@ -96,21 +97,10 @@ class TestSlackOauthCallback:
         assert "Missing code" in resp.json()["detail"]
 
     def test_missing_state_returns_400(self, slack_client, monkeypatch):
-        # Patch httpx so it doesn't make a real call
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {
-            "ok": True, "team": {"id": "T123"}, "access_token": "xoxb-x"
-        }
-        monkeypatch.setattr(
-            "app.controllers.slack_controller.httpx.AsyncClient",
-            lambda: AsyncMock(__aenter__=AsyncMock(return_value=AsyncMock(
-                post=AsyncMock(return_value=mock_resp)
-            )), __aexit__=AsyncMock(return_value=False)),
-        )
         resp = slack_client.get("/slack/oauth/callback?code=abc")
         assert resp.status_code == 400
         assert "company_id" in resp.json()["detail"].lower()
-
+        
     def test_invalid_state_returns_400(self, slack_client, monkeypatch):
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"ok": True}

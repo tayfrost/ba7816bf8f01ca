@@ -35,13 +35,14 @@ def _make_user(**kw):
 
 
 def _make_mailbox(**kw):
-    return SimpleNamespace(
+    defaults = dict(
         google_mailbox_id=10, company_id=1, user_id=uuid.uuid4(),
         email_address="emp@example.com",
         token_json={"token": "t", "refresh_token": "r"},
-        last_history_id=None, watch_expiration=None, **kw
+        last_history_id=None, watch_expiration=None,
     )
-
+    defaults.update(kw)
+    return SimpleNamespace(**defaults)
 
 def _patch_google(monkeypatch, email="emp@example.com",
                   history_id="12345", expiration="9999999999000"):
@@ -197,7 +198,7 @@ class TestProcessGmailOauth:
         )
         monkeypatch.setattr(
             "app.services.oauth_service.db.create_google_mailbox",
-            lambda *a: new_mailbox,
+            lambda cid, user_id, email, token: new_mailbox,
         )
         monkeypatch.setattr(
             "app.services.oauth_service.db.set_google_mailbox_history_id",
@@ -367,11 +368,11 @@ class TestProcessGmailOauth:
         )
         monkeypatch.setattr(
             "app.services.oauth_service.db.create_viewer_seat",
-            lambda *a: _make_user(),
+            lambda cid, display_name: _make_user(),
         )
         monkeypatch.setattr(
             "app.services.oauth_service.db.create_google_mailbox",
-            lambda *a: mailbox,
+            lambda cid, user_id, email, token: mailbox,
         )
         monkeypatch.setattr(
             "app.services.oauth_service.db.set_google_mailbox_history_id",
