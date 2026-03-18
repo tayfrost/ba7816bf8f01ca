@@ -115,8 +115,16 @@ def list_google_mailboxes_for_company(
     session=None,
 ) -> list[model.GoogleMailbox]:
     return crud2.list_google_mailboxes_for_company(company_id, session=session)
- 
- 
+
+
+def list_companies(
+    *,
+    session=None,
+) -> list[model.Company]:
+    """Return all active (non-deleted) companies. Used by the watch renewal job."""
+    return crud.list_companies(session=session)
+
+
 # ── Slack Workspaces ──────────────────────────────────────────────
  
 def create_workspace(

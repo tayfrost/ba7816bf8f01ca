@@ -13,3 +13,4 @@ protobuf==4.25.2
 prometheus-client>=0.20.0
 pytest==7.4.3
 httpx
+apscheduler>=3.10
