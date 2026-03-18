@@ -1,10 +1,12 @@
 """
 Integration tests for Filter Service gRPC stub.
+Dima - what is this sentinelai.filter.v1 
 """
 
 import pytest
 import grpc
-from sentinelai.filter.v1 import filter_pb2, filter_pb2_grpc
+#from sentinelai.filter.v1 import filter_pb2, filter_pb2_grpc
+from filter.v1 import filter_pb2, filter_pb2_grpc
 from app.services.filter_service import filter_message, FILTER_SERVICE_HOST
 
 
@@ -66,18 +68,21 @@ class TestFilterIntegration:
             assert isinstance(response.is_risk, bool)
             assert response.category == "neutral"
     
-    def test_filter_message_returns_bool(self):
-        """Test the filter_message wrapper function."""
+    def test_filter_message_returns_filter_result(self):
         result = filter_message("Just finished the report, feeling good about it.")
-        assert isinstance(result, bool)
-    
+        assert result is not None
+        assert isinstance(result.is_risk, bool)
+        assert isinstance(result.category, str)
+        assert isinstance(result.severity, str)
+
     def test_filter_message_extracts_is_risk(self):
-        """Test that filter_message correctly extracts is_risk field."""
         neutral = filter_message("Happy Friday everyone!")
-        assert isinstance(neutral, bool)
-        
+        assert neutral is not None
+        assert isinstance(neutral.is_risk, bool)
+
         concerning = filter_message("I feel completely exhausted and hopeless about everything.")
-        assert isinstance(concerning, bool)
+        assert concerning is not None
+        assert isinstance(concerning.is_risk, bool)
     
     def test_long_message_handling(self):
         """Test that long messages are processed via sliding window."""
