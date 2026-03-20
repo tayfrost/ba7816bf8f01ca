@@ -171,6 +171,203 @@ class StripeService:
         await db.refresh(sub)
         return sub
 
+    # ── Invoices ──────────────────────────────────
+
+    @staticmethod
+    def _format_invoice(inv: dict) -> dict:
+        """Convert a Stripe invoice object to our InvoiceResponse shape."""
+        lines = [
+            {
+                "description": li.get("description") or "Subscription charge",
+                "amount_pennies": li.get("amount", 0),
+                "currency": li.get("currency", "gbp").upper(),
+            }
+            for li in inv.get("lines", {}).get("data", [])
+        ]
+        return {
+            "stripe_invoice_id": inv["id"],
+            "number": inv.get("number"),
+            "status": inv.get("status", "unknown"),
+            "amount_due_pennies": inv.get("amount_due", 0),
+            "amount_paid_pennies": inv.get("amount_paid", 0),
+            "currency": inv.get("currency", "gbp").upper(),
+            "period_start": (
+                datetime.fromtimestamp(inv["period_start"], tz=timezone.utc)
+                if inv.get("period_start") else None
+            ),
+            "period_end": (
+                datetime.fromtimestamp(inv["period_end"], tz=timezone.utc)
+                if inv.get("period_end") else None
+            ),
+            "invoice_pdf": inv.get("invoice_pdf"),
+            "hosted_invoice_url": inv.get("hosted_invoice_url"),
+            "lines": lines,
+        }
+
+    @staticmethod
+    async def list_invoices(
+        db: AsyncSession,
+        company_id: int,
+        limit: int = 20,
+    ) -> list[dict]:
+        """Return the last N Stripe invoices for a company."""
+        result = await db.execute(
+            select(Company).where(Company.company_id == company_id)
+        )
+        company = result.scalar_one_or_none()
+        if not company or not company.stripe_customer_id:
+            raise ValueError("Company has no Stripe customer — no invoices yet")
+
+        invoices = stripe.Invoice.list(
+            customer=company.stripe_customer_id,
+            limit=limit,
+        )
+        return [StripeService._format_invoice(inv) for inv in invoices.auto_paging_iter()]
+
+    @staticmethod
+    async def get_upcoming_invoice(
+        db: AsyncSession,
+        company_id: int,
+    ) -> dict:
+        """Return the next upcoming invoice (what the company will be charged next cycle)."""
+        result = await db.execute(
+            select(Company).where(Company.company_id == company_id)
+        )
+        company = result.scalar_one_or_none()
+        if not company or not company.stripe_customer_id:
+            raise ValueError("Company has no Stripe customer")
+
+        try:
+            inv = stripe.Invoice.upcoming(customer=company.stripe_customer_id)
+        except stripe.error.InvalidRequestError as e:
+            raise ValueError(f"No upcoming invoice: {e.user_message}")
+
+        lines = [
+            {
+                "description": li.get("description") or "Subscription charge",
+                "amount_pennies": li.get("amount", 0),
+                "currency": li.get("currency", "gbp").upper(),
+            }
+            for li in inv.get("lines", {}).get("data", [])
+        ]
+        return {
+            "amount_due_pennies": inv.get("amount_due", 0),
+            "currency": inv.get("currency", "gbp").upper(),
+            "period_start": (
+                datetime.fromtimestamp(inv["period_start"], tz=timezone.utc)
+                if inv.get("period_start") else None
+            ),
+            "period_end": (
+                datetime.fromtimestamp(inv["period_end"], tz=timezone.utc)
+                if inv.get("period_end") else None
+            ),
+            "lines": lines,
+        }
+
+    @staticmethod
+    async def send_invoice(
+        db: AsyncSession,
+        company_id: int,
+        stripe_invoice_id: str,
+    ) -> dict:
+        """
+        Send (or resend) a Stripe invoice by email to the customer.
+        Only works on invoices in 'open' status.
+        """
+        result = await db.execute(
+            select(Company).where(Company.company_id == company_id)
+        )
+        company = result.scalar_one_or_none()
+        if not company or not company.stripe_customer_id:
+            raise ValueError("Company has no Stripe customer")
+
+        # Verify invoice belongs to this customer
+        try:
+            inv = stripe.Invoice.retrieve(stripe_invoice_id)
+        except stripe.error.InvalidRequestError:
+            raise ValueError(f"Invoice {stripe_invoice_id} not found")
+
+        if inv.get("customer") != company.stripe_customer_id:
+            raise ValueError("Invoice does not belong to this company")
+
+        if inv.get("status") != "open":
+            raise ValueError(
+                f"Can only send invoices with status 'open' (current: {inv.get('status')})"
+            )
+
+        try:
+            sent = stripe.Invoice.send_invoice(stripe_invoice_id)
+        except stripe.error.StripeError as e:
+            raise ValueError(f"Failed to send invoice: {e.user_message}")
+
+        return StripeService._format_invoice(sent)
+
+    # ── Refunds ───────────────────────────────────
+
+    @staticmethod
+    async def create_refund(
+        db: AsyncSession,
+        payment_id: int,
+        amount_pennies: Optional[int] = None,
+        reason: Optional[str] = None,
+    ) -> dict:
+        """Refund a payment fully or partially via Stripe."""
+
+        # Fetch payment record
+        result = await db.execute(
+            select(Payment).where(Payment.id == payment_id)
+        )
+        payment = result.scalar_one_or_none()
+        if not payment:
+            raise ValueError(f"Payment {payment_id} not found")
+
+        if payment.status == PaymentStatus.REFUNDED.value:
+            raise ValueError("Payment has already been refunded")
+
+        if payment.status != PaymentStatus.SUCCEEDED.value:
+            raise ValueError(f"Cannot refund a payment with status '{payment.status}'")
+
+        if not payment.stripe_payment_intent_id:
+            raise ValueError("Payment has no Stripe Payment Intent ID — cannot refund")
+
+        # Build Stripe refund params
+        refund_params: dict = {"payment_intent": payment.stripe_payment_intent_id}
+        if amount_pennies:
+            if amount_pennies > payment.amount_pennies:
+                raise ValueError(
+                    f"Refund amount ({amount_pennies}p) exceeds original "
+                    f"payment ({payment.amount_pennies}p)"
+                )
+            refund_params["amount"] = amount_pennies
+        if reason:
+            refund_params["reason"] = reason
+
+        # Call Stripe
+        try:
+            refund = stripe.Refund.create(**refund_params)
+        except stripe.error.StripeError as e:
+            raise ValueError(f"Stripe refund failed: {e.user_message}")
+
+        # Update local payment record
+        # Full refund → mark as REFUNDED; partial → keep SUCCEEDED
+        refunded_amount = refund.amount
+        is_full_refund = (amount_pennies is None) or (amount_pennies >= payment.amount_pennies)
+        if is_full_refund:
+            payment.status = PaymentStatus.REFUNDED.value
+
+        db.add(payment)
+        await db.commit()
+        await db.refresh(payment)
+
+        return {
+            "payment_id": payment.id,
+            "stripe_refund_id": refund.id,
+            "amount_pennies": refunded_amount,
+            "currency": refund.currency.upper(),
+            "status": refund.status,
+            "reason": reason,
+        }
+
     # ── Customer portal ───────────────────────────
 
     @staticmethod
@@ -356,11 +553,68 @@ async def _handle_subscription_deleted(db: AsyncSession, stripe_sub: dict) -> No
         db.add(sub)
 
 
+async def _handle_invoice_created(db: AsyncSession, invoice: dict) -> None:
+    """
+    invoice.created — Stripe just generated a new invoice for the upcoming cycle.
+    We log it; Stripe will auto-finalize and charge it (or we can send it manually).
+    """
+    sub_id = invoice.get("subscription")
+    customer_id = invoice.get("customer")
+    logger.info(
+        f"New invoice created | customer={customer_id} sub={sub_id} "
+        f"amount={invoice.get('amount_due')} status={invoice.get('status')}"
+    )
+    # Nothing to write to DB yet — invoice.paid will record the payment once collected.
+
+
+async def _handle_invoice_upcoming(db: AsyncSession, invoice: dict) -> None:
+    """
+    invoice.upcoming — fires ~1 hour before a subscription renews.
+    Good hook for sending reminder emails or checking payment method validity.
+    """
+    sub_id = invoice.get("subscription")
+    customer_id = invoice.get("customer")
+    amount_due = invoice.get("amount_due", 0)
+    logger.info(
+        f"Upcoming invoice reminder | customer={customer_id} sub={sub_id} "
+        f"amount_due={amount_due}"
+    )
+    # Extend here: send reminder email, check for expiring cards, etc.
+
+
+async def _handle_charge_refunded(db: AsyncSession, charge: dict) -> None:
+    """charge.refunded — sync refund status back to local payment record."""
+    payment_intent_id = charge.get("payment_intent")
+    if not payment_intent_id:
+        return
+
+    result = await db.execute(
+        select(Payment).where(Payment.stripe_payment_intent_id == payment_intent_id)
+    )
+    payment = result.scalar_one_or_none()
+    if not payment:
+        logger.warning(f"charge.refunded for unknown payment_intent: {payment_intent_id}")
+        return
+
+    # amount_refunded is the *total* refunded so far (in pennies)
+    amount_refunded = charge.get("amount_refunded", 0)
+    amount_captured = charge.get("amount_captured", payment.amount_pennies)
+
+    if amount_refunded >= amount_captured:
+        payment.status = PaymentStatus.REFUNDED.value
+    # Partial refund — keep SUCCEEDED, Stripe has the source of truth for partial amounts
+
+    db.add(payment)
+
+
 # Event type → handler mapping
 EVENT_HANDLERS = {
     "checkout.session.completed": _handle_checkout_completed,
+    "invoice.created": _handle_invoice_created,
+    "invoice.upcoming": _handle_invoice_upcoming,
     "invoice.paid": _handle_invoice_paid,
     "invoice.payment_failed": _handle_invoice_payment_failed,
     "customer.subscription.updated": _handle_subscription_updated,
     "customer.subscription.deleted": _handle_subscription_deleted,
+    "charge.refunded": _handle_charge_refunded,
 }
