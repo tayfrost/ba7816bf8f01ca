@@ -1,136 +1,99 @@
 # Webhooks Service
 
-FastAPI service that handles Slack app installation, receives Slack messages, applies filtering logic, and persists qualifying messages to database.
+Sits between Slack / Gmail and the SentinelAI database. Receives real-time messages via webhook, runs them through the AI filter, and stores flagged incidents with classification scores.
 
-## Purpose
-
-Provides two main functions:
-1. **OAuth Installation Flow** - Allows users to install the SentinelAI app in their Slack workspace
-2. **Event Webhooks** - Receives and processes messages from installed Slack workspaces
-
-## How It Works
-
-### OAuth Installation Flow (`/slack/oauth/callback`)
-
-When a user clicks "Add to Slack" on your website:
-
-1. User is redirected to Slack's OAuth page to authorize the app
-2. After approval, Slack redirects back to `/slack/oauth/callback` with a temporary `code`
-3. The controller exchanges this `code` for a permanent `access_token` by calling Slack's API
-4. The `team_id` (workspace ID) and `access_token` are stored in the database
-5. This token allows the app to interact with that specific workspace going forward
-
-**Environment Variables Required:**
-- `SLACK_CLIENT_ID` - Your Slack app's client ID
-- `SLACK_CLIENT_SECRET` - Your Slack app's client secret  
-- `SLACK_REDIRECT_URI` - The callback URL (e.g., `https://sentinelai.work/slack/oauth/callback`)
-
-### Event Webhook (`/slack/events`)
-
-Once installed, Slack sends events to this endpoint:
-
-1. **URL Verification** - On first setup, Slack sends a challenge to verify the endpoint
-2. **Signature Verification** - All requests are validated using Slack's signature to prevent spoofing
-3. **Message Processing** - When a message event arrives:
-   - Extract `team_id`, `user_id`, `text`, and `timestamp`
-   - Run the message through the filter service (AI-based filtering)
-   - If the filter approves it, store the message in the database via db_service
+---
 
 ## Structure
 
 ```
-app/
-├── controllers/    # API routes (OAuth and events endpoints)
-├── services/       # Business logic (Slack signature verification, DB, filtering)
-├── schemas/        # Pydantic data models (WorkspaceCredentials, MessageEvent)
-└── utils/         # Helper functions
+webhooks/
+├── app/
+│   ├── controllers/   # HTTP routing — Slack and Gmail endpoints
+│   ├── services/      # Business logic — OAuth, message pipeline, filter client, DB delegation, watch renewal
+│   ├── middleware/    # Prometheus metrics
+│   └── schemas/       # Pydantic models
+├── Dockerfile
+├── Dockerfile.test
+├── pytest.ini
+└── requirements.txt
 ```
 
-## Dependencies
+---
 
-- **filter service** - AI model for message classification (gRPC client stub, see filter branch)
-- **database service** - Persistent storage for workspaces and messages (gRPC client stub, see database branch)
+## Prerequisites
 
-## Setup
+Create `webhooks/.env` before running:
+
+```env
+SLACK_CLIENT_ID=
+SLACK_CLIENT_SECRET=
+SLACK_REDIRECT_URI=https://sentinelai.work/slack/oauth/callback
+SLACK_SIGNING_SECRET=
+
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_PUBSUB_TOPIC=projects/<project>/topics/<topic>
+
+BASE_URL=https://sentinelai.work
+GMAIL_WEBHOOK_ENDPOINT=https://sentinelai.work/gmail/events
+
+DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/sentinelai
+FILTER_SERVICE_HOST=filter:50051
+```
+
+---
+
+## Running via Docker Compose
+
+The service requires `filter` and `pgvector` to be running. Minimum Docker Compose config:
+
+```yaml
+webhooks:
+  build:
+    context: .
+    dockerfile: webhooks/Dockerfile
+  ports:
+    - "9000:8000"
+  env_file:
+    - ./webhooks/.env
+  depends_on:
+    - pgvector
+    - filter
+  restart: unless-stopped
+```
+
+Start just the webhooks stack:
 
 ```bash
+docker compose up --build webhooks filter pgvector
+```
+
+---
+
+## Running Tests
+
+Unit tests require no live services — all external dependencies are mocked.
+
+**Via Docker (recommended for CI/CD)** — run from the repo root:
+
+```bash
+sudo docker build -f webhooks/Dockerfile.test -t webhooks-test .
+sudo docker run --rm webhooks-test
+```
+
+**Locally on the VM:**
+
+```bash
+cd webhooks
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# Set environment variables
-export SLACK_CLIENT_ID="your_client_id"
-export SLACK_CLIENT_SECRET="your_client_secret"
-export SLACK_REDIRECT_URI="https://sentinelai.work/slack/oauth/callback"
-
-uvicorn app.main:app --reload
+python3 -m pytest app/tests/ -v --ignore=app/tests/test_filter_integration.py
 ```
 
-## Docker
+Integration tests (require the filter service running via Docker Compose):
 
 ```bash
-docker build -t webhooks .
-docker run -p 8000:8000 \
-  -e SLACK_CLIENT_ID="your_client_id" \
-  -e SLACK_CLIENT_SECRET="your_client_secret" \
-  -e SLACK_REDIRECT_URI="https://sentinelai.work/slack/oauth/callback" \
-  webhooks
+sudo docker compose up filter
+python3 -m pytest app/tests/test_filter_integration.py -v
 ```
-
-## Slack App Configuration
-
-In your Slack app settings on api.slack.com:
-
-1. **OAuth & Permissions**:
-   - Add redirect URL: `https://sentinelai.work/slack/oauth/callback`
-   - Add bot scopes: `channels:history`, `channels:read`, `chat:write`
-
-2. **Event Subscriptions**:
-   - Enable events
-   - Request URL: `https://sentinelai.work/slack/events`
-   - Subscribe to: `message.channels`
-
-## Testing OAuth Installation (Without Frontend)
-
-To test workspace installation before frontend is ready:
-
-**Method 1: Build Authorization URL**
-
-Construct this URL with your credentials:
-```
-https://slack.com/oauth/v2/authorize?client_id=YOUR_SLACK_CLIENT_ID&scope=channels:history,channels:read,chat:write&redirect_uri=https://sentinelai.work/slack/oauth/callback
-```
-
-Replace `YOUR_SLACK_CLIENT_ID` with your actual client ID from `.env`.
-
-**Important:** The `client_id` is your app's ID (same for all workspaces), not workspace-specific.
-
-**Installing to Multiple Workspaces:**
-
-Slack defaults to your currently active workspace. To test with different workspaces:
-
-- **Option 1:** Switch to the desired workspace in Slack web/desktop first, then use the OAuth link
-- **Option 2:** Force a specific workspace by adding `&team=WORKSPACE_ID` parameter:
-  ```
-  https://slack.com/oauth/v2/authorize?client_id=YOUR_CLIENT_ID&scope=channels:history,channels:read,chat:write&redirect_uri=https://sentinelai.work/slack/oauth/callback&team=T0A9QK6D291
-  ```
-  Replace `T0A9QK6D291` with your workspace ID (starts with `T...`)
-  
-- **Option 3:** Sign out of Slack, sign into the target workspace, then use the OAuth link
-
-**Method 2: Use Slack App Dashboard**
-
-1. Go to api.slack.com/apps → Select your app
-2. Navigate to "Install App" in the sidebar
-3. Click "Install to Workspace" button
-4. Follow the OAuth flow
-
-**Expected Flow:**
-
-1. Visit the authorization URL in browser
-2. Slack shows permission request screen
-3. Click "Allow" 
-4. Slack redirects to `/slack/oauth/callback` with temporary code
-5. Your app exchanges code for access token automatically
-6. Check container logs for: `OAuth successful for team: T...`
-7. Workspace credentials are now stored in database
-
-**Note for Frontend Integration:** The authorization URL format above is what your "Add to Slack" button should link to.
