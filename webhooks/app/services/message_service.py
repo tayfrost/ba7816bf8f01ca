@@ -20,6 +20,7 @@ from googleapiclient.errors import HttpError
 
 from app.schemas.message_schema import MessageEvent
 from app.services.filter_service import filter_message
+from app.services.slack_user_service import lookup_slack_user
 from app.services import db_stub as db
 
 logger = logging.getLogger(__name__)
@@ -58,15 +59,22 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
     if not filter_message(text):
         return False
 
-    # Ensure slack user exists before storing incident
+    workspace = db.get_workspace_by_team_id(team_id)
+
+    first_name, last_name, email = lookup_slack_user(
+        workspace.access_token, user_id
+    )
+    logger.info(
+        f"Slack user lookup: {user_id} -> {first_name} {last_name} email={email}"
+    )
+
     db.upsert_slack_user(
         team_id=team_id,
         slack_user_id=user_id,
-        name="unknown",    # TODO: fetch from Slack API once user lookup is wired up
-        surname="unknown",
+        name=first_name,
+        surname=last_name,
+        email=email,
     )
-
-    workspace = db.get_workspace_by_team_id(team_id)
 
     db.create_flagged_incident(
         company_id=workspace.company_id,
@@ -77,7 +85,7 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
         raw_message_text={"text": text},
     )
 
-    logger.info(f"Slack incident stored: team={team_id} user={user_id}")
+    logger.info(f"Slack incident stored: team={team_id} user={user_id} email={email}")
     return True
 
 
