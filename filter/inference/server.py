@@ -120,27 +120,36 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             context.set_details(f"Error processing message: {str(e)}")
             return filter_pb2.ClassifyResponse()
 
+    _SAFE_DEFAULT = {
+        "category": "neutral", "category_confidence": 0.0,
+        "severity": "none", "severity_confidence": 0.0,
+        "is_risk": False, "all_responses": "",
+    }
+
     def ClassifyMessages(self, request, context):
-        """Classify multiple messages in a single RPC call."""
+        """Classify multiple messages in a single RPC call.
+
+        Individual message failures are caught and returned as safe defaults
+        so that one bad message does not abort the entire batch.
+        """
         messages = list(request.messages)
         print(f"[BATCH] Received batch classification request: {len(messages)} messages")
-        try:
-            results = []
-            for i, message in enumerate(messages):
+
+        if not messages:
+            return filter_pb2.BatchClassifyResponse(results=[])
+
+        results = []
+        for i, message in enumerate(messages):
+            try:
                 print(f"[BATCH] Processing message {i+1}/{len(messages)} ({len(message)} chars)")
                 result = self._classify_single(message)
                 results.append(self._result_to_response(result))
+            except Exception as e:
+                print(f"[BATCH] Message {i+1} failed, returning safe default: {e}")
+                results.append(self._result_to_response(self._SAFE_DEFAULT))
 
-            print(f"[BATCH] Batch complete: {len(results)} messages classified")
-            return filter_pb2.BatchClassifyResponse(results=results)
-
-        except Exception as e:
-            print(f"[ERROR] Batch classification failed: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(f"Batch error: {str(e)}")
-            return filter_pb2.BatchClassifyResponse()
+        print(f"[BATCH] Batch complete: {len(results)} messages classified")
+        return filter_pb2.BatchClassifyResponse(results=results)
 
 
 def serve():

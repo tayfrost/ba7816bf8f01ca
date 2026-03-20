@@ -113,22 +113,33 @@ async def _analyze_single(message: str, mcp_client: Client) -> AgentOutput:
     )
 
 
+# Semaphore to limit concurrent LangGraph invocations (protects shared MCP client)
+_BATCH_SEMAPHORE = asyncio.Semaphore(5)
+
+
+async def _analyze_single_throttled(message: str, mcp_client: Client) -> AgentOutput:
+    """Throttled wrapper around _analyze_single to limit concurrency."""
+    async with _BATCH_SEMAPHORE:
+        return await _analyze_single(message, mcp_client)
+
+
 @app.post("/analyze/batch", response_model=BatchAgentOutput)
 async def analyze_messages_batch(
     request: BatchAnalyzeRequest,
     mcp_client: Client = Depends(get_mcp_client),
 ):
-    """Analyze multiple messages concurrently."""
+    """Analyze multiple messages concurrently (max 5 at a time)."""
     logger.info(f"[BATCH] Received batch request: {len(request.messages)} messages")
 
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
 
     try:
-        tasks = [_analyze_single(msg, mcp_client) for msg in request.messages]
+        tasks = [_analyze_single_throttled(msg, mcp_client) for msg in request.messages]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         outputs: List[AgentOutput] = []
+        processed = 0
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.error(f"[BATCH] Message {i} failed: {result}")
@@ -141,12 +152,13 @@ async def analyze_messages_batch(
                 ))
             else:
                 outputs.append(result)
+                processed += 1
 
-        logger.info(f"[BATCH] Completed: {len(outputs)}/{len(request.messages)} messages processed")
+        logger.info(f"[BATCH] Completed: {processed}/{len(request.messages)} messages successfully processed")
         return BatchAgentOutput(
             results=outputs,
             total=len(request.messages),
-            processed=len(outputs),
+            processed=processed,
         )
 
     except Exception as e:
