@@ -75,14 +75,14 @@ docker compose up --build webhooks filter pgvector
 
 Unit tests require no live services — all external dependencies are mocked.
 
-**Via Docker (recommended for CI/CD)** — run from the repo root:
+**Via Docker** — run from the repo root:
 
 ```bash
 sudo docker build -f webhooks/Dockerfile.test -t webhooks-test .
 sudo docker run --rm webhooks-test
 ```
 
-**Locally on the VM:**
+**To test without docker:**
 
 ```bash
 cd webhooks
