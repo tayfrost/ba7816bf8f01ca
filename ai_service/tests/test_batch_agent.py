@@ -73,17 +73,17 @@ class TestAnalyzeBatchEndpoint:
         resp = client.post("/analyze/batch", json={"messages": []})
         assert resp.status_code == 422
 
-    def test_exceeds_max_50(self):
-        resp = client.post("/analyze/batch", json={"messages": [f"m{i}" for i in range(51)]})
+    def test_exceeds_max_200(self):
+        resp = client.post("/analyze/batch", json={"messages": [f"m{i}" for i in range(201)]})
         assert resp.status_code == 422
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
     @patch("agent.agent.ainvoke", new_callable=AsyncMock)
-    def test_exactly_50(self, mock_ainvoke):
+    def test_exactly_200(self, mock_ainvoke):
         mock_ainvoke.return_value = _no_risk_result()
-        resp = client.post("/analyze/batch", json={"messages": [f"m{i}" for i in range(50)]})
+        resp = client.post("/analyze/batch", json={"messages": [f"m{i}" for i in range(200)]})
         assert resp.status_code == 200
-        assert resp.json()["total"] == 50
+        assert resp.json()["total"] == 200
 
     def test_missing_messages_field(self):
         resp = client.post("/analyze/batch", json={})
@@ -165,7 +165,7 @@ class TestBatchSchemaValidation:
 
     def test_request_max_length(self):
         with pytest.raises(Exception):
-            BatchAnalyzeRequest(messages=[f"m{i}" for i in range(51)])
+            BatchAnalyzeRequest(messages=[f"m{i}" for i in range(201)])
 
     def test_request_valid(self):
         req = BatchAnalyzeRequest(messages=["a", "b", "c"])

@@ -11,4 +11,4 @@ class AnalyzeRequest(BaseModel):
 
 class BatchAnalyzeRequest(BaseModel):
     """Request model for batch message analysis."""
-    messages: List[str] = Field(..., min_length=1, max_length=50)
+    messages: List[str] = Field(..., min_length=1, max_length=200)

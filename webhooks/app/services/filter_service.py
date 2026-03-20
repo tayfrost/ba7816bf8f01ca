@@ -81,7 +81,14 @@ def filter_messages(texts: List[str]) -> List[bool]:
 
     except grpc.RpcError as e:
         logger.warning(f"Batch gRPC failed ({e.code()}), falling back to per-message calls")
-        return [filter_message(text) for text in texts]
     except Exception as e:
         logger.error(f"Unexpected batch error: {e}, falling back to per-message calls")
-        return [filter_message(text) for text in texts]
+
+    results = []
+    for text in texts:
+        try:
+            results.append(filter_message(text))
+        except Exception as exc:
+            logger.error(f"Single filter_message fallback failed: {exc}, defaulting to False")
+            results.append(False)
+    return results
