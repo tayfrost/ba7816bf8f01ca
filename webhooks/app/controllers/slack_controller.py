@@ -62,6 +62,10 @@ async def slack_events(request: Request):
         logger.info("URL verification request")
         return {"challenge": payload.get("challenge")}
 
+    if headers.get("X-Slack-Retry-Num"):
+        logger.info(f"Dropping Slack retry #{headers['X-Slack-Retry-Num']}")
+        return {"ok": True}
+
     timestamp = headers.get("X-Slack-Request-Timestamp", "")
     signature = headers.get("X-Slack-Signature", "")
 
