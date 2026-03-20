@@ -1,8 +1,9 @@
 """Mental health risk assessment agent with LangGraph workflow."""
 
 import os
+import asyncio
 import logging
-from typing import Literal
+from typing import Literal, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
@@ -16,8 +17,8 @@ logger = logging.getLogger(__name__)
 from services.prompt_service import PromptService
 from services.mcp_service import get_mcp_client
 from schema.agent_state import AgentState
-from schema.output import AgentOutput, MentalHealthScore
-from schema.request import AnalyzeRequest
+from schema.output import AgentOutput, MentalHealthScore, BatchAgentOutput
+from schema.request import AnalyzeRequest, BatchAnalyzeRequest
 
 load_dotenv()
 
@@ -72,57 +73,85 @@ async def root():
 
 @app.post("/analyze", response_model=AgentOutput)
 async def analyze_message(request: AnalyzeRequest, mcp_client: Client = Depends(get_mcp_client)):
-    """Analyze message for mental health risks."""
+    """Analyze a single message for mental health risks."""
     logger.info("="*80)
     logger.info(f"[API] New analyze request received")
     logger.info(f"[API] Message length: {len(request.message)} chars")
     logger.info("="*80)
-    
+
     if not os.getenv("OPENAI_API_KEY"):
-        logger.error("[API] OPENAI_API_KEY not configured")
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
-    
+
     try:
-        # Initialize state
-        initial_state: AgentState = {"raw_message": request.message}
-        logger.info("[API] Starting agent workflow")
-        
-        # Run agent workflow
-        result = await agent.ainvoke(
-            initial_state,
-            config={"configurable": {"mcp_client": mcp_client}}
-        )
-        logger.info("[API] Agent workflow completed")
-        
-        # If no risk detected, return minimal response
-        if not result.get('is_confirmed_risk'):
-            logger.info("[API] No risk detected, returning minimal response")
-            return AgentOutput(
-                score=MentalHealthScore(
-                    stress_level=0,
-                    suicide_risk=0,
-                    burnout_score=0,
-                    depression_indicators=0,
-                    anxiety_markers=0,
-                    isolation_tendency=0
-                ),
-                response="No significant mental health risk detected."
-            )
-            
-        logger.info(f"[API] Final response: {result}")
-        
-        # Return full assessment
-        logger.info("[API] Risk confirmed, returning full assessment")
-        scores_dict = result['hr_report']['scores']
-        logger.info(f"[API] Final scores: {scores_dict}")
-        return AgentOutput(
-            score=MentalHealthScore(**scores_dict),
-            response=result['hr_report']['response']
-        )
-    
+        return await _analyze_single(request.message, mcp_client)
     except Exception as e:
         logger.error(f"[API] Analysis failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+async def _analyze_single(message: str, mcp_client: Client) -> AgentOutput:
+    """Run the agent workflow on a single message. Reused by both endpoints."""
+    initial_state: AgentState = {"raw_message": message}
+    result = await agent.ainvoke(
+        initial_state,
+        config={"configurable": {"mcp_client": mcp_client}},
+    )
+
+    if not result.get("is_confirmed_risk"):
+        return AgentOutput(
+            score=MentalHealthScore(
+                stress_level=0, suicide_risk=0, burnout_score=0,
+                depression_indicators=0, anxiety_markers=0, isolation_tendency=0,
+            ),
+            response="No significant mental health risk detected.",
+        )
+
+    scores_dict = result["hr_report"]["scores"]
+    return AgentOutput(
+        score=MentalHealthScore(**scores_dict),
+        response=result["hr_report"]["response"],
+    )
+
+
+@app.post("/analyze/batch", response_model=BatchAgentOutput)
+async def analyze_messages_batch(
+    request: BatchAnalyzeRequest,
+    mcp_client: Client = Depends(get_mcp_client),
+):
+    """Analyze multiple messages concurrently."""
+    logger.info(f"[BATCH] Received batch request: {len(request.messages)} messages")
+
+    if not os.getenv("OPENAI_API_KEY"):
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
+
+    try:
+        tasks = [_analyze_single(msg, mcp_client) for msg in request.messages]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        outputs: List[AgentOutput] = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.error(f"[BATCH] Message {i} failed: {result}")
+                outputs.append(AgentOutput(
+                    score=MentalHealthScore(
+                        stress_level=0, suicide_risk=0, burnout_score=0,
+                        depression_indicators=0, anxiety_markers=0, isolation_tendency=0,
+                    ),
+                    response=f"Analysis failed for this message: {str(result)}",
+                ))
+            else:
+                outputs.append(result)
+
+        logger.info(f"[BATCH] Completed: {len(outputs)}/{len(request.messages)} messages processed")
+        return BatchAgentOutput(
+            results=outputs,
+            total=len(request.messages),
+            processed=len(outputs),
+        )
+
+    except Exception as e:
+        logger.error(f"[BATCH] Batch analysis failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
 
 
 @app.get("/health")

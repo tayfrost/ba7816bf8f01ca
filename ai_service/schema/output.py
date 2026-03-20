@@ -1,5 +1,6 @@
 """Output schema for mental health risk assessment responses."""
 
+from typing import List
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -42,3 +43,10 @@ class AgentOutput(BaseModel):
         if not v.strip():
             raise ValueError("Response cannot be empty or whitespace only")
         return v
+
+
+class BatchAgentOutput(BaseModel):
+    """Output schema for batch analysis."""
+    results: List[AgentOutput]
+    total: int
+    processed: int

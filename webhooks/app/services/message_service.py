@@ -19,7 +19,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from app.schemas.message_schema import MessageEvent
-from app.services.filter_service import filter_message
+from app.services.filter_service import filter_message, filter_messages
 from app.services import db_stub as db
 
 logger = logging.getLogger(__name__)
@@ -121,15 +121,23 @@ def process_gmail_event(payload: dict) -> bool:
     # Always update history cursor even if no messages passed filter
     db.update_gmail_history_id(user_email, latest_history_id)
 
-    stored = 0
+    # Extract bodies from all messages first, then batch-filter
+    extracted = []
     for message in messages:
         body, _ = _extract_best_body(message)
-        if not body:
+        extracted.append((message, body))
+
+    bodies_to_filter = [body for _, body in extracted if body]
+    body_index_map = [i for i, (_, body) in enumerate(extracted) if body]
+
+    filter_results = filter_messages(bodies_to_filter) if bodies_to_filter else []
+
+    stored = 0
+    for filter_idx, extracted_idx in enumerate(body_index_map):
+        if not filter_results[filter_idx]:
             continue
 
-        if not filter_message(body):
-            continue
-
+        message, body = extracted[extracted_idx]
         headers = {
             h["name"]: h["value"]
             for h in message.get("payload", {}).get("headers", [])
@@ -137,8 +145,8 @@ def process_gmail_event(payload: dict) -> bool:
 
         db.create_flagged_incident(
             company_id=account.company_id,
-            team_id=None,           # no slack team for gmail — revisit with Employee table
-            slack_user_id=None,     # no slack user for gmail — revisit with Employee table
+            team_id=None,
+            slack_user_id=None,
             message_ts=message.get("internalDate", ""),
             channel_id="gmail",
             raw_message_text={

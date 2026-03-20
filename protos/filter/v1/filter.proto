@@ -4,6 +4,7 @@ package sentinelai.filter.v1;
 
 service FilterService {
   rpc ClassifyMessage(ClassifyRequest) returns (ClassifyResponse);
+  rpc ClassifyMessages(BatchClassifyRequest) returns (BatchClassifyResponse);
 }
 
 message ClassifyRequest {
@@ -17,4 +18,12 @@ message ClassifyResponse {
   float severity_confidence = 4;
   bool is_risk = 5;
   string all_responses = 6;
+}
+
+message BatchClassifyRequest {
+  repeated string messages = 1;
+}
+
+message BatchClassifyResponse {
+  repeated ClassifyResponse results = 1;
 }
