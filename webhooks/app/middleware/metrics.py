@@ -169,3 +169,4 @@ def setup_metrics(app):
     """Call this right after creating the FastAPI app."""
     app.add_middleware(PrometheusMiddleware)
     app.add_route("/metrics", metrics_endpoint, methods=["GET"])
+
