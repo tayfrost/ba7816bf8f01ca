@@ -33,6 +33,15 @@ async def slack_oauth_callback(code: str = None, state: str = None):
 
     logger.info("OAuth callback received, exchanging code for token")
 
+    if not state:
+        logger.warning("Slack OAuth callback missing state parameter")
+        raise HTTPException(status_code=400, detail="Missing company_id in state")
+
+    try:
+        company_id = int(state)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid company_id in state")
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://slack.com/api/oauth.v2.access",
@@ -44,6 +53,8 @@ async def slack_oauth_callback(code: str = None, state: str = None):
             }
         )
         data = response.json()
+        
+    data["_company_id"] = company_id
 
     try:
         process_slack_oauth(data)
