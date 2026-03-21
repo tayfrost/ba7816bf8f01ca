@@ -72,12 +72,18 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
     first_name, last_name, email = lookup_slack_user(
         workspace.access_token, slack_uid
     )
-    display_name = f"{first_name} {last_name}".strip()
+    display_name = (
+        f"{first_name} {last_name}".strip()
+        if first_name != "unknown" else f"Slack user {slack_uid}"
+    )
     logger.info(f"Slack user lookup: {slack_uid} -> {display_name} email={email}")
 
     existing_account = db.get_slack_account(team_id, slack_uid)
     if existing_account:
         user_id = existing_account.user_id
+        if email and not existing_account.email:
+            db.update_slack_account_email(team_id, slack_uid, email)
+            logger.info(f"Backfilled email for {slack_uid}: {email}")
     else:
         user     = db.create_viewer_seat(company_id, display_name=display_name)
         user_id  = user.user_id
