@@ -1,5 +1,20 @@
 # Database Tables Overview
 
+
+# How to look at the database.
+
+To search for functions of the database, look at new_crud.py and new_crud_second_half.py.
+new crud has utility functions, and functions for the tables:
+
+Subscription_plan crud functions, 
+Companies crud functions,
+Subscriptons crud functions,
+Users crud functions,
+Slack Workspaces crud functions,
+
+To search for thease functions look for large consective hashtags ######################    {Table name}   #########################
+
+
 This schema supports a SaaS where **companies sign up**, you create **users (seats)** under each company, optionally connect **Slack** and **Gmail**, and store **flagged messages** with **scoring**.
 
 Postgres extensions used:
