@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package db.v1;
+
+import "google/protobuf/timestamp.proto";
+
+service DatabaseService {
+  rpc AddGoogleMailbox(AddGoogleMailboxRequest) returns (AddGoogleMailboxResponse);
+  rpc AddMessageIncident(AddMessageIncidentRequest) returns (AddMessageIncidentResponse);
+  rpc AddIncidentScores(AddIncidentScoresRequest) returns (AddIncidentScoresResponse);
+}
+
+message AddGoogleMailboxRequest {
+  int64 company_id = 1;
+  string user_id = 2; // UUID as string
+  string email_address = 3;
+  string token_json = 4; // JSON string
+  string last_history_id = 5;
+  google.protobuf.Timestamp watch_expiration = 6;
+}
+
+message AddGoogleMailboxResponse {
+  int64 google_mailbox_id = 1;
+  int64 company_id = 2;
+  string user_id = 3;
+  string email_address = 4;
+  string last_history_id = 5;
+}
+
+message AddMessageIncidentRequest {
+  int64 company_id = 1;
+  string user_id = 2; // UUID as string
+  string source = 3; // slack or gmail
+  google.protobuf.Timestamp sent_at = 4;
+  string content_raw = 5; // JSON string
+  string conversation_id = 6;
+}
+
+message AddMessageIncidentResponse {
+  string message_id = 1; // UUID
+  int64 company_id = 2;
+  string user_id = 3;
+  string source = 4;
+  string conversation_id = 5;
+}
+
+message AddIncidentScoresRequest {
+  string message_id = 1; // UUID
+  double neutral_score = 2;
+  double humor_sarcasm_score = 3;
+  double stress_score = 4;
+  double burnout_score = 5;
+  double depression_score = 6;
+  double harassment_score = 7;
+  double suicidal_ideation_score = 8;
+  string predicted_category = 9;
+  int64 predicted_severity = 10;
+}
+
+message AddIncidentScoresResponse {
+  int64 id = 1;
+  string message_id = 2;
+  string predicted_category = 3;
+  int64 predicted_severity = 4;
+}
