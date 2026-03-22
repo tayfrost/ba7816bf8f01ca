@@ -8,6 +8,7 @@ from datetime import datetime
 from sqlalchemy.dialects.postgresql import JSONB
 
 
+
 class Base(DeclarativeBase):
     pass
 
@@ -220,6 +221,13 @@ class FlaggedIncident(Base):
                 foreign_keys=lambda: [FlaggedIncident.team_id, FlaggedIncident.slack_user_id],
                 overlaps="workspace,flagged_incidents")
     
+    message_details: Mapped[Optional["MessageDetails"]] = relationship(
+        "MessageDetails",
+        back_populates="flagged_incident",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    
     
     def __repr__(self) -> str:
         return (
@@ -230,5 +238,74 @@ class FlaggedIncident(Base):
             f"slack_user_id={self.slack_user_id!r}, "
             f"channel_id={self.channel_id!r}, "
             f"created_at={self.created_at!r}"
+            ")"
+        )
+
+class MessageDetails(Base):
+    """
+    Stores the AI agent's category scores + predicted labels for a flagged incident.
+    1 row per flagged_incidents.incident_id (enforced via UNIQUE).
+    """
+    __tablename__ = "message_details"
+
+    __table_args__ = (
+        UniqueConstraint("incident_id", name="uq_message_details_incident"),
+
+        ForeignKeyConstraint(
+            ["team_id", "slack_user_id"],
+            ["slack_users.team_id", "slack_users.slack_user_id"],
+            name="fk_message_details_user",
+            ondelete="RESTRICT",
+        ),
+
+        Index("idx_message_details_team_user", "team_id", "slack_user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+
+    incident_id: Mapped[int] = mapped_column(BigInteger,
+        ForeignKey("flagged_incidents.incident_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    team_id: Mapped[str] = mapped_column(Text, nullable=False)
+    slack_user_id: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # mental category scores
+    neutral_score: Mapped[float] = mapped_column(nullable=False)
+    humor_sarcasm_score: Mapped[float] = mapped_column(nullable=False)
+    stress_score: Mapped[float] = mapped_column(nullable=False)
+    burnout_score: Mapped[float] = mapped_column(nullable=False)
+    depression_score: Mapped[float] = mapped_column(nullable=False)
+    harassment_score: Mapped[float] = mapped_column(nullable=False)
+    suicidal_ideation_score: Mapped[float] = mapped_column(nullable=False)
+
+    predicted_category: Mapped[Optional[int]] = mapped_column(nullable=True)
+    predicted_severity: Mapped[Optional[int]] = mapped_column(nullable=True)
+
+    flagged_incident: Mapped["FlaggedIncident"] = relationship(
+        "FlaggedIncident",
+        back_populates="message_details",
+        foreign_keys=[incident_id],
+        uselist=False,  # one-to-one
+    )
+
+    slack_user: Mapped["SlackUser"] = relationship(
+        "SlackUser",
+        primaryjoin=lambda: and_(
+            MessageDetails.team_id == SlackUser.team_id,
+            MessageDetails.slack_user_id == SlackUser.slack_user_id,
+        ),
+        foreign_keys=lambda: [MessageDetails.team_id, MessageDetails.slack_user_id],
+        uselist=False,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            "MessageDetails("
+            f"id={self.id!r}, "
+            f"incident_id={self.incident_id!r}, "
+            f"team_id={self.team_id!r}, "
+            f"slack_user_id={self.slack_user_id!r}"
             ")"
         )
