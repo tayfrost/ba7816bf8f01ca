@@ -3,6 +3,7 @@
 
 # How to look at the database.
 
+<<<<<<< HEAD
 To search for functions of the database, look at new_crud.py and new_crud_second_half.py.
 new crud has utility functions, and functions for the tables:
 
@@ -11,6 +12,10 @@ Companies crud functions,
 Subscriptons crud functions,
 Users crud functions,
 Slack Workspaces crud functions,
+=======
+To search for functions of the database, look at utils  and new_crud_second_half.py.
+Utils has files each file is named after a table, thease will contain the crud functions needed. 
+>>>>>>> 0ce01e0 (updated read me)
 
 To search for thease functions look for large consective hashtags ######################    {Table name}   #########################
 
