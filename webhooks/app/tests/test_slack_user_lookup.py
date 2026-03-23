@@ -217,19 +217,35 @@ class TestSlackRetryHeader:
 
 class TestProcessSlackMessageWithLookup:
 
+    def _make_filter_result(self, is_risk=True, category="burnout", severity="early"):
+        mock_result = MagicMock()
+        mock_result.is_risk = is_risk
+        mock_result.category = category
+        mock_result.severity = severity
+        return mock_result
+
     @patch("app.services.message_service.db")
     @patch("app.services.message_service.lookup_slack_user")
     @patch("app.services.message_service.filter_message")
-    def test_passes_email_to_upsert(self, mock_filter, mock_lookup, mock_db):
+    def test_new_user_passes_email_to_create(self, mock_filter, mock_lookup, mock_db):
         from app.services.message_service import process_slack_message
 
-        mock_filter.return_value = True
+        mock_filter.return_value = self._make_filter_result()
         mock_lookup.return_value = ("Vishal", "Thakwani", "vishal@example.com")
 
         mock_workspace = MagicMock()
         mock_workspace.company_id = 1
         mock_workspace.access_token = "xoxb-test"
         mock_db.get_workspace_by_team_id.return_value = mock_workspace
+        mock_db.get_slack_account.return_value = None
+
+        mock_user = MagicMock()
+        mock_user.user_id = "uid-new"
+        mock_db.create_viewer_seat.return_value = mock_user
+
+        mock_incident = MagicMock()
+        mock_incident.message_id = "mid-1"
+        mock_db.create_message_incident.return_value = mock_incident
 
         payload = {
             "type": "event_callback", "team_id": "T123",
@@ -240,24 +256,35 @@ class TestProcessSlackMessageWithLookup:
 
         assert result is True
         mock_lookup.assert_called_once_with("xoxb-test", "U123")
-        mock_db.upsert_slack_user.assert_called_once_with(
-            team_id="T123", slack_user_id="U123",
-            name="Vishal", surname="Thakwani", email="vishal@example.com",
+        mock_db.create_viewer_seat.assert_called_once_with(1, display_name="Vishal Thakwani")
+        mock_db.create_slack_account.assert_called_once_with(
+            1, "T123", "U123", "uid-new", email="vishal@example.com",
         )
+        mock_db.create_message_incident.assert_called_once()
+        mock_db.create_incident_scores.assert_called_once()
 
     @patch("app.services.message_service.db")
     @patch("app.services.message_service.lookup_slack_user")
     @patch("app.services.message_service.filter_message")
-    def test_handles_none_email_gracefully(self, mock_filter, mock_lookup, mock_db):
+    def test_existing_user_backfills_email(self, mock_filter, mock_lookup, mock_db):
         from app.services.message_service import process_slack_message
 
-        mock_filter.return_value = True
-        mock_lookup.return_value = ("unknown", "unknown", None)
+        mock_filter.return_value = self._make_filter_result()
+        mock_lookup.return_value = ("Vishal", "Thakwani", "vishal@example.com")
 
         mock_workspace = MagicMock()
         mock_workspace.company_id = 1
         mock_workspace.access_token = "xoxb-test"
         mock_db.get_workspace_by_team_id.return_value = mock_workspace
+
+        existing = MagicMock()
+        existing.user_id = "uid-existing"
+        existing.email = None
+        mock_db.get_slack_account.return_value = existing
+
+        mock_incident = MagicMock()
+        mock_incident.message_id = "mid-2"
+        mock_db.create_message_incident.return_value = mock_incident
 
         payload = {
             "type": "event_callback", "team_id": "T123",
@@ -267,9 +294,43 @@ class TestProcessSlackMessageWithLookup:
         result = process_slack_message(payload, "1")
 
         assert result is True
-        mock_db.upsert_slack_user.assert_called_once_with(
-            team_id="T123", slack_user_id="U123",
-            name="unknown", surname="unknown", email=None,
+        mock_db.update_slack_account_email.assert_called_once_with("T123", "U123", "vishal@example.com")
+        mock_db.create_viewer_seat.assert_not_called()
+
+    @patch("app.services.message_service.db")
+    @patch("app.services.message_service.lookup_slack_user")
+    @patch("app.services.message_service.filter_message")
+    def test_handles_unknown_lookup_gracefully(self, mock_filter, mock_lookup, mock_db):
+        from app.services.message_service import process_slack_message
+
+        mock_filter.return_value = self._make_filter_result()
+        mock_lookup.return_value = ("unknown", "unknown", None)
+
+        mock_workspace = MagicMock()
+        mock_workspace.company_id = 1
+        mock_workspace.access_token = "xoxb-test"
+        mock_db.get_workspace_by_team_id.return_value = mock_workspace
+        mock_db.get_slack_account.return_value = None
+
+        mock_user = MagicMock()
+        mock_user.user_id = "uid-fallback"
+        mock_db.create_viewer_seat.return_value = mock_user
+
+        mock_incident = MagicMock()
+        mock_incident.message_id = "mid-3"
+        mock_db.create_message_incident.return_value = mock_incident
+
+        payload = {
+            "type": "event_callback", "team_id": "T123",
+            "event": {"type": "message", "user": "U123", "text": "help", "ts": "1", "channel": "C1"},
+        }
+
+        result = process_slack_message(payload, "1")
+
+        assert result is True
+        mock_db.create_viewer_seat.assert_called_once_with(1, display_name="Slack user U123")
+        mock_db.create_slack_account.assert_called_once_with(
+            1, "T123", "U123", "uid-fallback", email=None,
         )
 
     @patch("app.services.message_service.db")
@@ -278,7 +339,7 @@ class TestProcessSlackMessageWithLookup:
     def test_lookup_not_called_when_filter_rejects(self, mock_filter, mock_lookup, mock_db):
         from app.services.message_service import process_slack_message
 
-        mock_filter.return_value = False
+        mock_filter.return_value = None
 
         payload = {
             "type": "event_callback", "team_id": "T123",
@@ -289,4 +350,4 @@ class TestProcessSlackMessageWithLookup:
 
         assert result is False
         mock_lookup.assert_not_called()
-        mock_db.upsert_slack_user.assert_not_called()
+        mock_db.get_slack_account.assert_not_called()
