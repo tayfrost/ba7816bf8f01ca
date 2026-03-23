@@ -261,7 +261,10 @@ class TestProcessSlackMessageWithLookup:
             1, "T123", "U123", "uid-new", email="vishal@example.com",
         )
         mock_db.create_message_incident.assert_called_once()
-        mock_db.create_incident_scores.assert_called_once()
+        scores_call = mock_db.create_incident_scores.call_args
+        assert scores_call[0][0] == "mid-1"
+        assert scores_call[1]["predicted_category"] == "burnout"
+        assert scores_call[1]["predicted_severity"] == 1
 
     @patch("app.services.message_service.db")
     @patch("app.services.message_service.lookup_slack_user")
@@ -336,10 +339,29 @@ class TestProcessSlackMessageWithLookup:
     @patch("app.services.message_service.db")
     @patch("app.services.message_service.lookup_slack_user")
     @patch("app.services.message_service.filter_message")
-    def test_lookup_not_called_when_filter_rejects(self, mock_filter, mock_lookup, mock_db):
+    def test_lookup_not_called_when_filter_returns_none(self, mock_filter, mock_lookup, mock_db):
         from app.services.message_service import process_slack_message
 
         mock_filter.return_value = None
+
+        payload = {
+            "type": "event_callback", "team_id": "T123",
+            "event": {"type": "message", "user": "U123", "text": "lunch?", "ts": "1", "channel": "C1"},
+        }
+
+        result = process_slack_message(payload, "1")
+
+        assert result is False
+        mock_lookup.assert_not_called()
+        mock_db.get_slack_account.assert_not_called()
+
+    @patch("app.services.message_service.db")
+    @patch("app.services.message_service.lookup_slack_user")
+    @patch("app.services.message_service.filter_message")
+    def test_lookup_not_called_when_is_risk_false(self, mock_filter, mock_lookup, mock_db):
+        from app.services.message_service import process_slack_message
+
+        mock_filter.return_value = self._make_filter_result(is_risk=False)
 
         payload = {
             "type": "event_callback", "team_id": "T123",
