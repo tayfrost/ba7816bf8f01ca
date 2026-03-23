@@ -6,8 +6,7 @@ import grpc
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from protos.db.v1 import db_pb2, db_pb2_grpc
-from backend.New_database import new_crud_second_half as crud
-
+from database.new_database import new_crud_second_half as crud
 
 def _timestamp_to_datetime(ts: Timestamp | None):
     if ts is None:
@@ -16,7 +15,6 @@ def _timestamp_to_datetime(ts: Timestamp | None):
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
-
 
 class DatabaseServiceServicer(db_pb2_grpc.DatabaseServiceServicer):
     def AddGoogleMailbox(self, request, context):

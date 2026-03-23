@@ -1,45 +1,52 @@
 import pytest
-from .. import new_crud as crud
+from database.new_database.utils import slack_workspaces_crud as crud 
+from database.new_database.utils import companies_crud as company_crud 
+from database.new_database.utils import subscription_plan_crud as sp_crud 
+from database.new_database.utils import subscriptions_crud as sub_crud 
+from database.new_database.utils import users_crud as user_crud 
+
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import event
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
 
 import inspect
 
-@pytest.fixture()
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
+
+@pytest.fixture
 def db_session():
     connection = crud.engine.connect()
-    transaction = connection.begin()
-    session = crud.Session(bind=connection)
+    outer_transaction = connection.begin()
 
-    # Start a SAVEPOINT. session.commit() will ends the SAVEPOINT
-    session.begin_nested()
+    session = TestingSessionLocal(bind=connection)
 
-    # If the SAVEPOINT ends, restart it automatically.
+    nested_transaction = connection.begin_nested()
+
     @event.listens_for(session, "after_transaction_end")
     def restart_savepoint(sess, trans):
-        if trans.nested and not trans._parent.nested:
-            sess.begin_nested()
+        nonlocal nested_transaction
+        if connection.closed:
+            return
+        if not nested_transaction.is_active and connection.in_transaction():
+            nested_transaction = connection.begin_nested()
 
     try:
         yield session
     finally:
         session.close()
-        try:
-            transaction.rollback()
-        except Exception:
-            pass
+        if outer_transaction.is_active:
+            outer_transaction.rollback()
         connection.close()
 
-
 def _mk_company(db_session, name="SlackCo"):
-    return crud.create_company(name, session=db_session)
-
+    return company_crud.create_company(name, session=db_session)
 
 @pytest.mark.parametrize("team_id,token", [("", "x"), ("T123", ""), (" ", "tok"), ("T123", " ")])
 def test_create_slack_workspace_invalid_inputs_raise_valueerror(db_session, team_id, token):
     company = _mk_company(db_session)
     with pytest.raises(ValueError):
         crud.create_slack_workspace(company.company_id, team_id=team_id, access_token=token, session=db_session)
-
 
 def test_create_slack_workspace_success_and_get(db_session):
     company = _mk_company(db_session)
@@ -71,7 +78,6 @@ def test_create_slack_workspace_duplicate_team_id_raises_runtimeerror(db_session
     with pytest.raises(RuntimeError):
         crud.create_slack_workspace(c2.company_id, team_id="T_DUP", access_token="tok2", session=db_session)
 
-
 def test_list_slack_workspaces_include_exclude_revoked(db_session):
     c = _mk_company(db_session)
     crud.create_slack_workspace(c.company_id, team_id="T1", access_token="tok1", session=db_session)
@@ -85,8 +91,6 @@ def test_list_slack_workspaces_include_exclude_revoked(db_session):
     active_ws = crud.list_slack_workspaces_for_company(c.company_id, include_revoked=False, session=db_session)
     assert [w.team_id for w in active_ws] == ["T1"]
 
-
-
 def test_update_slack_workspace_access_token(db_session):
     c = _mk_company(db_session)
     crud.create_slack_workspace(c.company_id, team_id="T_UPD", access_token="old", session=db_session)
@@ -94,7 +98,6 @@ def test_update_slack_workspace_access_token(db_session):
     updated = crud.update_slack_workspace_access_token("T_UPD", access_token="new", session=db_session)
     assert updated is not None
     assert updated.access_token == "new"
-
 
 def test_revoke_and_reinstall_slack_workspace(db_session):
     c = _mk_company(db_session)
@@ -110,7 +113,6 @@ def test_revoke_and_reinstall_slack_workspace(db_session):
     assert reinstalled.access_token == "tok2"
     assert reinstalled.revoked_at is None
 
-
 def test_hard_delete_slack_workspace_success(db_session):
     c = _mk_company(db_session)
     crud.create_slack_workspace(c.company_id, team_id="T_DEL", access_token="tok", session=db_session)
@@ -118,15 +120,34 @@ def test_hard_delete_slack_workspace_success(db_session):
     assert crud.hard_delete_slack_workspace("T_DEL", session=db_session) is True
     assert crud.get_slack_workspace_by_team_id("T_DEL", session=db_session) is None
 
-
 def test_hard_delete_slack_workspace_fails_if_referenced(db_session):
     c = _mk_company(db_session)
-    ws = crud.create_slack_workspace(c.company_id, team_id="T_REF", access_token="tok", session=db_session)
+    ws = crud.create_slack_workspace(
+        c.company_id,
+        team_id="T_REF",
+        access_token="tok",
+        session=db_session,
+    )
 
-    # create a user + slack_account referencing the workspace (FK RESTRICT)
-    u = crud.create_user(c.company_id, role="viewer", session=db_session)
+    plan = sp_crud.create_subscription_plan(
+        plan_name="Test Plan",
+        price_pennies=1000,
+        seat_limit=5,
+        session=db_session,
+    )
 
-    # slack_accounts has composite PK (team_id, slack_user_id) --> insert one row directly
+    now = datetime.now(timezone.utc)
+    sub_crud.create_subscription(
+        c.company_id,
+        plan.plan_id,
+        status="active",
+        current_period_start=now,
+        current_period_end=now + timedelta(days=30),
+        session=db_session,
+    )
+
+    u = user_crud.create_user(c.company_id, role="viewer", session=db_session)
+
     sa = crud.model.SlackAccount(
         company_id=c.company_id,
         team_id=ws.team_id,

@@ -19,12 +19,13 @@ def test_full_grpc_flow():
 
     company_id = 47
     user_id = "c0b1ee2c-7e78-4794-97a3-9b5be1be533d"
+    email = f"testEmail+{int(datetime.now(timezone.utc).timestamp())}@example.com"
 
     mailbox_resp = stub.AddGoogleMailbox(
         db_pb2.AddGoogleMailboxRequest(
             company_id=company_id,
             user_id=user_id,
-            email_address="testEmail@example.com",
+            email_address=email,
             token_json=json.dumps({"access_token": "abc"}),
             last_history_id="100",
             watch_expiration=to_timestamp(datetime.now(timezone.utc) + timedelta(days=1)),
@@ -33,7 +34,7 @@ def test_full_grpc_flow():
 
     assert mailbox_resp.company_id == company_id
     assert mailbox_resp.user_id == user_id
-    assert mailbox_resp.email_address == "testEmail@example.com"
+    assert mailbox_resp.email_address == email
 
     incident_resp = stub.AddMessageIncident(
         db_pb2.AddMessageIncidentRequest(

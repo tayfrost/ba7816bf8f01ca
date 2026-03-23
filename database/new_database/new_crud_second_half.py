@@ -1,5 +1,5 @@
-from backend.New_database import new_oop as model
-from backend.New_database.new_crud import (
+from database.new_database import new_oop as model
+from database.new_database.utils.utility_functions import (
     Session,
     company_exists,
     user_exists,
