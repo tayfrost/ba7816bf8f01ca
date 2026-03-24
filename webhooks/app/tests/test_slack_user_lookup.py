@@ -152,6 +152,23 @@ class TestLookupSlackUser:
         assert last == "unknown"
         assert email is None
 
+    @patch("app.services.slack_user_service.httpx.Client")
+    def test_malformed_json_response_returns_defaults(self, mock_client_cls):
+        from app.services.slack_user_service import lookup_slack_user
+
+        mock_inner = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.side_effect = ValueError("No JSON: <html>502 Bad Gateway</html>")
+        mock_inner.get.return_value = mock_resp
+        mock_client_cls.return_value.__enter__ = MagicMock(return_value=mock_inner)
+        mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
+
+        first, last, email = lookup_slack_user("xoxb-token", "U123")
+        assert first == "unknown"
+        assert last == "unknown"
+        assert email is None
+
 
 class TestLookupCache:
 
@@ -170,6 +187,19 @@ class TestLookupCache:
         lookup_slack_user("xoxb-token", "U123")
 
         mock_fetch.assert_called_once()
+
+    @patch("app.services.slack_user_service._fetch_from_slack")
+    def test_failed_lookup_not_cached(self, mock_fetch):
+        from app.services.slack_user_service import lookup_slack_user, _cache
+
+        mock_fetch.return_value = ("unknown", "unknown", None)
+
+        lookup_slack_user("xoxb-token", "U404")
+        assert "U404" not in _cache
+        assert mock_fetch.call_count == 1
+
+        lookup_slack_user("xoxb-token", "U404")
+        assert mock_fetch.call_count == 2
 
     @patch("app.services.slack_user_service._fetch_from_slack")
     @patch("app.services.slack_user_service.time")
@@ -335,6 +365,40 @@ class TestProcessSlackMessageWithLookup:
         mock_db.create_slack_account.assert_called_once_with(
             1, "T123", "U123", "uid-fallback", email=None,
         )
+
+    @patch("app.services.message_service.db")
+    @patch("app.services.message_service.lookup_slack_user")
+    @patch("app.services.message_service.filter_message")
+    def test_existing_email_not_overwritten(self, mock_filter, mock_lookup, mock_db):
+        from app.services.message_service import process_slack_message
+
+        mock_filter.return_value = self._make_filter_result()
+        mock_lookup.return_value = ("Vishal", "Thakwani", "new@example.com")
+
+        mock_workspace = MagicMock()
+        mock_workspace.company_id = 1
+        mock_workspace.access_token = "xoxb-test"
+        mock_db.get_workspace_by_team_id.return_value = mock_workspace
+
+        existing = MagicMock()
+        existing.user_id = "uid-existing"
+        existing.email = "already@example.com"
+        mock_db.get_slack_account.return_value = existing
+
+        mock_incident = MagicMock()
+        mock_incident.message_id = "mid-4"
+        mock_db.create_message_incident.return_value = mock_incident
+
+        payload = {
+            "type": "event_callback", "team_id": "T123",
+            "event": {"type": "message", "user": "U123", "text": "help", "ts": "1", "channel": "C1"},
+        }
+
+        result = process_slack_message(payload, "1")
+
+        assert result is True
+        mock_db.update_slack_account_email.assert_not_called()
+        mock_db.create_viewer_seat.assert_not_called()
 
     @patch("app.services.message_service.db")
     @patch("app.services.message_service.lookup_slack_user")
