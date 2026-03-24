@@ -1307,7 +1307,6 @@ def update_incident_scores(
         if own_session:
             session.close()
 
-
 def hard_delete_incident_scores(
     message_id: uuid.UUID,
     *,
