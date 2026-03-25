@@ -3,7 +3,6 @@ import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
 import SidebarLink from "../components/SidebarLink";
 import EmployeeCard from "../components/EmployeeCard";
-import { MOCK_EMPLOYEES } from "../state/employeesMock";
 import { useEmployeesData } from "../hooks/useEmployeesData";
 import EmployeesFilters from "../components/employees/EmployeesFilters";
 import RiskBadge from "../components/employees/RiskBadge";
