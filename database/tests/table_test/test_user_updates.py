@@ -1,37 +1,39 @@
 import pytest
-from .. import new_crud as crud
-from sqlalchemy import event
+from database.new_database.utils import users_crud as crud 
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
 
 import inspect
 
-@pytest.fixture()
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
+
+@pytest.fixture
 def db_session():
     connection = crud.engine.connect()
-    transaction = connection.begin()
-    session = crud.Session(bind=connection)
+    outer_transaction = connection.begin()
 
-    # Start a SAVEPOINT. session.commit() will ends the SAVEPOINT
-    session.begin_nested()
+    session = TestingSessionLocal(bind=connection)
 
-    # If the SAVEPOINT ends, restart it automatically.
+    nested_transaction = connection.begin_nested()
+
     @event.listens_for(session, "after_transaction_end")
     def restart_savepoint(sess, trans):
-        if trans.nested and not trans._parent.nested:
-            sess.begin_nested()
+        nonlocal nested_transaction
+        if connection.closed:
+            return
+        if not nested_transaction.is_active and connection.in_transaction():
+            nested_transaction = connection.begin_nested()
 
     try:
         yield session
     finally:
         session.close()
-        try:
-            transaction.rollback()
-        except Exception:
-            pass
+        if outer_transaction.is_active:
+            outer_transaction.rollback()
         connection.close()
 
 TEST_COMPANY_ID = 47
 SEAT_LIMIT = 10
-
 
 def _count_active_users(session, company_id: int) -> int:
     return sum(
@@ -39,7 +41,6 @@ def _count_active_users(session, company_id: int) -> int:
         for u in crud.list_users(company_id, session=session)
         if u.deleted_at is None and u.status == "active"
     )
-
 
 def test_create_user_blocks_when_seat_limit_reached(db_session):
     active_before = _count_active_users(db_session, TEST_COMPANY_ID)
@@ -68,7 +69,6 @@ def test_create_user_blocks_when_seat_limit_reached(db_session):
             display_name="Should Fail",
             session=db_session,
         )
-
 
 def test_update_user_blocks_activation_when_seat_limit_reached(db_session):
     active_before = _count_active_users(db_session, TEST_COMPANY_ID)

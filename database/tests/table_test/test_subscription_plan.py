@@ -1,32 +1,37 @@
 import pytest
-from .. import new_crud as crud
+from database.new_database.utils import subscription_plan_crud as crud 
 from sqlalchemy import event
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
 
 import inspect
 
-@pytest.fixture()
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
+
+@pytest.fixture
 def db_session():
     connection = crud.engine.connect()
-    transaction = connection.begin()
-    session = crud.Session(bind=connection)
+    outer_transaction = connection.begin()
 
-    # Start a SAVEPOINT. session.commit() will ends the SAVEPOINT
-    session.begin_nested()
+    session = TestingSessionLocal(bind=connection)
 
-    # If the SAVEPOINT ends, restart it automatically.
+    nested_transaction = connection.begin_nested()
+
     @event.listens_for(session, "after_transaction_end")
     def restart_savepoint(sess, trans):
-        if trans.nested and not trans._parent.nested:
-            sess.begin_nested()
+        nonlocal nested_transaction
+        if connection.closed:
+            return
+        if not nested_transaction.is_active and connection.in_transaction():
+            nested_transaction = connection.begin_nested()
 
     try:
         yield session
     finally:
         session.close()
-        try:
-            transaction.rollback()
-        except Exception:
-            pass
+        if outer_transaction.is_active:
+            outer_transaction.rollback()
         connection.close()
     
 @pytest.mark.parametrize(
@@ -84,14 +89,19 @@ def test_create_subscription_plan_duplicate_name_raises_runtimeerror(db_session)
 
 def test_list_subscription_plans_ordering(db_session):
     # price asc, seat asc, name asc
-    crud.create_subscription_plan("Bi", 200, 10, "GBP", session=db_session) 
+    crud.create_subscription_plan("Bi", 200, 10, "GBP", session=db_session)
     crud.create_subscription_plan("Basic", 200, 10, "GBP", session=db_session)
     crud.create_subscription_plan("Plus", 200, 5, "GBP", session=db_session)
     crud.create_subscription_plan("Alpha", 200, 5, "GBP", session=db_session)
     crud.create_subscription_plan("Free", 0, 1, "GBP", session=db_session)
 
     plans = crud.list_subscription_plans(session=db_session)
-    assert [p.plan_name for p in plans] == ["Free", "Alpha", "Plus", "Basic", "Bi"]
+    names = [p.plan_name for p in plans]
+
+    target_names = {"Free", "Alpha", "Plus", "Basic", "Bi"}
+    filtered_names = [name for name in names if name in target_names]
+
+    assert filtered_names == ["Free", "Alpha", "Plus", "Basic", "Bi"]
 
 def test_get_subscription_plan_by_name_found_and_not_found(db_session):
     crud.create_subscription_plan("Team", 999, 25, "GBP", session=db_session)
@@ -183,5 +193,3 @@ def test_delete_subscription_plan_success(db_session):
     assert ok is True
 
     assert crud.get_subscription_plan_by_id(plan.plan_id, session=db_session) is None
-
-

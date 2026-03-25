@@ -2,7 +2,7 @@ from concurrent import futures
 import grpc
 
 from protos.db.v1 import db_pb2_grpc
-from backend.db_service.server import DatabaseServiceServicer
+from database.db_service.server import DatabaseServiceServicer
 
 
 def serve():

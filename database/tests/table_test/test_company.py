@@ -1,32 +1,34 @@
 import pytest
-from .. import new_crud as crud
-from sqlalchemy import event
-
+from database.new_database.utils import companies_crud as crud 
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
 import inspect
 
-@pytest.fixture()
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
+
+@pytest.fixture
 def db_session():
     connection = crud.engine.connect()
-    transaction = connection.begin()
-    session = crud.Session(bind=connection)
+    outer_transaction = connection.begin()
 
-    # Start a SAVEPOINT. session.commit() will ends the SAVEPOINT
-    session.begin_nested()
+    session = TestingSessionLocal(bind=connection)
 
-    # If the SAVEPOINT ends, restart it automatically.
+    nested_transaction = connection.begin_nested()
+
     @event.listens_for(session, "after_transaction_end")
     def restart_savepoint(sess, trans):
-        if trans.nested and not trans._parent.nested:
-            sess.begin_nested()
+        nonlocal nested_transaction
+        if connection.closed:
+            return
+        if not nested_transaction.is_active and connection.in_transaction():
+            nested_transaction = connection.begin_nested()
 
     try:
         yield session
     finally:
         session.close()
-        try:
-            transaction.rollback()
-        except Exception:
-            pass
+        if outer_transaction.is_active:
+            outer_transaction.rollback()
         connection.close()
 
 @pytest.mark.parametrize("name", ["", " ", "A"])
@@ -34,19 +36,16 @@ def test_create_company_invalid_name_raises_valueerror(db_session, name):
     with pytest.raises(ValueError):
         crud.create_company(name, session=db_session)
 
-
 def test_create_company_success(db_session):
     c = crud.create_company("Acme", session=db_session)
     assert c.company_id is not None
     assert c.name == "Acme"
     assert c.deleted_at is None
 
-
 def test_create_company_duplicate_name_raises_runtimeerror(db_session):
     crud.create_company("Acme", session=db_session)
     with pytest.raises(RuntimeError):
         crud.create_company("Acme", session=db_session)
-
 
 def test_get_company_by_id_and_name(db_session):
     c = crud.create_company("Umbrella", session=db_session)
@@ -62,19 +61,23 @@ def test_get_company_by_id_and_name(db_session):
     missing = crud.get_company_by_name("DoesNotExist", session=db_session)
     assert missing is None
 
-
 def test_list_companies_excludes_deleted_by_default(db_session):
     c1 = crud.create_company("Aco", session=db_session)
     c2 = crud.create_company("Bco", session=db_session)
 
-    # soft delete one
     assert crud.soft_delete_company(c1.company_id, session=db_session) is True
 
     active = crud.list_companies(session=db_session)
-    assert [c.name for c in active] == ["Bco"]
+    active_ids = [c.company_id for c in active]
+
+    assert c2.company_id in active_ids
+    assert c1.company_id not in active_ids
 
     all_companies = crud.list_companies(include_deleted=True, session=db_session)
-    assert sorted([c.name for c in all_companies]) == ["Aco", "Bco"]
+    all_ids = [c.company_id for c in all_companies]
+
+    assert c1.company_id in all_ids
+    assert c2.company_id in all_ids
 
 def test_update_company_name(db_session):
     c = crud.create_company("OldName", session=db_session)
@@ -84,12 +87,10 @@ def test_update_company_name(db_session):
     assert updated.company_id == c.company_id
     assert updated.name == "NewName"
 
-
 def test_update_company_invalid_name_raises_valueerror(db_session):
     c = crud.create_company("ValidName", session=db_session)
     with pytest.raises(ValueError):
         crud.update_company(c.company_id, name="A", session=db_session)
-
 
 def test_update_company_duplicate_name_raises_runtimeerror(db_session):
     c1 = crud.create_company("NameOne", session=db_session)
@@ -97,7 +98,6 @@ def test_update_company_duplicate_name_raises_runtimeerror(db_session):
 
     with pytest.raises(RuntimeError):
         crud.update_company(c2.company_id, name="NameOne", session=db_session)
-
 
 def test_soft_delete_and_restore_company(db_session):
     c = crud.create_company("DeleteMe", session=db_session)

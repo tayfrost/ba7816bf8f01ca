@@ -1,36 +1,65 @@
 import pytest
-from .. import new_crud as crud
+from database.new_database.utils import users_crud as crud  
+from database.new_database.utils import companies_crud as company_crud 
+from database.new_database.utils import subscription_plan_crud as sp_crud
+from database.new_database.utils import subscriptions_crud as subs_crud
 from sqlalchemy import event
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime, timedelta, timezone
 
 import inspect
 
-@pytest.fixture()
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
+
+@pytest.fixture
 def db_session():
     connection = crud.engine.connect()
-    transaction = connection.begin()
-    session = crud.Session(bind=connection)
+    outer_transaction = connection.begin()
 
-    # Start a SAVEPOINT. session.commit() will ends the SAVEPOINT
-    session.begin_nested()
+    session = TestingSessionLocal(bind=connection)
 
-    # If the SAVEPOINT ends, restart it automatically.
+    nested_transaction = connection.begin_nested()
+
     @event.listens_for(session, "after_transaction_end")
     def restart_savepoint(sess, trans):
-        if trans.nested and not trans._parent.nested:
-            sess.begin_nested()
+        nonlocal nested_transaction
+        if connection.closed:
+            return
+        if not nested_transaction.is_active and connection.in_transaction():
+            nested_transaction = connection.begin_nested()
 
     try:
         yield session
     finally:
         session.close()
-        try:
-            transaction.rollback()
-        except Exception:
-            pass
+        if outer_transaction.is_active:
+            outer_transaction.rollback()
         connection.close()
 
-def _mk_company(db_session, name="UsersCo"):
-    return crud.create_company(name, session=db_session)
+def _mk_company(db_session, name="UsersCo", with_subscription=True):
+    company = company_crud.create_company(name, session=db_session)
+
+    if with_subscription:
+        plan = sp_crud.create_subscription_plan(
+            plan_name=f"{name} Plan",
+            price_pennies=1000,
+            seat_limit=10,
+            currency="GBP",
+            session=db_session,
+        )
+
+        now = datetime.now(timezone.utc)
+        subs_crud.create_subscription(
+            company.company_id,
+            plan.plan_id,
+            status="active",
+            current_period_start=now,
+            current_period_end=now + timedelta(days=30),
+            session=db_session,
+        )
+
+    return company
 
 @pytest.mark.parametrize("role", ["", "owner", "ADMIN"])
 def test_create_user_invalid_role_raises_valueerror(db_session, role):
@@ -38,13 +67,11 @@ def test_create_user_invalid_role_raises_valueerror(db_session, role):
     with pytest.raises(ValueError):
         crud.create_user(company.company_id, role=role, session=db_session)
 
-
 @pytest.mark.parametrize("status", ["", "removed", "ACTIVE"])
 def test_create_user_invalid_status_raises_valueerror(db_session, status):
     company = _mk_company(db_session)
     with pytest.raises(ValueError):
         crud.create_user(company.company_id, role="viewer", status=status, session=db_session)
-
 
 def test_create_user_success(db_session):
     company = _mk_company(db_session)
@@ -62,7 +89,6 @@ def test_create_user_success(db_session):
     assert u.display_name == "Bob"
     assert u.deleted_at is None
 
-
 def test_get_user_by_id_and_list_users(db_session):
     company = _mk_company(db_session)
     u1 = crud.create_user(company.company_id, role="viewer", display_name="A", session=db_session)
@@ -75,7 +101,6 @@ def test_get_user_by_id_and_list_users(db_session):
     users = crud.list_users(company.company_id, session=db_session)
     assert len(users) == 2
     assert {u.user_id for u in users} == {u1.user_id, u2.user_id}
-
 
 def test_update_user_fields(db_session):
     company = _mk_company(db_session)
@@ -94,7 +119,6 @@ def test_update_user_fields(db_session):
     assert updated.role == "biller"
     assert updated.status == "inactive"
 
-
 @pytest.mark.parametrize("kwargs", [{"role": "boss"}, {"status": "removed"}])
 def test_update_user_invalid_inputs_raise_valueerror(db_session, kwargs):
     company = _mk_company(db_session)
@@ -102,7 +126,6 @@ def test_update_user_invalid_inputs_raise_valueerror(db_session, kwargs):
 
     with pytest.raises(ValueError):
         crud.update_user(company.company_id, u.user_id, session=db_session, **kwargs)
-
 
 def test_update_user_not_found_returns_none(db_session):
     company = _mk_company(db_session)
@@ -113,7 +136,6 @@ def test_update_user_not_found_returns_none(db_session):
 
     res = crud.update_user(company.company_id, missing_id, display_name="X", session=db_session)
     assert res is None
-
 
 def test_soft_delete_and_restore_user(db_session):
     company = _mk_company(db_session)
@@ -133,7 +155,6 @@ def test_soft_delete_and_restore_user(db_session):
     restored = crud.get_user_by_id(company.company_id, u.user_id, session=db_session)
     assert restored is not None
     assert restored.deleted_at is None
-
 
 def test_hard_delete_user_success(db_session):
     company = _mk_company(db_session)
