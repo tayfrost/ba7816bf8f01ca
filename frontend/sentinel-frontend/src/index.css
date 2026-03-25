@@ -19,3 +19,12 @@
   }
 }
 
+.theme-logged-in {
+
+  background: linear-gradient(to bottom, #20022bfd, #1a011d) !important;
+  color: #ffffff;
+}
+
+body {
+  transition: background 0.5s ease-in-out;
+}

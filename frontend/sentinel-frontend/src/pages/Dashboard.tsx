@@ -17,7 +17,7 @@ import EmptyMetricsState from "../components/dashboard/EmptyMetricsState";
 import { useIncidents } from "../hooks/useIncidents";
 import IncidentStatsPanel from "../components/dashboard/IncidentStatsPanel";
 import RecentIncidentsFeed from "../components/dashboard/RecentIncidentsFeed";
-import IncidentModal from "../components/dashboard/IncidentModal"; // Added Import
+import IncidentModal from "../components/dashboard/IncidentModal";
 
 
 const BRAND_ORANGE = "var(--color-top)"; 
