@@ -1,36 +1,12 @@
 # Database Tables Overview
 
-<<<<<<< HEAD:backend/README.md
 # How to look at the database.
 
-=======
-
-# How to look at the database.
-
-<<<<<<< HEAD
->>>>>>> feature/database:database/README.md
-To search for functions of the database, look at new_crud.py and new_crud_second_half.py.
-new crud has utility functions, and functions for the tables:
-
-Subscription_plan crud functions, 
-Companies crud functions,
-Subscriptons crud functions,
-Users crud functions,
-Slack Workspaces crud functions,
-<<<<<<< HEAD:backend/README.md
-
-To search for thease functions look for large consective hashtags ######################    {Table name}   #########################
-
-=======
-=======
 To search for functions of the database, look at utils  and new_crud_second_half.py.
 Utils has files each file is named after a table, thease will contain the crud functions needed. 
->>>>>>> 0ce01e0 (updated read me)
 
 To search for thease functions look for large consective hashtags ######################    {Table name}   #########################
 
-
->>>>>>> feature/database:database/README.md
 This schema supports a SaaS where **companies sign up**, you create **users (seats)** under each company, optionally connect **Slack** and **Gmail**, and store **flagged messages** with **scoring**.
 
 Postgres extensions used:
