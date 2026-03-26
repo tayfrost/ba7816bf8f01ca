@@ -6,7 +6,9 @@ import grpc
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from protos.db.v1 import db_pb2, db_pb2_grpc
-from database.new_database import new_crud_second_half as crud
+from database.new_database.utils import crud_google_mailboxes as mail_crud 
+from database.new_database.utils import crud_message_incidents as incidents_crud
+from database.new_database.utils import crud_incident_scores as scores_crud  
 
 def _timestamp_to_datetime(ts: Timestamp | None):
     if ts is None:
@@ -26,7 +28,7 @@ class DatabaseServiceServicer(db_pb2_grpc.DatabaseServiceServicer):
             if request.HasField("watch_expiration"):
                 watch_expiration = _timestamp_to_datetime(request.watch_expiration)
 
-            mailbox = crud.create_google_mailbox(
+            mailbox = mail_crud.create_google_mailbox(
                 company_id=request.company_id,
                 user_id=user_id,
                 email_address=request.email_address,
@@ -69,7 +71,7 @@ class DatabaseServiceServicer(db_pb2_grpc.DatabaseServiceServicer):
             content_raw = json.loads(request.content_raw)
             sent_at = _timestamp_to_datetime(request.sent_at)
 
-            incident = crud.create_message_incident(
+            incident = incidents_crud.create_message_incident(
                 company_id=request.company_id,
                 user_id=user_id,
                 source=request.source,
@@ -110,7 +112,7 @@ class DatabaseServiceServicer(db_pb2_grpc.DatabaseServiceServicer):
         try:
             message_id = uuid.UUID(request.message_id)
 
-            scores = crud.create_incident_scores(
+            scores = scores_crud.create_incident_scores(
                 message_id=message_id,
                 neutral_score=request.neutral_score,
                 humor_sarcasm_score=request.humor_sarcasm_score,
