@@ -404,6 +404,90 @@ class TestProcessSlackMessage:
         process_slack_message(_slack_payload(), "")
         assert captured["message_id"] == incident.message_id
 
+    # ── lookup_slack_user integration (happy path) ─────────────────
+
+    def test_display_name_uses_real_name_on_successful_lookup(self, monkeypatch):
+        monkeypatch.setattr(
+            "app.services.message_service.filter_message",
+            lambda t: _make_filter_result(),
+        )
+        new_user, _ = self._patch_db(monkeypatch, existing_account=None)
+        monkeypatch.setattr(
+            "app.services.message_service.lookup_slack_user",
+            lambda token, uid: ("Ada", "Lovelace", "ada@kcl.ac.uk"),
+        )
+        captured = {}
+        monkeypatch.setattr(
+            "app.services.message_service.db.create_viewer_seat",
+            lambda cid, display_name: (
+                captured.update(display_name=display_name) or new_user
+            ),
+        )
+        from app.services.message_service import process_slack_message
+        process_slack_message(_slack_payload(user="U999"), "")
+        assert captured["display_name"] == "Ada Lovelace"
+
+    def test_email_passed_to_create_slack_account(self, monkeypatch):
+        monkeypatch.setattr(
+            "app.services.message_service.filter_message",
+            lambda t: _make_filter_result(),
+        )
+        self._patch_db(monkeypatch, existing_account=None)
+        monkeypatch.setattr(
+            "app.services.message_service.lookup_slack_user",
+            lambda token, uid: ("Ada", "Lovelace", "ada@kcl.ac.uk"),
+        )
+        captured = {}
+        monkeypatch.setattr(
+            "app.services.message_service.db.create_slack_account",
+            lambda *a, **kw: captured.update(kw),
+        )
+        from app.services.message_service import process_slack_message
+        process_slack_message(_slack_payload(), "")
+        assert captured.get("email") == "ada@kcl.ac.uk"
+
+    def test_email_backfill_on_existing_account(self, monkeypatch):
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(
+            "app.services.message_service.filter_message",
+            lambda t: _make_filter_result(),
+        )
+        existing = _make_slack_account(email=None)
+        self._patch_db(monkeypatch, existing_account=existing)
+        monkeypatch.setattr(
+            "app.services.message_service.lookup_slack_user",
+            lambda token, uid: ("Ada", "Lovelace", "ada@kcl.ac.uk"),
+        )
+        mock_update = MagicMock()
+        monkeypatch.setattr(
+            "app.services.message_service.db.update_slack_account_email",
+            mock_update,
+        )
+        from app.services.message_service import process_slack_message
+        process_slack_message(_slack_payload(), "")
+        mock_update.assert_called_once_with("T123", "U999", "ada@kcl.ac.uk")
+
+    def test_no_backfill_when_existing_email_present(self, monkeypatch):
+        from unittest.mock import MagicMock
+        monkeypatch.setattr(
+            "app.services.message_service.filter_message",
+            lambda t: _make_filter_result(),
+        )
+        existing = _make_slack_account(email="old@example.com")
+        self._patch_db(monkeypatch, existing_account=existing)
+        monkeypatch.setattr(
+            "app.services.message_service.lookup_slack_user",
+            lambda token, uid: ("Ada", "Lovelace", "ada@kcl.ac.uk"),
+        )
+        mock_update = MagicMock()
+        monkeypatch.setattr(
+            "app.services.message_service.db.update_slack_account_email",
+            mock_update,
+        )
+        from app.services.message_service import process_slack_message
+        process_slack_message(_slack_payload(), "")
+        mock_update.assert_not_called()
+
 
 # ── process_gmail_event ───────────────────────────────────────────
 
