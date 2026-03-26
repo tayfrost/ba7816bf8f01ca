@@ -125,6 +125,10 @@ class TestProcessSlackMessage:
         new_user   = new_user   or _make_user()
         incident   = incident   or _make_incident()
         monkeypatch.setattr(
+            "app.services.message_service.lookup_slack_user",
+            lambda token, uid: ("unknown", "unknown", None),
+        )
+        monkeypatch.setattr(
             "app.services.message_service.db.get_workspace_by_team_id",
             lambda tid: workspace,
         )
@@ -133,12 +137,16 @@ class TestProcessSlackMessage:
             lambda tid, uid: existing_account,
         )
         monkeypatch.setattr(
+            "app.services.message_service.db.update_slack_account_email",
+            lambda *a, **kw: None,
+        )
+        monkeypatch.setattr(
             "app.services.message_service.db.create_viewer_seat",
             lambda cid, display_name: new_user,
         )
         monkeypatch.setattr(
             "app.services.message_service.db.create_slack_account",
-            lambda *a: None,
+            lambda *a, **kw: None,
         )
         monkeypatch.setattr(
             "app.services.message_service.db.create_message_incident",
