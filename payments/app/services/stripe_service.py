@@ -22,9 +22,9 @@ from app.models.models import (
     Payment,
     PaymentStatus,
     StripeEvent,
-    Subscription,
+    StripeSubscription,
     SubscriptionPlan,
-    SubscriptionStatus,
+    StripeSubscriptionStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class StripeService:
             return company.stripe_customer_id
 
         customer = stripe.Customer.create(
-            name=company.company_name,
+            name=company.name,
             metadata={"company_id": str(company.company_id)},
         )
         company.stripe_customer_id = customer.id
@@ -131,13 +131,13 @@ class StripeService:
     ) -> Optional[Subscription]:
         """Get the active subscription for a company."""
         result = await db.execute(
-            select(Subscription)
-            .where(Subscription.company_id == company_id)
+            select(StripeSubscription)
+            .where(StripeSubscription.company_id == company_id)
             .where(
-                Subscription.status.in_([
-                    SubscriptionStatus.ACTIVE.value,
-                    SubscriptionStatus.TRIALING.value,
-                    SubscriptionStatus.PAST_DUE.value,
+                StripeSubscription.status.in_([
+                    StripeSubscriptionStatus.ACTIVE.value,
+                    StripeSubscriptionStatus.TRIALING.value,
+                    StripeSubscriptionStatus.PAST_DUE.value,
                 ])
             )
             .order_by(Subscription.created_at.desc())
@@ -163,7 +163,7 @@ class StripeService:
             sub.cancel_at_period_end = True
         else:
             stripe.Subscription.cancel(sub.stripe_subscription_id)
-            sub.status = SubscriptionStatus.CANCELED.value
+            sub.status = StripeSubscriptionStatus.CANCELED.value
             sub.canceled_at = datetime.now(timezone.utc)
 
         db.add(sub)
@@ -458,11 +458,11 @@ async def _handle_checkout_completed(db: AsyncSession, session_obj: dict) -> Non
     # Fetch Stripe subscription for period info
     stripe_sub = stripe.Subscription.retrieve(stripe_sub_id)
 
-    subscription = Subscription(
+    subscription = StripeSubscription(
         company_id=int(company_id),
         plan_id=int(plan_id),
         stripe_subscription_id=stripe_sub_id,
-        status=SubscriptionStatus.ACTIVE.value,
+        status=StripeSubscriptionStatus.ACTIVE.value,
         interval=interval,
         current_period_start=datetime.fromtimestamp(
             stripe_sub.current_period_start, tz=timezone.utc
@@ -505,19 +505,19 @@ async def _handle_invoice_payment_failed(db: AsyncSession, invoice: dict) -> Non
         return
 
     result = await db.execute(
-        select(Subscription).where(Subscription.stripe_subscription_id == sub_id)
+        select(StripeSubscription).where(StripeSubscription.stripe_subscription_id == sub_id)
     )
     sub = result.scalar_one_or_none()
     if sub:
-        sub.status = SubscriptionStatus.PAST_DUE.value
+        sub.status = StripeSubscriptionStatus.PAST_DUE.value
         db.add(sub)
 
 
 async def _handle_subscription_updated(db: AsyncSession, stripe_sub: dict) -> None:
     """customer.subscription.updated — sync status from Stripe."""
     result = await db.execute(
-        select(Subscription).where(
-            Subscription.stripe_subscription_id == stripe_sub["id"]
+        select(StripeSubscription).where(
+            StripeSubscription.stripe_subscription_id == stripe_sub["id"]
         )
     )
     sub = result.scalar_one_or_none()
@@ -542,13 +542,13 @@ async def _handle_subscription_updated(db: AsyncSession, stripe_sub: dict) -> No
 async def _handle_subscription_deleted(db: AsyncSession, stripe_sub: dict) -> None:
     """customer.subscription.deleted — mark local subscription as canceled."""
     result = await db.execute(
-        select(Subscription).where(
-            Subscription.stripe_subscription_id == stripe_sub["id"]
+        select(StripeSubscription).where(
+            StripeSubscription.stripe_subscription_id == stripe_sub["id"]
         )
     )
     sub = result.scalar_one_or_none()
     if sub:
-        sub.status = SubscriptionStatus.CANCELED.value
+        sub.status = StripeSubscriptionStatus.CANCELED.value
         sub.canceled_at = datetime.now(timezone.utc)
         db.add(sub)
 

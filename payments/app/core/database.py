@@ -37,7 +37,7 @@ async def get_db() -> AsyncSession:
 async def init_db() -> None:
     """
     Create only NEW payment tables (subscriptions, payments, stripe_events).
-    Does NOT touch existing tables (subscription_plan, companies, etc.).
+    Does NOT touch existing tables (subscription_plans, companies, etc.).
     Also adds Stripe columns to existing tables via ALTER TABLE.
     """
     async with engine.begin() as conn:
@@ -57,20 +57,20 @@ async def init_db() -> None:
                         ALTER TABLE companies ADD COLUMN stripe_customer_id TEXT UNIQUE;
                     END IF;
 
-                    -- Add stripe_price_id_monthly to subscription_plan
+                    -- Add stripe_price_id_monthly to subscription_plans
                     IF NOT EXISTS (
                         SELECT 1 FROM information_schema.columns
-                        WHERE table_name = 'subscription_plan' AND column_name = 'stripe_price_id_monthly'
+                        WHERE table_name = 'subscription_plans' AND column_name = 'stripe_price_id_monthly'
                     ) THEN
-                        ALTER TABLE subscription_plan ADD COLUMN stripe_price_id_monthly TEXT;
+                        ALTER TABLE subscription_plans ADD COLUMN stripe_price_id_monthly TEXT;
                     END IF;
 
-                    -- Add stripe_price_id_yearly to subscription_plan
+                    -- Add stripe_price_id_yearly to subscription_plans
                     IF NOT EXISTS (
                         SELECT 1 FROM information_schema.columns
-                        WHERE table_name = 'subscription_plan' AND column_name = 'stripe_price_id_yearly'
+                        WHERE table_name = 'subscription_plans' AND column_name = 'stripe_price_id_yearly'
                     ) THEN
-                        ALTER TABLE subscription_plan ADD COLUMN stripe_price_id_yearly TEXT;
+                        ALTER TABLE subscription_plans ADD COLUMN stripe_price_id_yearly TEXT;
                     END IF;
                 END $$;
             """)
