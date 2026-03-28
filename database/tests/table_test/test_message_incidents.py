@@ -61,11 +61,13 @@ def test_create_message_incident_slack(db_session):
         source="slack",
         sent_at=NOW,
         content_raw={"text": "I'm really struggling"},
+        recommendation="Escalate for review",
         session=db_session,
     )
     assert inc.message_id is not None
     assert inc.source == "slack"
     assert inc.content_raw == {"text": "I'm really struggling"}
+    assert inc.recommendation == "Escalate for review"
 
 
 def test_create_message_incident_gmail(db_session):
@@ -78,6 +80,7 @@ def test_create_message_incident_gmail(db_session):
         source="gmail",
         sent_at=NOW,
         content_raw={"subject": "Help", "body": "need support"},
+        recommendation="Escalate for review",
         session=db_session,
     )
     assert inc.source == "gmail"

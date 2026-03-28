@@ -238,6 +238,7 @@ class MessageIncident(Base):
 
     content_raw: Mapped[dict] = mapped_column(JSONB, nullable=False)
     conversation_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    recommendation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

@@ -23,6 +23,7 @@ def create_message_incident(
     sent_at: datetime,
     content_raw: dict,
     conversation_id: str | None = None,
+    recommendation: str | None = None,
     session: optional[SASession] = None,
 ) -> model.MessageIncident:
     """
@@ -45,6 +46,7 @@ def create_message_incident(
         raise ValueError("content_raw must be a dict.")
 
     conversation_id = (conversation_id.strip() if isinstance(conversation_id, str) else None)
+    recommendation = (recommendation.strip() if isinstance(recommendation, str) else None)
 
     own_session = session is None
     if own_session:
@@ -63,6 +65,7 @@ def create_message_incident(
             sent_at=sent_at,
             content_raw=content_raw,
             conversation_id=conversation_id if conversation_id else None,
+            recommendation=recommendation if recommendation else None,
         )
         session.add(incident)
         session.flush()
