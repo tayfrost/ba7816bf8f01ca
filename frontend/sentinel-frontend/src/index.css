@@ -19,12 +19,19 @@
   }
 }
 
-.theme-logged-in {
-
+.theme-dark {
   background: linear-gradient(to bottom, #20022bfd, #1a011d) !important;
-  color: #ffffff;
+  --dynamic-text: #ffffff;
+  --dynamic-card: rgba(255, 255, 255, 0.05);
+  --dynamic-border: rgba(255, 255, 255, 0.1);
+}
+
+:root {
+  --dynamic-text: var(--color-brand-deep);
+  --dynamic-card: rgba(255, 255, 255, 0.15);
+  --dynamic-border: rgba(255, 255, 255, 0.3);
 }
 
 body {
-  transition: background 0.5s ease-in-out;
+  transition: background 0.4s ease;
 }

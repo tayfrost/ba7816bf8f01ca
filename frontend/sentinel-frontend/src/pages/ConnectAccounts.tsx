@@ -120,19 +120,31 @@ export default function ConnectAccounts() {
     nav("/dashboard", { replace: true });
   };
 
-  return (
-    <div className="min-h-screen flex flex-col font-sans antialiased relative overflow-hidden">
-      <LandingHeader isLoggedIn={true} />
+  const isDark = searchParams.get("theme") === "dark";
 
-      <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-6 relative z-10">
-        <div className="max-w-4xl w-full bg-white/15 backdrop-blur-3xl border border-white/30 shadow-xl rounded-[48px] p-10 md:p-14">
-          <div className="mb-12 text-center md:text-left">
-            <h1 className="text-4xl md:text-3xl font-serif font-black text-brand-deep mb-4 leading-[1.1]">
+  return (
+    <div className={`min-h-screen flex flex-col font-sans ${isDark ? 'theme-dark' : ''}`}>
+      
+      <LandingHeader 
+        isLoggedIn={true} 
+        theme={isDark ? 'dark' : 'light'} 
+        onToggleTheme={() => setSearchParams({ theme: isDark ? 'light' : 'dark' })} 
+      />
+
+      <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-6">
+        <div 
+          style={{ background: "var(--dynamic-card)" }}
+          className="max-w-4xl w-full backdrop-blur-3xl border border-white/30 shadow-xl rounded-[48px] p-10 md:p-14"
+        >
+          <div className="mb-12">
+            <h1 
+              style={{ color: "var(--dynamic-text)" }} 
+              className="text-4xl md:text-3xl font-serif font-black mb-4"
+            >
               Connect your work accounts
             </h1>
-            <p className="text-lg text-brand-deep/90 max-w-2xl font-medium mb-4">
-              Add Slack/Gmail/Outlook so SentinelAI can monitor early burnout signals using consent-based,
-              company-approved data sources.
+            <p style={{ color: "var(--dynamic-text)", opacity: 0.9 }} className="text-lg font-medium">
+              Add Slack/Gmail/Outlook so SentinelAI can monitor early burnout signals using consent-based, company-approved data sources.
             </p>
           </div>
 
