@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -39,5 +40,10 @@ class SlackUser(Base):
     surname: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     status: Mapped[str] = mapped_column(Text, nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    google_mailbox_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("google_mailboxes.google_mailbox_id"), nullable=True,
+    )
 
     workspace = relationship("SlackWorkspace", back_populates="slack_users")
+    linked_mailbox = relationship("GoogleMailbox", lazy="selectin")

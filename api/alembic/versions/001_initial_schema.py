@@ -121,6 +121,21 @@ def upgrade() -> None:
         sa.UniqueConstraint("team_id"),
     )
 
+    # ── google_mailboxes ───────────────────────────────────────────────
+    op.create_table(
+        "google_mailboxes",
+        sa.Column("google_mailbox_id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("company_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=True),
+        sa.Column("email_address", sa.Text(), nullable=False),
+        sa.Column("token_json", sa.Text(), nullable=True),
+        sa.Column("last_history_id", sa.Text(), nullable=True),
+        sa.Column("watch_expiration", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
+        sa.ForeignKeyConstraint(["user_id"], ["saas_user_data.user_id"]),
+        sa.PrimaryKeyConstraint("google_mailbox_id"),
+    )
+
     # ── slack_users ────────────────────────────────────────────────────
     op.create_table(
         "slack_users",
@@ -131,10 +146,13 @@ def upgrade() -> None:
         sa.Column("surname", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("status", sa.Text(), nullable=False),
+        sa.Column("email", sa.Text(), nullable=True),
+        sa.Column("google_mailbox_id", sa.BigInteger(), nullable=True),
         sa.CheckConstraint("char_length(trim(name)) > 1", name="ck_slack_user_name_len"),
         sa.CheckConstraint("char_length(trim(surname)) > 1", name="ck_slack_user_surname_len"),
         sa.CheckConstraint("status IN ('active','inactive','removed')", name="ck_slack_user_status"),
         sa.ForeignKeyConstraint(["team_id"], ["slack_workspaces.team_id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["google_mailbox_id"], ["google_mailboxes.google_mailbox_id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("team_id", "slack_user_id", name="uq_slack_users_team_user"),
     )
@@ -171,21 +189,6 @@ def upgrade() -> None:
         "idx_flagged_incidents_team_user_created_at",
         "flagged_incidents",
         ["team_id", "slack_user_id", "created_at"],
-    )
-
-    # ── google_mailboxes ───────────────────────────────────────────────
-    op.create_table(
-        "google_mailboxes",
-        sa.Column("google_mailbox_id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("company_id", sa.BigInteger(), nullable=False),
-        sa.Column("user_id", sa.BigInteger(), nullable=True),
-        sa.Column("email_address", sa.Text(), nullable=False),
-        sa.Column("token_json", sa.Text(), nullable=True),
-        sa.Column("last_history_id", sa.Text(), nullable=True),
-        sa.Column("watch_expiration", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"]),
-        sa.ForeignKeyConstraint(["user_id"], ["saas_user_data.user_id"]),
-        sa.PrimaryKeyConstraint("google_mailbox_id"),
     )
 
     # ── payments ───────────────────────────────────────────────────────
@@ -228,11 +231,11 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("stripe_events")
     op.drop_table("payments")
-    op.drop_table("google_mailboxes")
     op.drop_index("idx_flagged_incidents_team_user_created_at", table_name="flagged_incidents")
     op.drop_index("idx_flagged_incidents_company_created_at", table_name="flagged_incidents")
     op.drop_table("flagged_incidents")
     op.drop_table("slack_users")
+    op.drop_table("google_mailboxes")
     op.drop_table("slack_workspaces")
     op.drop_table("subscriptions")
     op.drop_table("saas_company_roles")

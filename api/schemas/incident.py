@@ -12,6 +12,9 @@ class FlaggedIncidentCreate(BaseModel):
     raw_message_text: dict[str, Any]
     class_reason: str | None = None
     recommendation: str | None = None
+    # optional - for account linking (slack <-> gmail)
+    email: str | None = None
+    google_id: str | None = None
 
 
 class FlaggedIncidentRead(BaseModel):
