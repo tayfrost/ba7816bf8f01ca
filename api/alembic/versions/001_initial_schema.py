@@ -151,6 +151,7 @@ def upgrade() -> None:
         sa.Column("channel_id", sa.Text(), nullable=False),
         sa.Column("raw_message_text", postgresql.JSONB(), nullable=False),
         sa.Column("class_reason", sa.Text(), nullable=True),
+        sa.Column("recommendation", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(["company_id"], ["companies.company_id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["team_id"], ["slack_workspaces.team_id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(

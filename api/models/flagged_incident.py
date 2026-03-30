@@ -37,6 +37,7 @@ class FlaggedIncident(Base):
     channel_id: Mapped[str] = mapped_column(Text, nullable=False)
     raw_message_text: Mapped[dict] = mapped_column(JSONB, nullable=False)
     class_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    recommendation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     company = relationship("Company", back_populates="flagged_incidents", foreign_keys=[company_id])
     workspace = relationship(

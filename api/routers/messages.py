@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import CurrentUser, get_current_user, get_db
+from api.dependencies import CurrentUser, get_current_user, get_db, require_role
 from api.models.flagged_incident import FlaggedIncident
-from api.schemas.incident import FlaggedIncidentRead
+from api.schemas.incident import FlaggedIncidentCreate, FlaggedIncidentRead
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
@@ -58,4 +58,26 @@ async def get_incident(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+    return incident
+
+
+@router.post("", response_model=FlaggedIncidentRead, status_code=status.HTTP_201_CREATED)
+async def create_incident(
+    body: FlaggedIncidentCreate,
+    user: CurrentUser = Depends(require_role("admin", "biller")),
+    db: AsyncSession = Depends(get_db),
+):
+    incident = FlaggedIncident(
+        company_id=user.company_id,
+        team_id=body.team_id,
+        slack_user_id=body.slack_user_id,
+        message_ts=body.message_ts,
+        channel_id=body.channel_id,
+        raw_message_text=body.raw_message_text,
+        class_reason=body.class_reason,
+        recommendation=body.recommendation,
+    )
+    db.add(incident)
+    await db.commit()
+    await db.refresh(incident)
     return incident
