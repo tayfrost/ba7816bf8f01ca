@@ -214,6 +214,21 @@ class TestLookupSlackUser:
         assert last == ""
         assert email is None
 
+    @patch("app.services.slack_user_service.httpx.Client")
+    def test_null_real_name_returns_defaults(self, mock_client_cls):
+        """Explicit null real_name must not AttributeError on .strip()."""
+        from app.services.slack_user_service import lookup_slack_user
+
+        _mock_httpx_client(mock_client_cls, {
+            "ok": True,
+            "user": {"id": "U123", "real_name": None, "profile": {}},
+        })
+
+        first, last, email = lookup_slack_user("xoxb-token", "U123")
+        assert first == "unknown"
+        assert last == ""
+        assert email is None
+
 
 class TestLookupCache:
 

@@ -36,7 +36,7 @@ def _parse_name(user: dict) -> Tuple[str, str]:
     if first and last:
         return first, last
 
-    real_name = user.get("real_name", "")
+    real_name = user.get("real_name") or ""
     if real_name.strip():
         parts = real_name.split(None, 1)
         first = first or parts[0]
