@@ -72,7 +72,7 @@ class TestLookupSlackUser:
 
         first, last, email = lookup_slack_user("xoxb-token", "U999")
         assert first == "unknown"
-        assert last == "unknown"
+        assert last == ""
         assert email is None
 
     @patch("app.services.slack_user_service.httpx.Client")
@@ -85,7 +85,7 @@ class TestLookupSlackUser:
 
         first, last, email = lookup_slack_user("xoxb-token", "U123")
         assert first == "unknown"
-        assert last == "unknown"
+        assert last == ""
         assert email is None
 
     @patch("app.services.slack_user_service.httpx.Client")
@@ -113,7 +113,7 @@ class TestLookupSlackUser:
 
         first, last, email = lookup_slack_user("xoxb-token", "U123")
         assert first == "Madonna"
-        assert last == "unknown"
+        assert last == ""
         assert email is None
 
     @patch("app.services.slack_user_service.httpx.Client")
@@ -149,7 +149,7 @@ class TestLookupSlackUser:
 
         first, last, email = lookup_slack_user("xoxb-token", "U123")
         assert first == "unknown"
-        assert last == "unknown"
+        assert last == ""
         assert email is None
 
     @patch("app.services.slack_user_service.httpx.Client")
@@ -166,7 +166,52 @@ class TestLookupSlackUser:
 
         first, last, email = lookup_slack_user("xoxb-token", "U123")
         assert first == "unknown"
-        assert last == "unknown"
+        assert last == ""
+        assert email is None
+
+    @patch("app.services.slack_user_service.httpx.Client")
+    def test_null_profile_returns_real_name_fallback(self, mock_client_cls):
+        """Slack can return explicit null for profile — must not AttributeError."""
+        from app.services.slack_user_service import lookup_slack_user
+
+        _mock_httpx_client(mock_client_cls, {
+            "ok": True,
+            "user": {"id": "U123", "real_name": "Ada Lovelace", "profile": None},
+        })
+
+        first, last, email = lookup_slack_user("xoxb-token", "U123")
+        assert first == "Ada"
+        assert last == "Lovelace"
+        assert email is None
+
+    @patch("app.services.slack_user_service.httpx.Client")
+    def test_whitespace_only_real_name_returns_defaults(self, mock_client_cls):
+        """Whitespace real_name must not IndexError on empty split."""
+        from app.services.slack_user_service import lookup_slack_user
+
+        _mock_httpx_client(mock_client_cls, {
+            "ok": True,
+            "user": {"id": "U123", "real_name": "   ", "profile": {}},
+        })
+
+        first, last, email = lookup_slack_user("xoxb-token", "U123")
+        assert first == "unknown"
+        assert last == ""
+        assert email is None
+
+    @patch("app.services.slack_user_service.httpx.Client")
+    def test_empty_profile_and_empty_real_name(self, mock_client_cls):
+        """Both fallback paths fail — should return clean defaults."""
+        from app.services.slack_user_service import lookup_slack_user
+
+        _mock_httpx_client(mock_client_cls, {
+            "ok": True,
+            "user": {"id": "U123", "real_name": "", "profile": {}},
+        })
+
+        first, last, email = lookup_slack_user("xoxb-token", "U123")
+        assert first == "unknown"
+        assert last == ""
         assert email is None
 
 
@@ -192,7 +237,7 @@ class TestLookupCache:
     def test_failed_lookup_not_cached(self, mock_fetch):
         from app.services.slack_user_service import lookup_slack_user, _cache
 
-        mock_fetch.return_value = ("unknown", "unknown", None)
+        mock_fetch.return_value = ("unknown", "", None)
 
         lookup_slack_user("xoxb-token", "U404")
         assert "U404" not in _cache
@@ -217,80 +262,72 @@ class TestLookupCache:
 
         assert mock_fetch.call_count == 2
 
+    @patch("app.services.slack_user_service._fetch_from_slack")
+    def test_single_word_name_user_is_cached(self, mock_fetch):
+        """'Madonna' with last='' differs from _DEFAULT ('unknown','',None) so gets cached."""
+        from app.services.slack_user_service import lookup_slack_user, _cache
+
+        mock_fetch.return_value = ("Madonna", "", None)
+
+        lookup_slack_user("xoxb-token", "UMADONNA")
+        assert "UMADONNA" in _cache
+
+        lookup_slack_user("xoxb-token", "UMADONNA")
+        mock_fetch.assert_called_once()
+
 
 class TestSlackRetryHeader:
 
-    def test_retry_header_returns_200_immediately(self):
+    def test_retry_header_returns_200_immediately(self, monkeypatch):
         """Slack retries carry an X-Slack-Retry-Num header.
         The controller should return 200 immediately without processing."""
         import sys
-        import types
         import json
         from unittest.mock import MagicMock
 
-        saved = {}
         stubs = [
             "backend", "backend.New_database",
             "backend.New_database.new_crud",
             "backend.New_database.new_oop",
         ]
-        try:
-            for mod_name in stubs:
-                saved[mod_name] = sys.modules.get(mod_name)
-                if mod_name not in sys.modules:
-                    sys.modules[mod_name] = types.ModuleType(mod_name)
+        for mod_name in stubs:
+            monkeypatch.setitem(sys.modules, mod_name, MagicMock())
 
-            for mod_name in [
-                "app.services.db_service",
-                "app.services.oauth_service",
-                "app.services.message_service",
-            ]:
-                saved[mod_name] = sys.modules.get(mod_name)
-                if mod_name not in sys.modules:
-                    stub = types.ModuleType(mod_name)
-                    if mod_name == "app.services.oauth_service":
-                        stub.process_slack_oauth = MagicMock()
-                    elif mod_name == "app.services.message_service":
-                        stub.process_slack_message = MagicMock()
-                    sys.modules[mod_name] = stub
+        for mod_name, attrs in [
+            ("app.services.db_service", {}),
+            ("app.services.oauth_service", {"process_slack_oauth": MagicMock()}),
+            ("app.services.message_service", {"process_slack_message": MagicMock()}),
+        ]:
+            stub = MagicMock(**attrs)
+            monkeypatch.setitem(sys.modules, mod_name, stub)
 
-            saved_ctrl = sys.modules.pop("app.controllers.slack_controller", None)
+        monkeypatch.delitem(sys.modules, "app.controllers.slack_controller", raising=False)
 
-            from app.controllers.slack_controller import router
-            from fastapi import FastAPI
-            from fastapi.testclient import TestClient
+        from app.controllers.slack_controller import router
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
 
-            test_app = FastAPI()
-            test_app.include_router(router)
-            client = TestClient(test_app)
+        test_app = FastAPI()
+        test_app.include_router(router)
+        client = TestClient(test_app)
 
-            payload = {
-                "type": "event_callback",
-                "team_id": "T123",
-                "event": {"type": "message", "user": "U1", "text": "help",
-                          "ts": "1", "channel": "C1"},
-            }
-            resp = client.post(
-                "/slack/events",
-                content=json.dumps(payload),
-                headers={
-                    "X-Slack-Retry-Num": "1",
-                    "X-Slack-Retry-Reason": "http_timeout",
-                    "Content-Type": "application/json",
-                },
-            )
-            assert resp.status_code == 200
-            assert resp.json() == {"ok": True}
-        finally:
-            for mod_name, original in saved.items():
-                if original is None:
-                    sys.modules.pop(mod_name, None)
-                else:
-                    sys.modules[mod_name] = original
-            if saved_ctrl is not None:
-                sys.modules["app.controllers.slack_controller"] = saved_ctrl
-            else:
-                sys.modules.pop("app.controllers.slack_controller", None)
+        payload = {
+            "type": "event_callback",
+            "team_id": "T123",
+            "event": {"type": "message", "user": "U1", "text": "help",
+                      "ts": "1", "channel": "C1"},
+        }
+        resp = client.post(
+            "/slack/events",
+            content=json.dumps(payload),
+            headers={
+                "X-Slack-Retry-Num": "1",
+                "X-Slack-Retry-Reason": "http_timeout",
+                "Content-Type": "application/json",
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json() == {"ok": True}
 
 
 class TestProcessSlackMessageWithLookup:
@@ -331,7 +368,7 @@ class TestProcessSlackMessageWithLookup:
             content_raw={}, conversation_id=None,
         )
 
-        lookup = lookup_result or ("unknown", "unknown", None)
+        lookup = lookup_result or ("unknown", "", None)
         monkeypatch.setattr(
             "app.services.message_service.lookup_slack_user",
             lambda token, uid: lookup,
@@ -441,7 +478,7 @@ class TestProcessSlackMessageWithLookup:
         )
         new_user, _ = self._patch_all(
             monkeypatch,
-            lookup_result=("unknown", "unknown", None),
+            lookup_result=("unknown", "", None),
             existing_account=None,
         )
         captured = {}

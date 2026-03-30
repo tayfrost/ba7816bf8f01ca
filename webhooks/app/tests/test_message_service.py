@@ -126,7 +126,7 @@ class TestProcessSlackMessage:
         incident   = incident   or _make_incident()
         monkeypatch.setattr(
             "app.services.message_service.lookup_slack_user",
-            lambda token, uid: ("unknown", "unknown", None),
+            lambda token, uid: ("unknown", "", None),
         )
         monkeypatch.setattr(
             "app.services.message_service.db.get_workspace_by_team_id",
