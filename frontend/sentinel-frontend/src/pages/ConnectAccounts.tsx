@@ -26,6 +26,7 @@ function providerDesc(p: Provider) {
 export default function ConnectAccounts() {
   const nav = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isDark = searchParams.get("theme") === "dark";
 
   const { integrations, setIntegrationConnected } = useOnboarding();
   const providers = useMemo<Provider[]>(() => ["slack", "gmail", "outlook"], []);
@@ -53,6 +54,16 @@ export default function ConnectAccounts() {
       setError("Failed to load integrations.");
     }
   }, [setIntegrationConnected]);
+
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.add('theme-dark');
+    } else {
+      document.body.classList.remove('theme-dark');
+    }
+
+    return () => document.body.classList.remove('theme-dark');
+  }, [isDark]);
 
   useEffect(() => {
     refreshIntegrations();
@@ -120,7 +131,6 @@ export default function ConnectAccounts() {
     nav("/dashboard", { replace: true });
   };
 
-  const isDark = searchParams.get("theme") === "dark";
 
   return (
     <div className={`min-h-screen flex flex-col font-sans ${isDark ? 'theme-dark' : ''}`}>
@@ -225,12 +235,22 @@ export default function ConnectAccounts() {
             })}
           </div>
 
-          <div className="bg-brand-deep/[0.02] border border-brand-deep/5 rounded-[32px] py-6 px-10 flex flex-col lg:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3 flex-grow">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
-              <p className="text-[10px] text-brand-deep/70 font-bold uppercase tracking-widest leading-relaxed max-w-2xl">
-                Only consent-based, company-approved data sources are analysed. HR decisions remain human-in-the-loop.
-              </p>
+          <div 
+
+  style={{ 
+    background: "var(--dynamic-card)", 
+    borderColor: "var(--dynamic-border)" 
+  }}
+  className="rounded-[32px] py-6 px-10 flex flex-col lg:flex-row items-center justify-between gap-6 border backdrop-blur-sm"
+>
+  <div className="flex items-center gap-3 flex-grow">
+    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+    <p 
+      style={{ color: "var(--dynamic-text)" }}
+      className="text-[10px] font-bold uppercase tracking-widest leading-relaxed max-w-2xl opacity-70"
+    >
+      Only consent-based, company-approved data sources are analysed. HR decisions remain human-in-the-loop.
+    </p>
             </div>
 
             <div className="flex flex-row items-center gap-4 shrink-0">
