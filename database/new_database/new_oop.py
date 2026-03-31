@@ -24,6 +24,9 @@ class Company(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # --- Stripe field (added by payments service) ---
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True, unique=True)
+
     subscriptions: Mapped[List["Subscription"]] = relationship(back_populates="company")
     users: Mapped[List["User"]] = relationship(back_populates="company")
     slack_workspaces: Mapped[List["SlackWorkspace"]] = relationship(back_populates="company")
@@ -47,6 +50,10 @@ class SubscriptionPlan(Base):
     price_pennies: Mapped[int] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(CHAR(3), nullable=False, server_default="GBP")
     seat_limit: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    # --- Stripe fields (added by payments service) ---
+    stripe_price_id_monthly: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    stripe_price_id_yearly: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     subscriptions: Mapped[List["Subscription"]] = relationship(back_populates="plan")
 
@@ -306,5 +313,3 @@ class AuthUser(Base):
 
     def __repr__(self) -> str:
         return f"AuthUser(auth_user_id={self.auth_user_id!r}, email={self.email!r})"
-
-
