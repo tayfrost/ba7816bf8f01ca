@@ -138,14 +138,14 @@ export default function Settings() {
 
         <div style={{ position: "absolute", top: "50px", right: "60px", display: "flex", gap: "15px" }}>
           <Button 
-            onClick={() => navigate("/usage")}
+            onClick={() => navigate("/usage?theme=dark")}
             className="!bg-white/5 !text-white/85 !border-white/30 !w-auto !px-6 !py-2 !text-xs"
             variant="secondary"
           >
             USAGE GUIDE
           </Button>
           <Button 
-            onClick={() => navigate("/connect-accounts")}
+            onClick={() => navigate("/connect-accounts?theme=dark")}
             className="!bg-orange-500/10 !text-orange-400 !border-orange-400/40 !w-auto !px-6 !py-2 !text-xs"
             variant="secondary"
           >

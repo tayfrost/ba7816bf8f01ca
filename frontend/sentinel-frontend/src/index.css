@@ -12,15 +12,23 @@
 
 @layer base {
   body {
-    @apply antialiased m-0 p-0 overflow-hidden;
+    @apply antialiased m-0 p-0;
+
+    overflow-x: hidden;
+    overflow-y: auto;
     /* Vertical Gradient */
-    background: linear-gradient(to bottom, var(--color-top), var(--color-bottom));
+    background-image: linear-gradient(to bottom, var(--color-top), var(--color-bottom));
+    background-attachment: fixed; 
+    background-size: cover;
+    
     min-height: 100vh;
+    transition: background 0.4s ease;
   }
 }
 
 .theme-dark {
-  background: linear-gradient(to bottom, #20022bfd, #1a011d) !important;
+  background-image: linear-gradient(to bottom, #20022bfd, #1a011d) !important;
+  background-attachment: fixed !important;
   --dynamic-text: #ffffff;
   --dynamic-card: rgba(255, 255, 255, 0.05);
   --dynamic-border: rgba(255, 255, 255, 0.1);
