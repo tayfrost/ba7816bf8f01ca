@@ -53,79 +53,65 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         
         print(f"[SERVER] ✓ FilterServiceServicer initialized successfully")
     
+    def _classify_single(self, message: str) -> dict:
+        """Core classification logic for a single message. Returns a result dict."""
+        tokens = tokenize_message(self.tokenizer, message)
+
+        if len(tokens) == 0:
+            return {
+                "category": "neutral",
+                "category_confidence": 1.0,
+                "severity": "none",
+                "severity_confidence": 1.0,
+                "is_risk": False,
+                "all_responses": "",
+            }
+
+        chunks = create_chunks(tokens, self.max_length, self.overlap)
+        category_labels = {v: k for k, v in config.CATEGORY_MAP.items()}
+        severity_labels = {v: k for k, v in config.SEVERITY_MAP.items()}
+
+        chunk_results = []
+        for chunk in chunks:
+            input_ids, attention_mask = prepare_chunk_inputs(
+                chunk, self.cls_token_id, self.sep_token_id,
+                self.pad_token_id, self.max_length,
+            )
+            category_logits, severity_logits = run_chunk_inference(
+                self.onnx_session, input_ids, attention_mask,
+            )
+            result = process_chunk_predictions(
+                category_logits, severity_logits,
+                category_labels, severity_labels, config.RISK_CATEGORIES,
+            )
+            chunk_results.append(result)
+
+        return aggregate_chunk_results(chunk_results, self.threshold)
+
+    def _result_to_response(self, result: dict) -> "filter_pb2.ClassifyResponse":
+        return filter_pb2.ClassifyResponse(
+            category=result["category"],
+            category_confidence=result["category_confidence"],
+            severity=result["severity"],
+            severity_confidence=result["severity_confidence"],
+            is_risk=result["is_risk"],
+            all_responses=result["all_responses"],
+        )
+
     def ClassifyMessage(self, request, context):
-        """Classify a message using sliding window approach."""
+        """Classify a single message using sliding window approach."""
         print(f"[REQUEST] Received classification request")
         try:
             message = request.message
             print(f"[REQUEST] Message length: {len(message)} chars")
-            
-            # Tokenize message
-            tokens = tokenize_message(self.tokenizer, message)
-            print(f"[REQUEST] Tokenized into {len(tokens)} tokens")
-            
-            # Handle empty messages
-            if len(tokens) == 0:
-                return filter_pb2.ClassifyResponse(
-                    category="neutral",
-                    category_confidence=1.0,
-                    severity="none",
-                    severity_confidence=1.0,
-                    is_risk=False,
-                    all_responses=""
-                )
-            
-            # Create chunks with sliding window
-            chunks = create_chunks(tokens, self.max_length, self.overlap)
-            print(f"[REQUEST] Split into {len(chunks)} chunks for processing")
-            
-            # Process each chunk
-            category_labels = {v: k for k, v in config.CATEGORY_MAP.items()}
-            severity_labels = {v: k for k, v in config.SEVERITY_MAP.items()}
-            
-            chunk_results = []
-            for chunk in chunks:
-                # Prepare inputs
-                input_ids, attention_mask = prepare_chunk_inputs(
-                    chunk,
-                    self.cls_token_id,
-                    self.sep_token_id,
-                    self.pad_token_id,
-                    self.max_length
-                )
-                
-                # Run inference
-                category_logits, severity_logits = run_chunk_inference(
-                    self.onnx_session,
-                    input_ids,
-                    attention_mask
-                )
-                
-                # Process predictions
-                result = process_chunk_predictions(
-                    category_logits,
-                    severity_logits,
-                    category_labels,
-                    severity_labels,
-                    config.RISK_CATEGORIES
-                )
-                chunk_results.append(result)
-            
-            # Aggregate results
-            final_result = aggregate_chunk_results(chunk_results, self.threshold)
-            
+
+            final_result = self._classify_single(message)
+
             print(f"[RESPONSE] Classification complete: category={final_result['category']}({final_result['category_confidence']:.3f}), "
                   f"severity={final_result['severity']}({final_result['severity_confidence']:.3f}), is_risk={final_result['is_risk']}")
-            
-            return filter_pb2.ClassifyResponse(
-                category=final_result["category"],
-                category_confidence=final_result["category_confidence"],
-                severity=final_result["severity"],
-                severity_confidence=final_result["severity_confidence"],
-                is_risk=final_result["is_risk"],
-                all_responses=final_result["all_responses"]
-            )
-            
+
+            return self._result_to_response(final_result)
+
         except Exception as e:
             print(f"[ERROR] Failed to process message: {str(e)}")
             import traceback
@@ -133,6 +119,37 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Error processing message: {str(e)}")
             return filter_pb2.ClassifyResponse()
+
+    _SAFE_DEFAULT = {
+        "category": "neutral", "category_confidence": 0.0,
+        "severity": "none", "severity_confidence": 0.0,
+        "is_risk": False, "all_responses": "",
+    }
+
+    def ClassifyMessages(self, request, context):
+        """Classify multiple messages in a single RPC call.
+
+        Individual message failures are caught and returned as safe defaults
+        so that one bad message does not abort the entire batch.
+        """
+        messages = list(request.messages)
+        print(f"[BATCH] Received batch classification request: {len(messages)} messages")
+
+        if not messages:
+            return filter_pb2.BatchClassifyResponse(results=[])
+
+        results = []
+        for i, message in enumerate(messages):
+            try:
+                print(f"[BATCH] Processing message {i+1}/{len(messages)} ({len(message)} chars)")
+                result = self._classify_single(message)
+                results.append(self._result_to_response(result))
+            except Exception as e:
+                print(f"[BATCH] Message {i+1} failed, returning safe default: {e}")
+                results.append(self._result_to_response(self._SAFE_DEFAULT))
+
+        print(f"[BATCH] Batch complete: {len(results)} messages classified")
+        return filter_pb2.BatchClassifyResponse(results=results)
 
 
 def serve():

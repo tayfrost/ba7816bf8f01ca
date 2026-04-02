@@ -114,6 +114,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
         try {
           localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem("sentinel_access_token");
         } catch {
           // ignore
         }

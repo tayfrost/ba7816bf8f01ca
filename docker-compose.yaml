@@ -1,6 +1,14 @@
 version: '3.8'
 
 services:
+
+  ai_service:
+    build: ./ai_service
+    ports:
+      - "8002:8001"
+    depends_on:
+      - kg-mcp-server
+
   filter:
     build:
       context: .
@@ -8,7 +16,7 @@ services:
     ports:
       - "50051:50051"
       - "9192:8000"
-    #restart: unless-stopped
+    restart: unless-stopped
 
   webhooks:
     build:
@@ -22,17 +30,17 @@ services:
       - pgvector
     restart: unless-stopped
 
-  # payments:
-  #   build: ./payments
-  #   ports:
-  #     - "8001:8001"
-  #   env_file:
-  #     - ./payments/.env
-  #   environment:
-  #     - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
-  #   depends_on:
-  #     - pgvector
-  #   restart: unless-stopped
+  payments:
+    build: ./payments
+    ports:
+      - "8004:8001"
+    env_file:
+      - ./payments/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
+    depends_on:
+      - pgvector
+    restart: unless-stopped
 
   api:
     build:
@@ -78,7 +86,7 @@ services:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8001
       - KG_DATA_PATH=/app/data/papers.json
-    restart: unless-stopped
+    #restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8001))"]
       interval: 30s
@@ -143,7 +151,7 @@ services:
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3002:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
