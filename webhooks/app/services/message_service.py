@@ -22,8 +22,9 @@ from app.services import db_service as db
 
 SEVERITY_MAP = {"none": 0, "early": 1, "middle": 2, "late": 3}
 
-from backend.New_database import new_oop as model
-from backend.New_database.new_crud import Session
+from database.new_database import new_oop as model
+from database.new_database.utils.utility_functions import Session
+
 from sqlalchemy import select
  
 logger = logging.getLogger(__name__)
