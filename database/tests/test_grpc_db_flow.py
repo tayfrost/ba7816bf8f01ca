@@ -14,7 +14,7 @@ def to_timestamp(dt):
 
 
 def test_full_grpc_flow():
-    channel = grpc.insecure_channel("localhost:50051")
+    channel = grpc.insecure_channel("localhost:50051") # issue might be localhost here when testing just renam eto the actuall server name 
     stub = db_pb2_grpc.DatabaseServiceStub(channel)
 
     company_id = 47
