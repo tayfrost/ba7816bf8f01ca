@@ -1,0 +1,56 @@
+
+.DS_Store
+**/.DS_Store
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv
+ENV/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# Logs
+*.log
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+#database configs
+*.db
+# Big models
+*.pt
+
+# Generated proto files
+filter/generated/
+*.pb2.py
+*.pb2_grpc.py
+*.pb2.pyi
+
+#mcp-debug tools
+.mcp-debug-tools/
+

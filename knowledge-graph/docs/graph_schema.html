@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SentinelAI Knowledge Graph Schema v3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f172a; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+  h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.3rem; background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
+  .stats { display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; justify-content: center; }
+  .stat { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1rem 1.5rem; text-align: center; min-width: 120px; }
+  .stat-num { font-size: 2rem; font-weight: 800; }
+  .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
+  .stat.papers .stat-num { color: #3b82f6; }
+  .stat.advice .stat-num { color: #f59e0b; }
+  .stat.topics .stat-num { color: #10b981; }
+  .stat.techs .stat-num { color: #a78bfa; }
+  svg { max-width: 900px; width: 100%; height: auto; }
+  .node-group { cursor: pointer; }
+  .node-group:hover .node-box { filter: brightness(1.2); }
+  .node-group:hover .node-label { fill: #fff; }
+  .edge-label { font-size: 11px; fill: #94a3b8; font-family: 'Courier New', monospace; }
+  .node-box { rx: 14; ry: 14; }
+  .node-label { font-size: 14px; font-weight: 700; fill: #fff; }
+  .node-detail { font-size: 10px; fill: rgba(255,255,255,0.7); }
+  .arrow { stroke-width: 2.5; fill: none; marker-end: url(#arrowhead); }
+  .guarantee { background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 16px; padding: 1.5rem 2rem; max-width: 800px; margin-top: 2rem; text-align: center; }
+  .guarantee h3 { color: #10b981; margin-bottom: 0.5rem; font-size: 1rem; }
+  .guarantee p { color: #94a3b8; font-size: 0.85rem; line-height: 1.6; }
+  .guarantee code { background: #334155; padding: 0.15rem 0.4rem; border-radius: 4px; color: #e2e8f0; font-size: 0.8rem; }
+  .journals { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 1.5rem; }
+  .journal-tag { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.7rem; color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<h1>SentinelAI Knowledge Graph v3.0</h1>
+<p class="subtitle">Evidence-Based Workplace Mental Health Ontology</p>
+
+<div class="stats">
+  <div class="stat papers"><div class="stat-num">60</div><div class="stat-label">Papers</div></div>
+  <div class="stat advice"><div class="stat-num">240</div><div class="stat-label">Advice Items</div></div>
+  <div class="stat topics"><div class="stat-num">17</div><div class="stat-label">Topics</div></div>
+  <div class="stat techs"><div class="stat-num">26</div><div class="stat-label">Techniques</div></div>
+</div>
+
+<svg viewBox="0 0 860 340" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <linearGradient id="gPaper" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="gAdvice" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d97706"/><stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="gTopic" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/><stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="gTech" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Edges -->
+  <path d="M 245,160 L 100,160" class="arrow" stroke="#64748b"/>
+  <text x="160" y="148" class="edge-label">:COVERS</text>
+
+  <path d="M 415,160 L 270,160" class="arrow" stroke="#64748b"/>
+  <text x="310" y="148" class="edge-label">:SOURCED_FROM</text>
+
+  <path d="M 560,160 L 700,160" class="arrow" stroke="#64748b"/>
+  <text x="600" y="148" class="edge-label">:USES_TECHNIQUE</text>
+
+  <path d="M 770,120 Q 820,60 430,60 Q 40,60 70,120" class="arrow" stroke="#64748b" stroke-dasharray="6,3"/>
+  <text x="410" y="50" class="edge-label" text-anchor="middle">:ADDRESSES</text>
+
+  <!-- Topic Node -->
+  <g class="node-group" transform="translate(10,110)">
+    <rect class="node-box" width="160" height="100" fill="url(#gTopic)" filter="url(#glow)"/>
+    <text x="80" y="35" class="node-label" text-anchor="middle">🏷️ Topic</text>
+    <text x="80" y="55" class="node-detail" text-anchor="middle">17 nodes</text>
+    <text x="80" y="72" class="node-detail" text-anchor="middle">id · name · description</text>
+    <text x="80" y="88" class="node-detail" text-anchor="middle">e.g. burnout, anxiety</text>
+  </g>
+
+  <!-- Paper Node -->
+  <g class="node-group" transform="translate(190,110)">
+    <rect class="node-box" width="180" height="100" fill="url(#gPaper)" filter="url(#glow)"/>
+    <text x="90" y="35" class="node-label" text-anchor="middle">📄 Paper</text>
+    <text x="90" y="55" class="node-detail" text-anchor="middle">60 nodes · 10,000+ citations</text>
+    <text x="90" y="72" class="node-detail" text-anchor="middle">title · authors · year · doi</text>
+    <text x="90" y="88" class="node-detail" text-anchor="middle">JAMA · Cochrane · Frontiers</text>
+  </g>
+
+  <!-- Advice Node -->
+  <g class="node-group" transform="translate(400,110)">
+    <rect class="node-box" width="170" height="100" fill="url(#gAdvice)" filter="url(#glow)"/>
+    <text x="85" y="35" class="node-label" text-anchor="middle">💡 Advice</text>
+    <text x="85" y="55" class="node-detail" text-anchor="middle">240 nodes</text>
+    <text x="85" y="72" class="node-detail" text-anchor="middle">text · confidence (0-1)</text>
+    <text x="85" y="88" class="node-detail" text-anchor="middle">Actionable interventions</text>
+  </g>
+
+  <!-- Technique Node -->
+  <g class="node-group" transform="translate(690,110)">
+    <rect class="node-box" width="160" height="100" fill="url(#gTech)" filter="url(#glow)"/>
+    <text x="80" y="35" class="node-label" text-anchor="middle">⚙️ Technique</text>
+    <text x="80" y="55" class="node-detail" text-anchor="middle">26 nodes</text>
+    <text x="80" y="72" class="node-detail" text-anchor="middle">id · name</text>
+    <text x="80" y="88" class="node-detail" text-anchor="middle">CBT · MBSR · HRV · ACT</text>
+  </g>
+
+  <!-- Flow label -->
+  <text x="430" y="270" text-anchor="middle" fill="#475569" font-size="12" font-style="italic">
+    User Input → Concern Detection → Topic → Paper → Advice → Technique → Topic (closed loop)
+  </text>
+  <text x="430" y="295" text-anchor="middle" fill="#10b981" font-size="13" font-weight="bold">
+    ✓ Zero hallucination guarantee — every output traces to a verified DOI
+  </text>
+</svg>
+
+<div class="guarantee">
+  <h3>🔒 Closed-Loop Hallucination Prevention</h3>
+  <p>The agent restricts output strictly to <code>Advice</code> nodes that exist in the graph. Each advice node links to a <code>Paper</code> with a verifiable DOI. No generative text is produced — only citation-backed, confidence-scored interventions.</p>
+</div>
+
+<div class="journals">
+  <span class="journal-tag">JAMA Network Open</span>
+  <span class="journal-tag">JAMA Internal Medicine</span>
+  <span class="journal-tag">Cochrane Reviews</span>
+  <span class="journal-tag">Annals of Internal Medicine</span>
+  <span class="journal-tag">Cell Reports Medicine</span>
+  <span class="journal-tag">British Journal of Sports Medicine</span>
+  <span class="journal-tag">Frontiers in Psychology</span>
+  <span class="journal-tag">JMIR</span>
+  <span class="journal-tag">PLoS ONE</span>
+  <span class="journal-tag">Psychiatry Research</span>
+</div>
+
+</body>
+</html>
