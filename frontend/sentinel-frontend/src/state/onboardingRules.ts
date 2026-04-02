@@ -1,4 +1,4 @@
-import { SignupData, PlanType, Integration } from "./onboarding";
+import type { SignupData, PlanType, Integration } from "./onboarding";
 
 export type NextStep =
   | "/signup"
