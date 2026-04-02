@@ -22,7 +22,7 @@ class FlaggedIncident(Base):
         Index("idx_flagged_incidents_team_user_created_at", "team_id", "slack_user_id", "created_at"),
     )
 
-    incident_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    incident_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     company_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("companies.company_id", ondelete="RESTRICT"), nullable=False,
     )

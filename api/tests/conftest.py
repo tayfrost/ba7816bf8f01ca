@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import JSON, event
+from sqlalchemy import JSON, Integer, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.schema import CheckConstraint
 
@@ -28,6 +28,7 @@ def event_loop():
 def _strip_pg_specifics(target, connection, **kw):
     """Remove PostgreSQL-specific constructs for SQLite testing."""
     if connection.dialect.name == "sqlite":
+        from sqlalchemy import BigInteger
         from sqlalchemy.dialects.postgresql import JSONB
 
         for table in target.tables.values():
@@ -35,10 +36,13 @@ def _strip_pg_specifics(target, connection, **kw):
             table.constraints = {
                 c for c in table.constraints if not isinstance(c, CheckConstraint)
             }
-            # Replace JSONB columns with plain JSON
             for col in table.columns:
+                # Replace JSONB with JSON
                 if isinstance(col.type, JSONB):
                     col.type = JSON()
+                # BigInteger PKs need to be Integer for SQLite autoincrement
+                if isinstance(col.type, BigInteger) and col.primary_key:
+                    col.type = Integer()
 
 
 # Strip PostgreSQL specifics before table creation on SQLite
