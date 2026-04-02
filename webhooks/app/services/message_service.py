@@ -16,7 +16,7 @@ from google.auth.transport.requests import Request as GoogleRequest
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
  
-from app.services.filter_service import filter_message, FilterResult
+from app.services.filter_service import filter_message, filter_messages, FilterResult
 from app.services.slack_user_service import lookup_slack_user
 from app.services import db_service as db
 
@@ -120,7 +120,7 @@ def process_gmail_event(payload: dict) -> bool:
     """
     Process an incoming Gmail Pub/Sub notification.
     Decodes the notification, fetches new messages via the History API,
-    filters each one, and stores any that pass.
+    batch-filters them, and stores any that pass.
     Returns True if at least one message was stored.
     """
     try:
@@ -150,17 +150,24 @@ def process_gmail_event(payload: dict) -> bool:
     messages, latest_history_id = _fetch_new_messages(account, user_email)
  
     db.set_google_mailbox_history_id(account.google_mailbox_id, latest_history_id)
- 
-    stored = 0
+
+    extracted = []
     for message in messages:
         body, _ = _extract_best_body(message)
-        if not body:
-            continue
- 
-        result = filter_message(body)
+        extracted.append((message, body))
+
+    bodies_to_filter = [body for _, body in extracted if body]
+    body_index_map = [i for i, (_, body) in enumerate(extracted) if body]
+
+    filter_results = filter_messages(bodies_to_filter) if bodies_to_filter else []
+
+    stored = 0
+    for filter_idx, extracted_idx in enumerate(body_index_map):
+        result = filter_results[filter_idx]
         if not result or not result.is_risk:
             continue
- 
+
+        message, body = extracted[extracted_idx]
         headers = {
             h["name"]: h["value"]
             for h in message.get("payload", {}).get("headers", [])
