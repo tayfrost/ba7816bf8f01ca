@@ -43,12 +43,8 @@ def get_workspace_by_team_id(team_id: str):
         access_token = "xoxb-stub-token"
     return FakeWorkspace()
 
-def upsert_slack_user(team_id: str, slack_user_id: str, name: str, surname: str,
-                      email: str = None):
-    logger.info(
-        f"[STUB] upsert_slack_user: {slack_user_id} team={team_id} "
-        f"name={name} {surname} email={email}"
-    )
+def upsert_slack_user(team_id: str, slack_user_id: str, name: str, surname: str):
+    logger.info(f"[STUB] upsert_slack_user: {slack_user_id} team={team_id}")
 
 def create_flagged_incident(*, company_id, team_id, slack_user_id,
                              message_ts, channel_id, raw_message_text, class_reason=None):

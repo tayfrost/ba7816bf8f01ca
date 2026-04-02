@@ -69,7 +69,8 @@ def lookup_slack_user(
             return first, last, email
 
     result = _fetch_from_slack(access_token, slack_user_id)
-    _cache[slack_user_id] = (*result, time())
+    if result != _DEFAULT:
+        _cache[slack_user_id] = (*result, time())
     return result
 
 
@@ -104,6 +105,9 @@ def _fetch_from_slack(
         return _DEFAULT
     except httpx.HTTPStatusError as e:
         logger.warning(f"Slack users.info HTTP {e.response.status_code} for {slack_user_id}")
+        return _DEFAULT
+    except (ValueError, KeyError) as e:
+        logger.warning(f"Slack users.info malformed response for {slack_user_id}: {e}")
         return _DEFAULT
     except Exception as e:
         logger.error(f"Slack users.info unexpected error for {slack_user_id}: {e}")
