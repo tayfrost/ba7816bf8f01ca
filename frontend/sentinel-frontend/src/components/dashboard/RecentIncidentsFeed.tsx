@@ -2,9 +2,10 @@ import type { Incident } from "../../api";
 
 type Props = {
   incidents: Incident[];
+  onIncidentClick: (incident: Incident) => void;
 };
 
-export default function RecentIncidentsFeed({ incidents }: Props) {
+export default function RecentIncidentsFeed({ incidents, onIncidentClick }: Props) {
   return (
     <div
       style={{
@@ -22,12 +23,17 @@ export default function RecentIncidentsFeed({ incidents }: Props) {
         {incidents.map((incident) => (
           <div
             key={incident.incident_id}
+            onClick={() => onIncidentClick(incident)} // Handle Click for IncidentModal
             style={{
               padding: "16px",
               borderRadius: "18px",
               background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.05)",
+              cursor: "pointer",
+              transition: "background 0.2s"
             }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
           >
             <div
               style={{

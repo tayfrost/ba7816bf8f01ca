@@ -20,7 +20,7 @@ SLACK_USERS_INFO_URL = "https://slack.com/api/users.info"
 
 _TIMEOUT = 1.5
 
-_DEFAULT = ("unknown", "unknown", None)
+_DEFAULT = ("unknown", "", None)
 
 _cache: dict[str, Tuple[str, str, Optional[str], float]] = {}
 _CACHE_TTL = 300  # 5 minutes
@@ -28,7 +28,7 @@ _CACHE_TTL = 300  # 5 minutes
 
 def _parse_name(user: dict) -> Tuple[str, str]:
     """Extract first/last name from Slack user object, safely handling single-word names."""
-    profile = user.get("profile", {})
+    profile = user.get("profile") or {}
 
     first = profile.get("first_name") or ""
     last = profile.get("last_name") or ""
@@ -36,14 +36,14 @@ def _parse_name(user: dict) -> Tuple[str, str]:
     if first and last:
         return first, last
 
-    real_name = user.get("real_name", "")
-    if real_name:
+    real_name = user.get("real_name") or ""
+    if real_name.strip():
         parts = real_name.split(None, 1)
         first = first or parts[0]
-        last = last or (parts[1] if len(parts) > 1 else "unknown")
+        last = last or (parts[1] if len(parts) > 1 else "")
         return first, last
 
-    return first or "unknown", last or "unknown"
+    return first or "unknown", last
 
 
 def lookup_slack_user(
@@ -69,7 +69,8 @@ def lookup_slack_user(
             return first, last, email
 
     result = _fetch_from_slack(access_token, slack_user_id)
-    _cache[slack_user_id] = (*result, time())
+    if result != _DEFAULT:
+        _cache[slack_user_id] = (*result, time())
     return result
 
 
@@ -95,7 +96,7 @@ def _fetch_from_slack(
 
         user = data.get("user", {})
         first_name, last_name = _parse_name(user)
-        email = user.get("profile", {}).get("email") or None
+        email = (user.get("profile") or {}).get("email") or None
 
         return first_name, last_name, email
 
@@ -104,6 +105,9 @@ def _fetch_from_slack(
         return _DEFAULT
     except httpx.HTTPStatusError as e:
         logger.warning(f"Slack users.info HTTP {e.response.status_code} for {slack_user_id}")
+        return _DEFAULT
+    except (ValueError, KeyError) as e:
+        logger.warning(f"Slack users.info malformed response for {slack_user_id}: {e}")
         return _DEFAULT
     except Exception as e:
         logger.error(f"Slack users.info unexpected error for {slack_user_id}: {e}")
