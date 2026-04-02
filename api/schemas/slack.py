@@ -22,3 +22,4 @@ class SlackUserRead(BaseModel):
     surname: str
     created_at: datetime
     status: str
+    email: str | None = None
