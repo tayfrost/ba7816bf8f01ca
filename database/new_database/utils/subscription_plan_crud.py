@@ -11,7 +11,7 @@ from database.new_database.utils import utility_functions as ufunc
 import uuid
 
 
-engine = create_engine("postgresql+psycopg://postgres:postgres@localhost:5432/sentinelai", echo=True)
+engine = create_engine("postgresql+psycopg://postgres:postgres@pgvector:5432/sentinelai", echo=True)
 Session = sessionmaker(bind=engine)
 
 VALID_ROLES = {"admin", "viewer", "biller"}
