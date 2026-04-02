@@ -1287,7 +1287,6 @@ def create_slack_user(
     name: str,
     surname: str,
     status: str = "active",
-    email: optional[str] = None,
     *,
     session: optional[SASession] = None,
 ) -> model.SlackUser:
@@ -1332,7 +1331,6 @@ def create_slack_user(
             slack_user_id=slack_user_id,
             name=name,
             surname=surname,
-            email=email,
             status=status,
         )
         session.add(row)
@@ -1431,11 +1429,10 @@ def update_slack_user_profile(
     *,
     name: optional[str] = None,
     surname: optional[str] = None,
-    email: optional[str] = None,
     session: optional[SASession] = None,
 ) -> model.SlackUser:
     """
-    Update name/surname/email for a slack user.
+    Update name/surname for a slack user 
     """
     team_id = (team_id or "").strip()
     slack_user_id = (slack_user_id or "").strip()
@@ -1444,8 +1441,8 @@ def update_slack_user_profile(
     if not slack_user_id:
         raise ValueError("slack_user_id is required")
 
-    if name is None and surname is None and email is None:
-        raise ValueError("Provide at least one of name, surname, or email to update.")
+    if name is None and surname is None:
+        raise ValueError("Provide at least one of name or surname to update.")
 
     if name is not None:
         name = (name or "").strip()
@@ -1474,8 +1471,6 @@ def update_slack_user_profile(
             row.name = name
         if surname is not None:
             row.surname = surname
-        if email is not None:
-            row.email = email
 
         session.commit()
         session.refresh(row)
@@ -1551,12 +1546,11 @@ def upsert_slack_user(
     name: str,
     surname: str,
     status: str = "active",
-    email: optional[str] = None,
     *,
     session: optional[SASession] = None,
 ) -> model.SlackUser:
     """
-    Insert if missing (team_id, slack_user_id), else update name/surname/status/email.
+    Insert if missing (team_id, slack_user_id), else update name/surname/status.
     Useful when syncing from Slack API.
     """
     team_id = (team_id or "").strip()
@@ -1599,7 +1593,6 @@ def upsert_slack_user(
                 slack_user_id=slack_user_id,
                 name=name,
                 surname=surname,
-                email=email,
                 status=status,
             )
             session.add(row)
@@ -1608,8 +1601,6 @@ def upsert_slack_user(
             row.name = name
             row.surname = surname
             row.status = status
-            if email is not None:
-                row.email = email
 
         session.commit()
         session.refresh(row)
