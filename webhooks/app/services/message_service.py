@@ -17,6 +17,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
  
 from app.services.filter_service import filter_message, filter_messages, FilterResult
+from app.services.slack_user_service import lookup_slack_user
 from app.services import db_service as db
 
 SEVERITY_MAP = {"none": 0, "early": 1, "middle": 2, "late": 3}
@@ -67,15 +68,27 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
         return False
  
     company_id: int = workspace.company_id
- 
+
+    first_name, last_name, email = lookup_slack_user(
+        workspace.access_token, slack_uid
+    )
+    display_name = (
+        f"{first_name} {last_name}".strip()
+        if first_name != "unknown" else f"Slack user {slack_uid}"
+    )
+    logger.info(f"Slack user lookup: {slack_uid} -> {display_name} email={email}")
+
     existing_account = db.get_slack_account(team_id, slack_uid)
     if existing_account:
         user_id = existing_account.user_id
+        if email and not existing_account.email:
+            db.update_slack_account_email(team_id, slack_uid, email)
+            logger.info(f"Backfilled email for {slack_uid}: {email}")
     else:
-        user     = db.create_viewer_seat(company_id, display_name=f"Slack user {slack_uid}")
+        user     = db.create_viewer_seat(company_id, display_name=display_name)
         user_id  = user.user_id
-        db.create_slack_account(company_id, team_id, slack_uid, user_id)
-        logger.info(f"New viewer seat + slack_account created for {slack_uid} team={team_id}")
+        db.create_slack_account(company_id, team_id, slack_uid, user_id, email=email)
+        logger.info(f"New viewer seat + slack_account created for {slack_uid} team={team_id} email={email}")
  
     try:
         sent_at = datetime.fromtimestamp(float(message_ts), tz=timezone.utc)

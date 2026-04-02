@@ -3,7 +3,6 @@ import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
 import SidebarLink from "../components/SidebarLink";
 import EmployeeCard from "../components/EmployeeCard";
-import { MOCK_EMPLOYEES } from "../state/employeesMock";
 import { useEmployeesData } from "../hooks/useEmployeesData";
 import EmployeesFilters from "../components/employees/EmployeesFilters";
 import RiskBadge from "../components/employees/RiskBadge";
@@ -162,39 +161,47 @@ export default function Employees() {
               }}
              />
           </div>
-        </section>
 
-        <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
-          <button
-            onClick={() => setDirectoryView("cards")}
-            style={{
-              padding: "10px 16px",
-              borderRadius: "14px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: directoryView === "cards" ? "rgba(227,141,38,0.2)" : "rgba(255,255,255,0.03)",
-              color: directoryView === "cards" ? BRAND_ORANGE : "rgba(255,255,255,0.6)",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            Card View
-          </button>
-          
-          <button
-            onClick={() => setDirectoryView("table")}
-            style={{
-              padding: "10px 16px",
-              borderRadius: "14px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: directoryView === "table" ? "rgba(227,141,38,0.2)" : "rgba(255,255,255,0.03)",
-              color: directoryView === "table" ? BRAND_ORANGE : "rgba(255,255,255,0.6)",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            Table View
-          </button>
-        </div>
+          <div style={{ 
+            display: "flex", 
+            gap: "30px", 
+            background: "rgba(255, 255, 255, 0)", 
+            padding: "10px 30px", 
+            borderRadius: "50px", 
+            border: "1px solid rgba(255, 255, 255, 0)" 
+          }}>
+            <button
+              onClick={() => setDirectoryView("cards")}
+              style={{
+                background: "none",
+                border: "none",
+                color: directoryView === "cards" ? BRAND_ORANGE : "rgba(255,255,255,0.3)",
+                fontSize: "12px",
+                fontWeight: "900",
+                letterSpacing: "1px",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              CARDS
+            </button>
+            <button
+              onClick={() => setDirectoryView("table")}
+              style={{
+                background: "none",
+                border: "none",
+                color: directoryView === "table" ? BRAND_ORANGE : "rgba(255,255,255,0.3)",
+                fontSize: "12px",
+                fontWeight: "900",
+                letterSpacing: "1px",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              TABLE
+            </button>
+          </div>
+        </section>
 
         <EmployeesFilters
           riskFilter={riskFilter}
