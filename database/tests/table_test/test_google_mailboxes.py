@@ -1,8 +1,8 @@
 import pytest
-from database.new_database.utils import utility_functions as crud
-from database.new_database.utils import companies_crud as company_crud 
-from database.new_database import new_oop as model
-from database.new_database.utils.crud_google_mailboxes import (
+from database.db_service.utils import utility_functions as crud
+from database.db_service.utils import companies_crud as company_crud 
+from database.database import new_oop as model
+from database.db_service.utils.crud_google_mailboxes import (
     _increment_history_id,
     create_google_mailbox,
     get_google_mailbox_by_id,

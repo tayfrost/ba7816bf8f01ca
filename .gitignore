@@ -53,4 +53,4 @@ filter/generated/
 
 #mcp-debug tools
 .mcp-debug-tools/
-
+.claude

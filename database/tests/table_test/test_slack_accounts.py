@@ -1,8 +1,8 @@
 import pytest
-from database.new_database.utils import utility_functions as crud
-from database.new_database.utils import companies_crud as company_crud
-from database.new_database import new_oop as model
-from database.new_database.utils.crud_slack_accounts import (
+from database.db_service.utils import utility_functions as crud
+from database.db_service.utils import companies_crud as company_crud
+from database.database import new_oop as model
+from database.db_service.utils.crud_slack_accounts import (
     create_slack_account,
     get_slack_account,
     list_slack_accounts_for_company,

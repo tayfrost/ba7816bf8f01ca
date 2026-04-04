@@ -1,17 +1,15 @@
-from collections.abc import AsyncGenerator, Callable
+import asyncio
+import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.config import settings
-from api.database import async_session_factory
-from api.models.company import Company
-from api.models.company_role import SaasCompanyRole
-from api.models.user import SaasUserData
+from database.db_service.utils import companies_crud, crud_auth_users
+from database.db_service.utils import users_crud
 
 security = HTTPBearer()
 ALGORITHM = "HS256"
@@ -19,23 +17,15 @@ ALGORITHM = "HS256"
 
 @dataclass
 class CurrentUser:
-    """Lightweight representation of the authenticated user + company context."""
-    user_id: int
+    user_id: uuid.UUID
     company_id: int
     role: str
-    name: str
-    surname: str
+    display_name: str | None
     email: str
-
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with async_session_factory() as session:
-        yield session
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db),
 ) -> CurrentUser:
     token = credentials.credentials
     try:
@@ -48,38 +38,28 @@ async def get_current_user(
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    user_id = int(user_id_str)
+    try:
+        user_id = uuid.UUID(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    # Verify user exists
-    user = await db.get(SaasUserData, user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    user = await asyncio.to_thread(users_crud.get_user_by_id, company_id, user_id)
+    if not user or user.status != "active" or user.role != role:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
 
-    # Verify company role is still active
-    result = await db.execute(
-        select(SaasCompanyRole).where(
-            SaasCompanyRole.company_id == company_id,
-            SaasCompanyRole.user_id == user_id,
-            SaasCompanyRole.role == role,
-            SaasCompanyRole.status == "active",
-        )
-    )
-    company_role = result.scalar_one_or_none()
-    if not company_role:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Role no longer active")
-
-    # Check company is not soft-deleted
-    company = await db.get(Company, company_id)
+    company = await asyncio.to_thread(companies_crud.get_company_by_id, company_id)
     if not company or company.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Company deleted")
+
+    auth_user = await asyncio.to_thread(crud_auth_users.get_auth_user_by_user_id, company_id, user_id)
+    email = auth_user.email if auth_user else ""
 
     return CurrentUser(
         user_id=user_id,
         company_id=company_id,
         role=role,
-        name=user.name,
-        surname=user.surname,
-        email=user.email,
+        display_name=user.display_name,
+        email=email,
     )
 
 
