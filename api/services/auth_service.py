@@ -5,8 +5,8 @@ from jose import jwt
 from passlib.context import CryptContext
 
 from api.config import settings
-from database.db_service.utils import companies_crud, crud_auth_users, subscriptions_crud
-from database.db_service.utils import users_crud
+from database.services import companies_crud, crud_auth_users, subscriptions_crud
+from database.services import users_crud
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"

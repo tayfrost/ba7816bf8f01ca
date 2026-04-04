@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import CurrentUser, get_current_user, require_role
 from api.schemas.company import CompanyCreate, CompanyRead, CompanyUpdate
-from database.db_service.utils import companies_crud
-from database.db_service.utils import subscriptions_crud
+from database.services import companies_crud
+from database.services import subscriptions_crud
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 

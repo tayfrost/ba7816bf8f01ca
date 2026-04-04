@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from api.dependencies import CurrentUser, get_current_user
-from database.db_service.utils import crud_incident_scores
-from database.db_service.utils import crud_message_incidents
+from database.services import crud_incident_scores
+from database.services import crud_message_incidents
 
 router = APIRouter(tags=["usage"])
 

@@ -9,10 +9,8 @@ from pydantic import BaseModel
 from api.schemas.incident import MessageIncidentCreate, MessageIncidentRead
 from api.schemas.slack import SlackAccountRead, SlackWorkspaceRead
 from api.schemas.user import UserRead
-from database.db_service.utils import crud_auth_users, crud_google_mailboxes, crud_message_incidents, crud_slack_accounts, slack_workspaces_crud
-from database.db_service.utils import (
-    users_crud,
-)
+from database.services import crud_auth_users, crud_google_mailboxes, crud_message_incidents, crud_slack_accounts, slack_workspaces_crud
+from database.services import users_crud
 
 logger = logging.getLogger(__name__)
 

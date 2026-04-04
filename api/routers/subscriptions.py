@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import CurrentUser, get_current_user, require_role
 from api.schemas.subscription import SubscriptionCreate, SubscriptionPlanRead, SubscriptionRead
-from database.db_service.utils import subscription_plan_crud
-from database.db_service.utils import subscriptions_crud
+from database.services import subscription_plan_crud
+from database.services import subscriptions_crud
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 

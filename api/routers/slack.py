@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import CurrentUser, get_current_user, require_role
 from api.schemas.slack import SlackAccountRead, SlackWorkspaceRead
-from database.db_service.utils import crud_slack_accounts
-from database.db_service.utils import slack_workspaces_crud
+from database.services import crud_slack_accounts
+from database.services import slack_workspaces_crud
 
 router = APIRouter(prefix="/integrations/slack", tags=["slack"])
 

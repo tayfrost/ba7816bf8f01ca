@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import CurrentUser, require_role
 from api.schemas.plan import PlanCreate, PlanRead, PlanUpdate
-from database.db_service.utils import subscription_plan_crud
+from database.services import subscription_plan_crud
 
 router = APIRouter(prefix="/plans", tags=["plans"])
 

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.dependencies import CurrentUser, get_current_user, require_role
 from api.schemas.incident import MessageIncidentCreate, MessageIncidentRead
-from database.db_service.utils import crud_message_incidents
+from database.services import crud_message_incidents
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 

@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from api.dependencies import CurrentUser, get_current_user, require_role
-from database.db_service.utils import crud_google_mailboxes
-from database.db_service.utils import slack_workspaces_crud
+from database.services import crud_google_mailboxes
+from database.services import slack_workspaces_crud
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 

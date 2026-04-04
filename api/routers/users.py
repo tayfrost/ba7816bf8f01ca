@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from api.dependencies import CurrentUser, get_current_user, require_role
 from api.schemas.user import UserRoleRead, UserUpdate
 from api.services.auth_service import hash_password
-from database.db_service.utils import crud_auth_users
-from database.db_service.utils import users_crud
+from database.services import crud_auth_users
+from database.services import users_crud
 
 router = APIRouter(prefix="/users", tags=["users"])
 
