@@ -1,4 +1,4 @@
-from database.new_database import new_oop as model
+from database.database import models as model
 from sqlalchemy import select, and_
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session as SASession

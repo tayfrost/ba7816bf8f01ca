@@ -1,5 +1,5 @@
 import pytest
-from database.db_service.utils import subscription_plan_crud as crud 
+from database.services import subscription_plan_crud as crud 
 from sqlalchemy import event
 
 from sqlalchemy import create_engine, event

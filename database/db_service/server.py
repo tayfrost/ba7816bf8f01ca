@@ -6,9 +6,9 @@ import grpc
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from protos.db.v1 import db_pb2, db_pb2_grpc
-from database.db_service.utils import crud_google_mailboxes as mail_crud 
-from database.db_service.utils import crud_message_incidents as incidents_crud
-from database.db_service.utils import crud_incident_scores as scores_crud  
+from database.services import crud_google_mailboxes as mail_crud 
+from database.services import crud_message_incidents as incidents_crud
+from database.services import crud_incident_scores as scores_crud  
 
 def _timestamp_to_datetime(ts: Timestamp | None):
     if ts is None:

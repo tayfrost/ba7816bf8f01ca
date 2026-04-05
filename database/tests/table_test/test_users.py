@@ -1,8 +1,8 @@
 import pytest
-from database.db_service.utils import users_crud as crud  
-from database.db_service.utils import companies_crud as company_crud 
-from database.db_service.utils import subscription_plan_crud as sp_crud
-from database.db_service.utils import subscriptions_crud as subs_crud
+from database.services import users_crud as crud  
+from database.services import companies_crud as company_crud 
+from database.services import subscription_plan_crud as sp_crud
+from database.services import subscriptions_crud as subs_crud
 from sqlalchemy import event
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker

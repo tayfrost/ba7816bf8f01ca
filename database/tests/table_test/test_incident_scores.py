@@ -1,10 +1,10 @@
 import pytest
 import uuid
-from database.db_service.utils import utility_functions as crud
-from database.db_service.utils import companies_crud as company_crud 
-from database.database import new_oop as model
-from database.db_service.utils.crud_message_incidents import create_message_incident
-from database.db_service.utils.crud_incident_scores import (
+from database.services import utility_functions as crud
+from database.services import companies_crud as company_crud 
+from database.database import models as model
+from database.services.crud_message_incidents import create_message_incident
+from database.services.crud_incident_scores import (
     create_incident_scores,
     get_incident_scores_by_message_id,
     get_incident_scores_by_id,

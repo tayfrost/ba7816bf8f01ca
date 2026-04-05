@@ -17,8 +17,8 @@ if ($LASTEXITCODE -ne 0) { Write-Error "pgvector never became ready"; exit 1 }
 docker compose -f $Compose exec -T pgvector bash -c "psql -U postgres -c 'CREATE DATABASE sentinelai' || true"
 Assert-Ok "CREATE DATABASE failed"
 
-python "$PSScriptRoot\database\new_database\new_tables.py"
-Assert-Ok "new_tables.py failed"
+python "$PSScriptRoot\database\database\tables.py"
+Assert-Ok "database/tables.py failed"
 
 docker compose -f $Compose up -d --build api
 Assert-Ok "api failed to start"

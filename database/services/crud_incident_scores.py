@@ -1,5 +1,5 @@
-from database.database import new_oop as model
-from database.db_service.utils.utility_functions import Session
+from database.database import models as model
+from database.services.utility_functions import Session
 from sqlalchemy import select
 from sqlalchemy.orm import Session as SASession
 from typing import Optional as optional

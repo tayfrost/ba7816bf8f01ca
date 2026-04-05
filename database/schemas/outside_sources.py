@@ -10,11 +10,9 @@ from sqlalchemy import (BigInteger,Text,CHAR,
     UniqueConstraint,Index,func)
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB, CITEXT
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-class Base(DeclarativeBase):
-    pass
+from database.schemas.base import Base
 
 
 class SlackWorkspace(Base):

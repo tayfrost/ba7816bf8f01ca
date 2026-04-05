@@ -1,4 +1,4 @@
-from database.database import new_oop as model
+from database.database import models as model
 from sqlalchemy import select, and_
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session as SASession
@@ -7,7 +7,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
-from database.db_service.utils import utility_functions as ufunc
 import uuid
 
 

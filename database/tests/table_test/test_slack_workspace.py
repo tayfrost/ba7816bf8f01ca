@@ -1,9 +1,9 @@
 import pytest
-from database.db_service.utils import slack_workspaces_crud as crud 
-from database.db_service.utils import companies_crud as company_crud 
-from database.db_service.utils import subscription_plan_crud as sp_crud 
-from database.db_service.utils import subscriptions_crud as sub_crud 
-from database.db_service.utils import users_crud as user_crud 
+from database.services import slack_workspaces_crud as crud 
+from database.services import companies_crud as company_crud 
+from database.services import subscription_plan_crud as sp_crud 
+from database.services import subscriptions_crud as sub_crud 
+from database.services import users_crud as user_crud 
 
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import event
