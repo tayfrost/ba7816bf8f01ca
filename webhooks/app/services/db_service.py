@@ -2,9 +2,14 @@ import uuid
 from datetime import datetime
 from typing import Optional
  
-from backend.New_database import new_crud as crud
-from backend.New_database import new_crud_second_half as crud2
-from backend.New_database import new_oop as model
+import database.New_database.utils.users_crud as users_crud
+import database.New_database.utils.crud_google_mailboxes as crud_google_mailboxes
+import database.New_database.utils.companies_crud as companies_crud
+import database.New_database.utils.slack_workspaces_crud as slack_workspaces_crud
+import database.New_database.utils.crud_slack_accounts as crud_slack_accounts
+import database.New_database.utils.crud_message_incidents as crud_message_incidents
+from database.New_database import new_crud_second_half as crud2
+from database.New_database import new_oop as model
  
  
 # ── Canonical viewer seats ────────────────────────────────────────
@@ -15,7 +20,7 @@ def create_viewer_seat(
     *,
     session=None,
 ) -> model.User:
-    return crud.create_user(
+    return users_crud.create_user(
         company_id,
         role="viewer",
         status="active",
@@ -31,7 +36,7 @@ def get_user_by_id(
     session=None,
 ) -> Optional[model.User]:
     """Fetch a users row by (company_id, user_id). Returns None if not found."""
-    return crud.get_user_by_id(company_id, user_id, session=session)
+    return users_crud.get_user_by_id(company_id, user_id, session=session)
  
  
 # ── Google Mailboxes ──────────────────────────────────────────────
@@ -49,7 +54,7 @@ def create_google_mailbox(
     Raises RuntimeError if the mailbox already exists (from crud).
     Call get_google_mailbox_by_email first if you need upsert behaviour.
     """
-    return crud2.create_google_mailbox(
+    return crud_google_mailboxes.create_google_mailbox(
         company_id,
         user_id=user_id,
         email_address=email_address,
@@ -65,7 +70,7 @@ def get_google_mailbox_by_email(
     session=None,
 ) -> Optional[model.GoogleMailbox]:
     """Fetch a google_mailboxes row by (company_id, email_address)."""
-    return crud2.get_google_mailbox_by_email(
+    return crud_google_mailboxes.get_google_mailbox_by_email(
         company_id, email_address, session=session
     )
  
@@ -76,7 +81,7 @@ def update_google_mailbox_token(
     *,
     session=None,
 ) -> Optional[model.GoogleMailbox]:
-    return crud2.update_google_mailbox_token(
+    return crud_google_mailboxes.update_google_mailbox_token(
         google_mailbox_id,
         token_json=token_json,
         session=session,
@@ -89,7 +94,7 @@ def set_google_mailbox_history_id(
     *,
     session=None,
 ) -> None:
-    crud2.set_google_mailbox_history_id(
+    crud_google_mailboxes.set_google_mailbox_history_id(
         google_mailbox_id,
         last_history_id=last_history_id,
         session=session,
@@ -102,7 +107,7 @@ def update_google_mailbox_watch_expiration(
     *,
     session=None,
 ) -> None:
-    crud2.update_google_mailbox_watch_expiration(
+    crud_google_mailboxes.update_google_mailbox_watch_expiration(
         google_mailbox_id,
         watch_expiration=watch_expiration,
         session=session,
@@ -114,15 +119,15 @@ def list_google_mailboxes_for_company(
     *,
     session=None,
 ) -> list[model.GoogleMailbox]:
-    return crud2.list_google_mailboxes_for_company(company_id, session=session)
+    return crud_google_mailboxes.list_google_mailboxes_for_company(company_id, session=session)
 
-
+# ── Companies ──────────────────────────────────────────────
 def list_companies(
     *,
     session=None,
 ) -> list[model.Company]:
     """Return all active (non-deleted) companies. Used by the watch renewal job."""
-    return crud.list_companies(session=session)
+    return companies_crud.list_companies(session=session)
 
 
 # ── Slack Workspaces ──────────────────────────────────────────────
@@ -134,7 +139,7 @@ def create_workspace(
     *,
     session=None,
 ) -> model.SlackWorkspace:
-    return crud2.create_workspace(
+    return slack_workspaces_crud.create_workspace(
         company_id=company_id,
         team_id=team_id,
         access_token=access_token,
@@ -147,7 +152,7 @@ def get_workspace_by_team_id(
     *,
     session=None,
 ) -> Optional[model.SlackWorkspace]:
-    return crud2.get_workspace_by_team_id(team_id, session=session)
+    return slack_workspaces_crud.get_workspace_by_team_id(team_id, session=session)
  
  
 def update_workspace_token(
@@ -156,7 +161,7 @@ def update_workspace_token(
     *,
     session=None,
 ) -> Optional[model.SlackWorkspace]:
-    return crud2.update_workspace_token(team_id, access_token, session=session)
+    return slack_workspaces_crud.update_workspace_token(team_id, access_token, session=session)
  
  
 # ── Slack Accounts ────────────────────────────────────────────────
@@ -175,7 +180,7 @@ def create_slack_account(
     Raises RuntimeError if the account already exists (from crud).
     Call get_slack_account first if you need upsert behaviour.
     """
-    return crud2.create_slack_account(
+    return crud_slack_accounts.create_slack_account(
         company_id,
         team_id=team_id,
         slack_user_id=slack_user_id,
@@ -192,7 +197,7 @@ def get_slack_account(
     session=None,
 ) -> Optional[model.SlackAccount]:
     """Fetch a slack_accounts row by (team_id, slack_user_id)."""
-    return crud2.get_slack_account(team_id, slack_user_id, session=session)
+    return crud_slack_accounts.get_slack_account(team_id, slack_user_id, session=session)
  
  
 def update_slack_account_email(
@@ -203,7 +208,7 @@ def update_slack_account_email(
     session=None,
 ) -> None:
     """Update the email metadata on a slack_accounts row."""
-    crud2.update_slack_account_email(
+    crud_slack_accounts.update_slack_account_email(
         team_id, slack_user_id,
         email=email,
         session=session,
@@ -223,7 +228,7 @@ def create_message_incident(
     session=None,
 ) -> model.MessageIncident:
     """Create a message_incidents row. Returns the created incident."""
-    return crud2.create_message_incident(
+    return crud_message_incidents.create_message_incident(
         company_id,
         user_id=user_id,
         source=source,
@@ -249,7 +254,7 @@ def create_incident_scores(
     session=None,
 ) -> None:
     """Create an incident_scores row (1:1 with message_incidents)."""
-    crud2.create_incident_scores(
+    crud_message_incidents.create_incident_scores(
         message_id,
         neutral_score=neutral_score,
         humor_sarcasm_score=humor_sarcasm_score,
