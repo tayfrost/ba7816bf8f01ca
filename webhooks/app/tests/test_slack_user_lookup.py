@@ -346,27 +346,11 @@ class TestSlackRetryHeader:
 
 
 class TestProcessSlackMessageWithLookup:
-    """Integration tests verifying lookup_slack_user inside process_slack_message.
+    """Tests verifying lookup_slack_user behaviour inside process_slack_message."""
 
-    Uses monkeypatch.setattr (matching test_message_service.py pattern) to
-    avoid @patch-decorator import chain issues with backend.New_database deps.
-    """
-
-    def _make_filter_result(self, is_risk=True, category="burnout",
-                            severity="early"):
-        from app.services.filter_service import FilterResult
-        return FilterResult(
-            is_risk=is_risk, category=category,
-            category_confidence=0.9, severity=severity,
-            severity_confidence=0.85,
-        )
-
-    def _patch_all(self, monkeypatch, *, lookup_result=None,
-                   existing_account=None):
-        """Patch all external deps so process_slack_message runs in isolation."""
-        from types import SimpleNamespace
+    def _patch_all(self, monkeypatch, *, lookup_result=None, existing_account=None):
         import uuid
-        from datetime import datetime, timezone
+        from types import SimpleNamespace
 
         workspace = SimpleNamespace(
             slack_workspace_id=1, company_id=1, team_id="T123",
@@ -376,17 +360,9 @@ class TestProcessSlackMessageWithLookup:
             user_id=uuid.uuid4(), company_id=1, role="viewer",
             status="active", display_name="Test",
         )
-        incident = SimpleNamespace(
-            message_id=uuid.uuid4(), company_id=1,
-            user_id=uuid.uuid4(), source="slack",
-            sent_at=datetime.now(tz=timezone.utc),
-            content_raw={}, conversation_id=None,
-        )
-
-        lookup = lookup_result or ("unknown", "", None)
         monkeypatch.setattr(
             "app.services.message_service.lookup_slack_user",
-            lambda token, uid: lookup,
+            lambda token, uid: lookup_result or ("unknown", "", None),
         )
         monkeypatch.setattr(
             "app.services.message_service.db.get_workspace_by_team_id",
@@ -409,24 +385,14 @@ class TestProcessSlackMessageWithLookup:
             lambda *a, **kw: None,
         )
         monkeypatch.setattr(
-            "app.services.message_service.db.create_message_incident",
-            lambda *a, **kw: incident,
+            "app.services.message_service.dispatch_to_filter",
+            lambda meta, text: None,
         )
-        monkeypatch.setattr(
-            "app.services.message_service.db.create_incident_scores",
-            lambda *a, **kw: None,
-        )
-        return new_user, incident
+        return new_user
 
     def test_new_user_passes_email_to_create(self, monkeypatch):
-        from types import SimpleNamespace
         from unittest.mock import MagicMock
-
-        monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: self._make_filter_result(),
-        )
-        new_user, _ = self._patch_all(
+        new_user = self._patch_all(
             monkeypatch,
             lookup_result=("Vishal", "Thakwani", "vishal@example.com"),
             existing_account=None,
@@ -449,20 +415,13 @@ class TestProcessSlackMessageWithLookup:
             "event": {"type": "message", "user": "U123", "text": "help",
                       "ts": "1", "channel": "C1"},
         }
-        result = process_slack_message(payload, "xoxb-token")
-
-        assert result is True
+        assert process_slack_message(payload, "xoxb-token") is True
         assert captured.get("display_name") == "Vishal Thakwani"
         assert captured.get("email") == "vishal@example.com"
 
     def test_existing_user_backfills_email(self, monkeypatch):
         from types import SimpleNamespace
         from unittest.mock import MagicMock
-
-        monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: self._make_filter_result(),
-        )
         existing = SimpleNamespace(
             user_id="uid-existing", email=None,
             company_id=1, team_id="T123", slack_user_id="U123",
@@ -484,17 +443,11 @@ class TestProcessSlackMessageWithLookup:
             "event": {"type": "message", "user": "U123", "text": "help",
                       "ts": "1", "channel": "C1"},
         }
-        result = process_slack_message(payload, "xoxb-token")
-
-        assert result is True
+        assert process_slack_message(payload, "xoxb-token") is True
         mock_update.assert_called_once_with("T123", "U123", "ada@kcl.ac.uk")
 
     def test_handles_unknown_lookup_gracefully(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: self._make_filter_result(),
-        )
-        new_user, _ = self._patch_all(
+        new_user = self._patch_all(
             monkeypatch,
             lookup_result=("unknown", "", None),
             existing_account=None,
@@ -513,19 +466,12 @@ class TestProcessSlackMessageWithLookup:
             "event": {"type": "message", "user": "U123", "text": "help",
                       "ts": "1", "channel": "C1"},
         }
-        result = process_slack_message(payload, "1")
-
-        assert result is True
+        assert process_slack_message(payload, "1") is True
         assert captured["display_name"] == "Slack user U123"
 
     def test_existing_email_not_overwritten(self, monkeypatch):
         from types import SimpleNamespace
         from unittest.mock import MagicMock
-
-        monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: self._make_filter_result(),
-        )
         existing = SimpleNamespace(
             user_id="uid-existing", email="already@example.com",
             company_id=1, team_id="T123", slack_user_id="U123",
@@ -547,51 +493,5 @@ class TestProcessSlackMessageWithLookup:
             "event": {"type": "message", "user": "U123", "text": "help",
                       "ts": "1", "channel": "C1"},
         }
-        result = process_slack_message(payload, "1")
-
-        assert result is True
+        assert process_slack_message(payload, "1") is True
         mock_update.assert_not_called()
-
-    def test_lookup_not_called_when_filter_returns_none(self, monkeypatch):
-        lookup_called = []
-        monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: None,
-        )
-        monkeypatch.setattr(
-            "app.services.message_service.lookup_slack_user",
-            lambda token, uid: lookup_called.append(True) or ("x", "y", None),
-        )
-
-        from app.services.message_service import process_slack_message
-        payload = {
-            "type": "event_callback", "team_id": "T123",
-            "event": {"type": "message", "user": "U123", "text": "lunch?",
-                      "ts": "1", "channel": "C1"},
-        }
-        result = process_slack_message(payload, "1")
-
-        assert result is False
-        assert lookup_called == []
-
-    def test_lookup_not_called_when_is_risk_false(self, monkeypatch):
-        lookup_called = []
-        monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: self._make_filter_result(is_risk=False),
-        )
-        monkeypatch.setattr(
-            "app.services.message_service.lookup_slack_user",
-            lambda token, uid: lookup_called.append(True) or ("x", "y", None),
-        )
-
-        from app.services.message_service import process_slack_message
-        payload = {
-            "type": "event_callback", "team_id": "T123",
-            "event": {"type": "message", "user": "U123", "text": "lunch?",
-                      "ts": "1", "channel": "C1"},
-        }
-        result = process_slack_message(payload, "1")
-
-        assert result is False
-        assert lookup_called == []
