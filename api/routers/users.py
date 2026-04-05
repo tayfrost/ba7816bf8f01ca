@@ -44,18 +44,18 @@ async def get_user(user_id: uuid.UUID, user: CurrentUser = Depends(get_current_u
 
 @router.post("/invite", response_model=UserRoleRead, status_code=status.HTTP_201_CREATED)
 async def invite_user(
+    company_id: int,
     email: str,
     display_name: str | None = None,
     role: str = "viewer",
-    user: CurrentUser = Depends(require_role("admin", "biller")),
 ):
     try:
         new_user = await asyncio.to_thread(
-            users_crud.create_user, user.company_id,
+            users_crud.create_user, company_id,
             role=role, status="active", display_name=display_name,
         )
         await asyncio.to_thread(
-            crud_auth_users.create_auth_user, user.company_id,
+            crud_auth_users.create_auth_user, company_id,
             email=email.lower().strip(),
             password_hash=hash_password("changeme"),
             user_id=new_user.user_id,

@@ -48,14 +48,11 @@ async def get_incident(
 
 
 @router.post("", response_model=MessageIncidentRead, status_code=status.HTTP_201_CREATED)
-async def create_incident(
-    body: MessageIncidentCreate,
-    user: CurrentUser = Depends(require_role("admin", "biller")),
-):
+async def create_incident(company_id: int, body: MessageIncidentCreate):
     try:
         return await asyncio.to_thread(
             crud_message_incidents.create_message_incident,
-            user.company_id,
+            company_id,
             user_id=body.user_id,
             source=body.source,
             sent_at=body.sent_at,
