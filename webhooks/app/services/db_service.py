@@ -8,7 +8,6 @@ import database.New_database.utils.companies_crud as companies_crud
 import database.New_database.utils.slack_workspaces_crud as slack_workspaces_crud
 import database.New_database.utils.crud_slack_accounts as crud_slack_accounts
 import database.New_database.utils.crud_message_incidents as crud_message_incidents
-from database.New_database import new_crud_second_half as crud2
 from database.New_database import new_oop as model
  
  
