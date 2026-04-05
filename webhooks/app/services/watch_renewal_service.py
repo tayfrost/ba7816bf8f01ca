@@ -25,7 +25,7 @@ RENEWAL_THRESHOLD_HOURS  = int(os.getenv("GMAIL_WATCH_RENEWAL_THRESHOLD_HOURS", 
 
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/pubsub",
+    #"https://www.googleapis.com/auth/pubsub",
 ]
 
 

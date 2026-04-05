@@ -32,7 +32,7 @@ GMAIL_REDIRECT_URI  = f"{BASE_URL}/gmail/oauth/callback" if BASE_URL else None
  
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/pubsub",
+    #"https://www.googleapis.com/auth/pubsub",
 ]
 
 GMAIL_PUBSUB_TOPIC = os.getenv("GMAIL_PUBSUB_TOPIC")
