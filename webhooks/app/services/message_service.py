@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
  
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/pubsub",
+    #"https://www.googleapis.com/auth/pubsub",
 ]
  
  
