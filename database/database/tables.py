@@ -8,18 +8,21 @@ CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS companies (
-  company_id BIGSERIAL PRIMARY KEY,
-  name       TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  deleted_at TIMESTAMPTZ NULL
+  company_id         BIGSERIAL PRIMARY KEY,
+  name               TEXT NOT NULL UNIQUE,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at         TIMESTAMPTZ NULL,
+  stripe_customer_id TEXT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS subscription_plans (
-  plan_id       BIGSERIAL PRIMARY KEY,
-  plan_name     TEXT NOT NULL UNIQUE,
-  price_pennies BIGINT NOT NULL CHECK (price_pennies >= 0),
-  currency      CHAR(3) NOT NULL DEFAULT 'GBP',
-  seat_limit    INT NOT NULL CHECK (seat_limit > 0)
+  plan_id                 BIGSERIAL PRIMARY KEY,
+  plan_name               TEXT NOT NULL UNIQUE,
+  price_pennies           BIGINT NOT NULL CHECK (price_pennies >= 0),
+  currency                CHAR(3) NOT NULL DEFAULT 'GBP',
+  seat_limit              INT NOT NULL CHECK (seat_limit > 0),
+  stripe_price_id_monthly TEXT NULL,
+  stripe_price_id_yearly  TEXT NULL
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -129,6 +132,7 @@ CREATE TABLE IF NOT EXISTS message_incidents (
 
   content_raw      JSONB NOT NULL,
   conversation_id  TEXT NULL,
+  recommendation   TEXT NULL,
 
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
 
@@ -168,6 +172,12 @@ CREATE TABLE IF NOT EXISTS auth_users (
 
 CREATE INDEX IF NOT EXISTS idx_auth_users_company
   ON auth_users(company_id);
+
+-- Idempotent column additions for schema migrations
+ALTER TABLE companies         ADD COLUMN IF NOT EXISTS stripe_customer_id       TEXT NULL UNIQUE;
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS stripe_price_id_monthly TEXT NULL;
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS stripe_price_id_yearly  TEXT NULL;
+ALTER TABLE message_incidents  ADD COLUMN IF NOT EXISTS recommendation           TEXT NULL;
 
 """
 

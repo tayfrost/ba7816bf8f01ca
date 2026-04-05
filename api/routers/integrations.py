@@ -39,7 +39,7 @@ async def start_integration(
     oauth_urls = {
         "slack": "https://slack.com/oauth/v2/authorize",
         "gmail": "https://accounts.google.com/o/oauth2/v2/auth",
-        "outlook": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        #"outlook": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", Decided not to move on with outlook
     }
     if provider not in oauth_urls:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown provider: {provider}")
