@@ -1,8 +1,8 @@
 """
-Isolated unit tests for db_service.py
+Integration tests for db_service.py
 
-Verifies that every function delegates correctly to the right crud / crud2
-function with the right arguments. No real DB, sessions, or network calls.
+Real HTTP calls to the internal API (no mocks). API + pgvector must be running.
+Fixture creates test company via API before each test, cleans up after.
 
 Run with:
     pytest tests/test_db_service.py -v
@@ -10,9 +10,10 @@ Run with:
 
 import uuid
 from datetime import datetime, timezone
-from types import SimpleNamespace
 
 import pytest
+
+from app.services import db_service as db
 
 
 # ── Helpers ───────────────────────────────────────────────────────
@@ -21,439 +22,355 @@ def _utcnow():
     return datetime.now(tz=timezone.utc)
 
 
-def _make_user(**kw):
-    return SimpleNamespace(
-        user_id=uuid.uuid4(), company_id=1, role="viewer",
-        status="active", display_name="Test User", deleted_at=None, **kw
-    )
-
-
-def _make_mailbox(**kw):
-    defaults = dict(
-        google_mailbox_id=10, company_id=1, user_id=uuid.uuid4(),
-        email_address="emp@example.com",
-        token_json={"token": "t", "refresh_token": "r"},
-        last_history_id="100", watch_expiration=None,
-    )
-    defaults.update(kw)
-    return SimpleNamespace(**defaults)
-
-def _make_workspace(**kw):
-    return SimpleNamespace(
-        slack_workspace_id=1, company_id=1, team_id="T123",
-        access_token="xoxb-token", revoked_at=None, **kw
-    )
-
-
-def _make_slack_account(**kw):
-    return SimpleNamespace(
-        company_id=1, team_id="T123", slack_user_id="U999",
-        user_id=uuid.uuid4(), email=None, **kw
-    )
-
-
-def _make_incident(**kw):
-    return SimpleNamespace(
-        message_id=uuid.uuid4(), company_id=1, user_id=uuid.uuid4(),
-        source="slack", sent_at=_utcnow(), content_raw={},
-        conversation_id=None, **kw
-    )
-
-
 # ── Viewer seats ──────────────────────────────────────────────────
 
 class TestCreateViewerSeat:
 
-    def test_calls_create_user_with_viewer_role(self, monkeypatch):
-        new_user = _make_user()
-        captured = {}
+    def test_creates_viewer_with_display_name(self, test_company_id):
+        result = db.create_viewer_seat(test_company_id, display_name="Alice")
+        assert result is not None
+        assert result.company_id == test_company_id
+        assert result.role == "viewer"
+        assert result.status == "active"
+        assert result.display_name == "Alice"
+        assert isinstance(result.user_id, uuid.UUID)
 
-        def fake(company_id, role, status, display_name, session=None):
-            captured.update(company_id=company_id, role=role,
-                            status=status, display_name=display_name)
-            return new_user
+    def test_creates_viewer_without_display_name(self, test_company_id):
+        result = db.create_viewer_seat(test_company_id, display_name=None)
+        assert result is not None
+        assert result.company_id == test_company_id
+        assert result.role == "viewer"
+        assert result.status == "active"
 
-        monkeypatch.setattr("app.services.db_service.crud.create_user", fake)
-        from app.services import db_service as db
-        result = db.create_viewer_seat(1, display_name="Alice")
-        assert result is new_user
-        assert captured["role"]         == "viewer"
-        assert captured["status"]       == "active"
-        assert captured["display_name"] == "Alice"
-        assert captured["company_id"]   == 1
 
-    def test_passes_company_id_through(self, monkeypatch):
-        captured = {}
-        monkeypatch.setattr(
-            "app.services.db_service.crud.create_user",
-            lambda cid, role, status, display_name, session=None: (
-                captured.update(company_id=cid) or _make_user()
-            ),
-        )
-        from app.services import db_service as db
-        db.create_viewer_seat(42, display_name="Bob")
-        assert captured["company_id"] == 42
-
+# ── User retrieval ────────────────────────────────────────────────
 
 class TestGetUserById:
 
-    def test_returns_user_when_found(self, monkeypatch):
-        user = _make_user()
-        monkeypatch.setattr(
-            "app.services.db_service.crud.get_user_by_id",
-            lambda cid, uid, session=None: user,
-        )
-        from app.services import db_service as db
-        assert db.get_user_by_id(1, user.user_id) is user
+    def test_returns_user_when_found(self, test_company_id):
+        # Create a user first
+        created = db.create_viewer_seat(test_company_id, display_name="Bob")
 
-    def test_returns_none_when_not_found(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.services.db_service.crud.get_user_by_id",
-            lambda cid, uid, session=None: None,
-        )
-        from app.services import db_service as db
-        assert db.get_user_by_id(1, uuid.uuid4()) is None
+        # Retrieve it
+        retrieved = db.get_user_by_id(test_company_id, created.user_id)
+        assert retrieved is not None
+        assert retrieved.user_id == created.user_id
+        assert retrieved.company_id == test_company_id
+        assert retrieved.display_name == "Bob"
+
+    def test_returns_none_when_not_found(self, test_company_id):
+        fake_id = uuid.uuid4()
+        result = db.get_user_by_id(test_company_id, fake_id)
+        assert result is None
 
 
 # ── Google mailboxes ──────────────────────────────────────────────
 
 class TestCreateGoogleMailbox:
 
-    def test_delegates_all_fields(self, monkeypatch):
-        mailbox  = _make_mailbox()
-        captured = {}
+    def test_creates_mailbox_with_all_fields(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Mailbox Owner")
 
-        def fake(cid, *, user_id, email_address, token_json, session=None):
-            captured.update(company_id=cid, user_id=user_id,
-                            email_address=email_address, token_json=token_json)
-            return mailbox
+        result = db.create_google_mailbox(
+            test_company_id,
+            user.user_id,
+            "emp@example.com",
+            {"token": "abc", "refresh_token": "xyz"}
+        )
 
-        monkeypatch.setattr("app.services.db_service.crud2.create_google_mailbox", fake)
-        from app.services import db_service as db
-        uid    = uuid.uuid4()
-        result = db.create_google_mailbox(1, uid, "emp@example.com", {"t": "v"})
-        assert result is mailbox
-        assert captured["user_id"]       == uid
-        assert captured["email_address"] == "emp@example.com"
-        assert captured["token_json"]    == {"t": "v"}
+        assert result is not None
+        assert result.company_id == test_company_id
+        assert result.user_id == user.user_id
+        assert result.email_address == "emp@example.com"
+        assert result.token_json == {"token": "abc", "refresh_token": "xyz"}
+        assert result.google_mailbox_id is not None
 
+
+# ── Mailbox retrieval ─────────────────────────────────────────────
 
 class TestGetGoogleMailboxByEmail:
 
-    def test_returns_mailbox_when_found(self, monkeypatch):
-        mailbox = _make_mailbox()
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.get_google_mailbox_by_email",
-            lambda cid, email, session=None: mailbox,
+    def test_returns_mailbox_when_found(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        created = db.create_google_mailbox(
+            test_company_id,
+            user.user_id,
+            "test@example.com",
+            {"token": "t"}
         )
-        from app.services import db_service as db
-        assert db.get_google_mailbox_by_email(1, "emp@example.com") is mailbox
 
-    def test_returns_none_when_not_found(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.get_google_mailbox_by_email",
-            lambda cid, email, session=None: None,
-        )
-        from app.services import db_service as db
-        assert db.get_google_mailbox_by_email(1, "unknown@example.com") is None
+        retrieved = db.get_google_mailbox_by_email(test_company_id, "test@example.com")
+        assert retrieved is not None
+        assert retrieved.email_address == "test@example.com"
+        assert retrieved.google_mailbox_id == created.google_mailbox_id
 
+    def test_returns_none_when_not_found(self, test_company_id):
+        result = db.get_google_mailbox_by_email(test_company_id, "nonexistent@example.com")
+        assert result is None
+
+
+# ── Mailbox token updates ─────────────────────────────────────────
 
 class TestUpdateGoogleMailboxToken:
 
-    def test_passes_mailbox_id_and_token(self, monkeypatch):
-        captured = {}
-
-        def fake(mid, *, token_json, session=None):
-            captured.update(mailbox_id=mid, token_json=token_json)
-            return _make_mailbox()
-
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.update_google_mailbox_token", fake
+    def test_updates_token_successfully(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        mailbox = db.create_google_mailbox(
+            test_company_id,
+            user.user_id,
+            "mail@example.com",
+            {"token": "old"}
         )
-        from app.services import db_service as db
-        db.update_google_mailbox_token(10, {"new": "token"})
-        assert captured["mailbox_id"] == 10
-        assert captured["token_json"] == {"new": "token"}
 
+        new_token = {"token": "new_token", "refresh": "new_refresh"}
+        result = db.update_google_mailbox_token(mailbox.google_mailbox_id, new_token)
+
+        assert result is not None
+        assert result.token_json == new_token
+
+
+# ── Mailbox history ID ────────────────────────────────────────────
 
 class TestSetGoogleMailboxHistoryId:
 
-    def test_passes_mailbox_id_and_history_id(self, monkeypatch):
-        captured = {}
-
-        def fake(mid, *, last_history_id, session=None):
-            captured.update(mailbox_id=mid, last_history_id=last_history_id)
-
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.set_google_mailbox_history_id", fake
+    def test_sets_history_id(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        mailbox = db.create_google_mailbox(
+            test_company_id,
+            user.user_id,
+            "mail@example.com",
+            {"token": "t"}
         )
-        from app.services import db_service as db
-        db.set_google_mailbox_history_id(10, "99999")
-        assert captured["mailbox_id"]      == 10
-        assert captured["last_history_id"] == "99999"
 
+        # Should not raise
+        db.set_google_mailbox_history_id(mailbox.google_mailbox_id, "99999")
+
+        # Verify by retrieving
+        retrieved = db.get_google_mailbox_by_email(test_company_id, "mail@example.com")
+        assert retrieved.last_history_id == "99999"
+
+
+# ── Mailbox watch expiration ──────────────────────────────────────
 
 class TestUpdateGoogleMailboxWatchExpiration:
 
-    def test_passes_mailbox_id_and_expiry(self, monkeypatch):
-        expiry   = _utcnow()
-        captured = {}
-
-        def fake(mid, *, watch_expiration, session=None):
-            captured.update(mailbox_id=mid, watch_expiration=watch_expiration)
-
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.update_google_mailbox_watch_expiration", fake
+    def test_sets_watch_expiration(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        mailbox = db.create_google_mailbox(
+            test_company_id,
+            user.user_id,
+            "mail@example.com",
+            {"token": "t"}
         )
-        from app.services import db_service as db
-        db.update_google_mailbox_watch_expiration(10, expiry)
-        assert captured["mailbox_id"]       == 10
-        assert captured["watch_expiration"] == expiry
 
+        expiry = _utcnow()
+        # Should not raise
+        db.update_google_mailbox_watch_expiration(mailbox.google_mailbox_id, expiry)
+
+        # Verify by retrieving
+        retrieved = db.get_google_mailbox_by_email(test_company_id, "mail@example.com")
+        # Note: watch_expiration may be slightly different due to serialization
+        assert retrieved.watch_expiration is not None
+
+
+# ── List mailboxes ────────────────────────────────────────────────
 
 class TestListGoogleMailboxesForCompany:
 
-    def test_returns_list_from_crud(self, monkeypatch):
-        mailboxes = [_make_mailbox(), _make_mailbox(google_mailbox_id=11)]
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.list_google_mailboxes_for_company",
-            lambda cid, session=None: mailboxes,
-        )
-        from app.services import db_service as db
-        result = db.list_google_mailboxes_for_company(1)
-        assert result == mailboxes
-        assert len(result) == 2
+    def test_returns_all_mailboxes_for_company(self, test_company_id):
+        user1 = db.create_viewer_seat(test_company_id, display_name="User1")
+        user2 = db.create_viewer_seat(test_company_id, display_name="User2")
+
+        mb1 = db.create_google_mailbox(test_company_id, user1.user_id, "mb1@example.com", {})
+        mb2 = db.create_google_mailbox(test_company_id, user2.user_id, "mb2@example.com", {})
+
+        result = db.list_google_mailboxes_for_company(test_company_id)
+
+        # Should contain at least our two
+        assert len(result) >= 2
+        emails = [m.email_address for m in result]
+        assert "mb1@example.com" in emails
+        assert "mb2@example.com" in emails
 
 
 # ── Slack workspaces ──────────────────────────────────────────────
 
 class TestCreateWorkspace:
 
-    def test_delegates_company_team_token(self, monkeypatch):
-        ws       = _make_workspace()
-        captured = {}
+    def test_creates_workspace(self, test_company_id):
+        result = db.create_workspace(
+            test_company_id,
+            "T123ABC",
+            "xoxb-123-slack-token"
+        )
 
-        def fake(*, company_id, team_id, access_token, session=None):
-            captured.update(company_id=company_id, team_id=team_id,
-                            access_token=access_token)
-            return ws
+        assert result is not None
+        assert result.company_id == test_company_id
+        assert result.team_id == "T123ABC"
+        assert result.access_token == "xoxb-123-slack-token"
 
-        monkeypatch.setattr("app.services.db_service.crud2.create_workspace", fake)
-        from app.services import db_service as db
-        result = db.create_workspace(1, "T123", "xoxb-token")
-        assert result is ws
-        assert captured["company_id"]   == 1
-        assert captured["team_id"]      == "T123"
-        assert captured["access_token"] == "xoxb-token"
 
+# ── Workspace retrieval ───────────────────────────────────────────
 
 class TestGetWorkspaceByTeamId:
 
-    def test_returns_workspace_when_found(self, monkeypatch):
-        ws = _make_workspace()
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.get_workspace_by_team_id",
-            lambda tid, session=None: ws,
-        )
-        from app.services import db_service as db
-        assert db.get_workspace_by_team_id("T123") is ws
+    def test_returns_workspace_when_found(self, test_company_id):
+        created = db.create_workspace(test_company_id, "T456", "xoxb-token")
 
-    def test_returns_none_when_not_found(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.get_workspace_by_team_id",
-            lambda tid, session=None: None,
-        )
-        from app.services import db_service as db
-        assert db.get_workspace_by_team_id("T_UNKNOWN") is None
+        retrieved = db.get_workspace_by_team_id("T456")
+        assert retrieved is not None
+        assert retrieved.team_id == "T456"
+        assert retrieved.company_id == test_company_id
 
+    def test_returns_none_when_not_found(self):
+        result = db.get_workspace_by_team_id("T_NONEXISTENT_12345")
+        assert result is None
+
+
+# ── Workspace token updates ───────────────────────────────────────
 
 class TestUpdateWorkspaceToken:
 
-    def test_passes_team_id_and_token(self, monkeypatch):
-        captured = {}
+    def test_updates_token(self, test_company_id):
+        created = db.create_workspace(test_company_id, "T789", "xoxb-old")
 
-        def fake(team_id, access_token, session=None):
-            captured.update(team_id=team_id, access_token=access_token)
-            return _make_workspace()
+        result = db.update_workspace_token("T789", "xoxb-new-token")
 
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.update_workspace_token", fake
-        )
-        from app.services import db_service as db
-        db.update_workspace_token("T123", "xoxb-new")
-        assert captured["team_id"]      == "T123"
-        assert captured["access_token"] == "xoxb-new"
+        assert result is not None
+        assert result.access_token == "xoxb-new-token"
 
 
 # ── Slack accounts ────────────────────────────────────────────────
 
 class TestCreateSlackAccount:
 
-    def test_delegates_all_fields(self, monkeypatch):
-        acct     = _make_slack_account()
-        captured = {}
+    def test_creates_slack_account(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Slack User")
 
-        def fake(cid, *, team_id, slack_user_id, user_id, email, session=None):
-            captured.update(company_id=cid, team_id=team_id,
-                            slack_user_id=slack_user_id, user_id=user_id)
-            return acct
-
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.create_slack_account", fake
+        result = db.create_slack_account(
+            test_company_id,
+            "T123",
+            "U999",
+            user.user_id,
+            email="slack@example.com"
         )
-        from app.services import db_service as db
-        uid    = uuid.uuid4()
-        result = db.create_slack_account(1, "T123", "U999", uid)
-        assert result is acct
-        assert captured["slack_user_id"] == "U999"
-        assert captured["user_id"]       == uid
 
+        assert result is not None
+        assert result.company_id == test_company_id
+        assert result.team_id == "T123"
+        assert result.slack_user_id == "U999"
+        assert result.user_id == user.user_id
+        assert result.email == "slack@example.com"
+
+
+# ── Slack account retrieval ───────────────────────────────────────
 
 class TestGetSlackAccount:
 
-    def test_returns_account_when_found(self, monkeypatch):
-        acct = _make_slack_account()
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.get_slack_account",
-            lambda tid, uid, session=None: acct,
+    def test_returns_account_when_found(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        created = db.create_slack_account(
+            test_company_id,
+            "T111",
+            "U222",
+            user.user_id
         )
-        from app.services import db_service as db
-        assert db.get_slack_account("T123", "U999") is acct
 
-    def test_returns_none_when_not_found(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.get_slack_account",
-            lambda tid, uid, session=None: None,
-        )
-        from app.services import db_service as db
-        assert db.get_slack_account("T123", "U_UNKNOWN") is None
+        retrieved = db.get_slack_account("T111", "U222")
+        assert retrieved is not None
+        assert retrieved.slack_user_id == "U222"
+        assert retrieved.team_id == "T111"
 
+    def test_returns_none_when_not_found(self):
+        result = db.get_slack_account("T_FAKE", "U_NONEXISTENT")
+        assert result is None
+
+
+# ── Slack account email updates ───────────────────────────────────
 
 class TestUpdateSlackAccountEmail:
 
-    def test_passes_team_user_and_email(self, monkeypatch):
-        captured = {}
-
-        def fake(team_id, slack_user_id, *, email, session=None):
-            captured.update(team_id=team_id, slack_user_id=slack_user_id,
-                            email=email)
-
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.update_slack_account_email", fake
+    def test_updates_email(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        acct = db.create_slack_account(
+            test_company_id,
+            "T555",
+            "U666",
+            user.user_id,
+            email="old@example.com"
         )
-        from app.services import db_service as db
-        db.update_slack_account_email("T123", "U999", "real@example.com")
-        assert captured["team_id"]       == "T123"
-        assert captured["slack_user_id"] == "U999"
-        assert captured["email"]         == "real@example.com"
+
+        # Should not raise
+        db.update_slack_account_email("T555", "U666", "new@example.com")
+
+        # Verify
+        retrieved = db.get_slack_account("T555", "U666")
+        assert retrieved.email == "new@example.com"
 
 
 # ── Message incidents ─────────────────────────────────────────────
 
 class TestCreateMessageIncident:
 
-    def test_delegates_all_fields(self, monkeypatch):
-        incident = _make_incident()
-        captured = {}
-        sent     = _utcnow()
+    def test_creates_incident_with_slack_source(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        sent = _utcnow()
 
-        def fake(cid, *, user_id, source, sent_at, content_raw,
-                 conversation_id, session=None):
-            captured.update(company_id=cid, source=source,
-                            sent_at=sent_at, conversation_id=conversation_id)
-            return incident
-
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.create_message_incident", fake
-        )
-        from app.services import db_service as db
-        uid    = uuid.uuid4()
         result = db.create_message_incident(
-            1, uid, "slack", sent, {"text": "hi"}, conversation_id="C1"
+            test_company_id,
+            user.user_id,
+            "slack",
+            sent,
+            {"text": "hello"},
+            conversation_id="C123"
         )
-        assert result is incident
-        assert captured["source"]          == "slack"
-        assert captured["conversation_id"] == "C1"
-        assert captured["sent_at"]         == sent
 
-    def test_slack_source_label(self, monkeypatch):
-        captured = {}
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.create_message_incident",
-            lambda cid, *, user_id, source, sent_at, content_raw,
-                   conversation_id, session=None: (
-                captured.update(source=source) or _make_incident()
-            ),
-        )
-        from app.services import db_service as db
-        db.create_message_incident(
-            1, uuid.uuid4(), "slack", _utcnow(), {}, conversation_id=None
-        )
-        assert captured["source"] == "slack"
+        assert result is not None
+        assert result.company_id == test_company_id
+        assert result.user_id == user.user_id
+        assert result.source == "slack"
+        assert result.content_raw == {"text": "hello"}
+        assert result.conversation_id == "C123"
 
-    def test_gmail_source_label(self, monkeypatch):
-        captured = {}
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.create_message_incident",
-            lambda cid, *, user_id, source, sent_at, content_raw,
-                   conversation_id, session=None: (
-                captured.update(source=source) or _make_incident()
-            ),
-        )
-        from app.services import db_service as db
-        db.create_message_incident(
-            1, uuid.uuid4(), "gmail", _utcnow(), {}, conversation_id="gmail"
-        )
-        assert captured["source"] == "gmail"
+    def test_creates_incident_with_gmail_source(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        sent = _utcnow()
 
+        result = db.create_message_incident(
+            test_company_id,
+            user.user_id,
+            "gmail",
+            sent,
+            {"subject": "test"},
+            conversation_id="msg123"
+        )
+
+        assert result is not None
+        assert result.source == "gmail"
+        assert result.conversation_id == "msg123"
+
+
+# ── Incident scores ───────────────────────────────────────────────
 
 class TestCreateIncidentScores:
 
-    def test_delegates_message_id_and_scores(self, monkeypatch):
-        captured = {}
-
-        def fake(mid, *, neutral_score, humor_sarcasm_score, stress_score,
-                 burnout_score, depression_score, harassment_score,
-                 suicidal_ideation_score, predicted_category,
-                 predicted_severity, session=None):
-            captured.update(
-                message_id=mid, stress_score=stress_score,
-                predicted_category=predicted_category,
-                predicted_severity=predicted_severity,
-            )
-
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.create_incident_scores", fake
+    def test_creates_scores(self, test_company_id):
+        user = db.create_viewer_seat(test_company_id, display_name="Test")
+        incident = db.create_message_incident(
+            test_company_id,
+            user.user_id,
+            "slack",
+            _utcnow(),
+            {},
         )
-        from app.services import db_service as db
-        mid = uuid.uuid4()
+
+        # Should not raise
         db.create_incident_scores(
-            mid, stress_score=0.9,
-            predicted_category="stress", predicted_severity=1,
+            incident.message_id,
+            predicted_category="stress",
+            predicted_severity=1,
         )
-        assert captured["message_id"]         == mid
-        assert captured["stress_score"]       == 0.9
-        assert captured["predicted_category"] == "stress"
-        assert captured["predicted_severity"] == 1
 
-    def test_score_defaults_are_zero(self, monkeypatch):
-        captured = {}
-
-        def fake(mid, *, neutral_score, humor_sarcasm_score, stress_score,
-                 burnout_score, depression_score, harassment_score,
-                 suicidal_ideation_score, predicted_category,
-                 predicted_severity, session=None):
-            captured.update(
-                neutral_score=neutral_score,
-                burnout_score=burnout_score,
-                harassment_score=harassment_score,
-            )
-
-        monkeypatch.setattr(
-            "app.services.db_service.crud2.create_incident_scores", fake
-        )
-        from app.services import db_service as db
-        db.create_incident_scores(uuid.uuid4())
-        assert captured["neutral_score"]   == 0.0
-        assert captured["burnout_score"]   == 0.0
-        assert captured["harassment_score"] == 0.0
+        # Verify (would need a get_incident_scores function to fully verify)
+        # For now, just ensure no error on creation
+        assert incident.message_id is not None

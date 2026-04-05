@@ -528,7 +528,7 @@ class TestProcessGmailEvent:
 
     def test_returns_false_when_no_mailbox(self, monkeypatch):
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: None,
         )
         from app.services.message_service import process_gmail_event
@@ -540,7 +540,7 @@ class TestProcessGmailEvent:
         account  = _make_mailbox(last_history_id=None)
         captured = {}
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         monkeypatch.setattr(
@@ -559,7 +559,7 @@ class TestProcessGmailEvent:
         account  = _make_mailbox(last_history_id="100")
         captured = {}
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [], latest_id="999")
@@ -578,7 +578,7 @@ class TestProcessGmailEvent:
     def test_history_advances_even_when_no_messages_stored(self, monkeypatch):
         account = _make_mailbox(last_history_id="100")
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message()], latest_id="200")
@@ -601,7 +601,7 @@ class TestProcessGmailEvent:
     def test_skips_message_when_filter_returns_none(self, monkeypatch):
         account = _make_mailbox(last_history_id="100")
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
@@ -615,7 +615,7 @@ class TestProcessGmailEvent:
     def test_skips_message_when_not_a_risk(self, monkeypatch):
         account = _make_mailbox(last_history_id="100")
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
@@ -631,7 +631,7 @@ class TestProcessGmailEvent:
         account  = _make_mailbox(last_history_id="100")
         incident = _make_incident(source="gmail")
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
@@ -648,7 +648,7 @@ class TestProcessGmailEvent:
     def test_incident_source_is_gmail(self, monkeypatch):
         account = _make_mailbox(last_history_id="100")
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
@@ -678,7 +678,7 @@ class TestProcessGmailEvent:
     def test_incident_conversation_id_is_gmail(self, monkeypatch):
         account = _make_mailbox(last_history_id="100")
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
@@ -709,7 +709,7 @@ class TestProcessGmailEvent:
     def test_content_raw_includes_subject_from_to(self, monkeypatch):
         account = _make_mailbox(last_history_id="100")
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message(
@@ -748,7 +748,7 @@ class TestProcessGmailEvent:
         account  = _make_mailbox(last_history_id="100")
         incident = _make_incident()
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
@@ -778,7 +778,7 @@ class TestProcessGmailEvent:
     def test_multiple_risk_messages_all_stored(self, monkeypatch):
         account = _make_mailbox(last_history_id="100")
         monkeypatch.setattr(
-            "app.services.message_service._get_mailbox_by_email_any_company",
+            "app.services.db_service.get_mailbox_by_email_global",
             lambda email: account,
         )
         self._patch_fetch(monkeypatch, [_fake_message("msg1"), _fake_message("msg2")])

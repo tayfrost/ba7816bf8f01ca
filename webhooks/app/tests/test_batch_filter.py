@@ -41,7 +41,8 @@ class TestFilterMessagesBatch:
         mock_ch.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_ch.return_value.__exit__ = MagicMock(return_value=False)
 
-        assert filter_messages(["a", "b", "c"]) == [False, True, False]
+        results = filter_messages(["a", "b", "c"])
+        assert [r.is_risk for r in results] == [False, True, False]
 
     @patch("app.services.filter_service.filter_pb2_grpc.FilterServiceStub")
     @patch("app.services.filter_service.grpc.insecure_channel")
@@ -54,7 +55,8 @@ class TestFilterMessagesBatch:
         mock_ch.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_ch.return_value.__exit__ = MagicMock(return_value=False)
 
-        assert filter_messages(["a", "b", "c", "d"]) == flags
+        results = filter_messages(["a", "b", "c", "d"])
+        assert [r.is_risk for r in results] == flags
 
     def test_empty_list(self):
         from app.services.filter_service import filter_messages
@@ -62,39 +64,52 @@ class TestFilterMessagesBatch:
 
     @patch("app.services.filter_service.filter_message")
     def test_single_message_delegates_to_single_rpc(self, mock_single):
-        from app.services.filter_service import filter_messages
-        mock_single.return_value = True
-        assert filter_messages(["one"]) == [True]
+        from app.services.filter_service import filter_messages, FilterResult
+        mock_single.return_value = FilterResult(
+            is_risk=True, category="stress", category_confidence=0.9,
+            severity="high", severity_confidence=0.8
+        )
+        results = filter_messages(["one"])
+        assert [r.is_risk for r in results] == [True]
         mock_single.assert_called_once_with("one")
 
     @patch("app.services.filter_service.filter_message")
     @patch("app.services.filter_service.filter_pb2_grpc.FilterServiceStub")
     @patch("app.services.filter_service.grpc.insecure_channel")
     def test_fallback_on_grpc_error(self, mock_ch, mock_stub_cls, mock_single):
-        from app.services.filter_service import filter_messages
+        from app.services.filter_service import filter_messages, FilterResult
         stub = MagicMock()
         stub.ClassifyMessages.side_effect = grpc.RpcError()
         mock_stub_cls.return_value = stub
         mock_ch.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_ch.return_value.__exit__ = MagicMock(return_value=False)
-        mock_single.side_effect = [False, True, False]
+        mock_single.side_effect = [
+            FilterResult(is_risk=False, category="neutral", category_confidence=0.9, severity="none", severity_confidence=0.9),
+            FilterResult(is_risk=True, category="stress", category_confidence=0.9, severity="high", severity_confidence=0.8),
+            FilterResult(is_risk=False, category="neutral", category_confidence=0.9, severity="none", severity_confidence=0.9),
+        ]
 
-        assert filter_messages(["a", "b", "c"]) == [False, True, False]
+        results = filter_messages(["a", "b", "c"])
+        assert [r.is_risk for r in results] == [False, True, False]
         assert mock_single.call_count == 3
 
     @patch("app.services.filter_service.filter_message")
     @patch("app.services.filter_service.filter_pb2_grpc.FilterServiceStub")
     @patch("app.services.filter_service.grpc.insecure_channel")
     def test_fallback_on_unexpected_error(self, mock_ch, mock_stub_cls, mock_single):
-        from app.services.filter_service import filter_messages
+        from app.services.filter_service import filter_messages, FilterResult
         stub = MagicMock()
         stub.ClassifyMessages.side_effect = RuntimeError("oops")
         mock_stub_cls.return_value = stub
         mock_ch.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mock_ch.return_value.__exit__ = MagicMock(return_value=False)
-        mock_single.side_effect = [True, True]
+        mock_single.side_effect = [
+            FilterResult(is_risk=True, category="stress", category_confidence=0.9, severity="high", severity_confidence=0.8),
+            FilterResult(is_risk=True, category="burnout", category_confidence=0.9, severity="high", severity_confidence=0.8),
+        ]
 
-        assert filter_messages(["a", "b"]) == [True, True]
+        results = filter_messages(["a", "b"])
+        assert [r.is_risk for r in results] == [True, True]
 
 
 class TestBatchFilterIntegration:
@@ -102,11 +117,11 @@ class TestBatchFilterIntegration:
 
     @pytest.mark.integration
     def test_batch_via_grpc(self):
-        from app.services.filter_service import filter_messages
+        from app.services.filter_service import filter_messages, FilterResult
         results = filter_messages([
             "Happy Friday!",
             "I'm struggling with severe anxiety",
             "Lunch at noon?",
         ])
         assert len(results) == 3
-        assert all(isinstance(r, bool) for r in results)
+        assert all(isinstance(r, (FilterResult, type(None))) for r in results)

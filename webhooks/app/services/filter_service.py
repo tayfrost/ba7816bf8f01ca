@@ -96,7 +96,7 @@ def filter_messages(texts: List[str]) -> List[Optional[FilterResult]]:
             return results
 
     except grpc.RpcError as e:
-        logger.warning(f"Batch gRPC failed ({e.code()}), falling back to per-message calls")
+        logger.warning(f"Batch gRPC failed ({getattr(e, 'code', lambda: 'unknown')()}), falling back to per-message calls")
     except Exception as e:
         logger.error(f"Unexpected batch error: {e}, falling back to per-message calls")
 

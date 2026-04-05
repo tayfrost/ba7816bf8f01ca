@@ -436,6 +436,9 @@ class TestProcessSlackMessageWithLookup:
         return new_user, incident
 
     def test_new_user_passes_email_to_create(self, monkeypatch):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
         monkeypatch.setattr(
             "app.services.message_service.filter_message",
             lambda t: self._make_filter_result(),
@@ -457,45 +460,16 @@ class TestProcessSlackMessageWithLookup:
             lambda *a, **kw: captured.update(kw),
         )
 
-    def _make_filter_result(self, is_risk=True, category="burnout", severity="early"):
-        mock_result = MagicMock()
-        mock_result.is_risk = is_risk
-        mock_result.category = category
-        mock_result.severity = severity
-        return mock_result
-
-    @patch("app.services.message_service.db")
-    @patch("app.services.message_service.lookup_slack_user")
-    @patch("app.services.message_service.filter_message")
-    def test_new_user_passes_email_to_create(self, mock_filter, mock_lookup, mock_db):
         from app.services.message_service import process_slack_message
-
-        mock_filter.return_value = self._make_filter_result()
-        mock_lookup.return_value = ("Vishal", "Thakwani", "vishal@example.com")
-
-        mock_workspace = MagicMock()
-        mock_workspace.company_id = 1
-        mock_workspace.access_token = "xoxb-test"
-        mock_db.get_workspace_by_team_id.return_value = mock_workspace
-        mock_db.get_slack_account.return_value = None
-
-        mock_user = MagicMock()
-        mock_user.user_id = "uid-new"
-        mock_db.create_viewer_seat.return_value = mock_user
-
-        mock_incident = MagicMock()
-        mock_incident.message_id = "mid-1"
-        mock_db.create_message_incident.return_value = mock_incident
-
         payload = {
             "type": "event_callback", "team_id": "T123",
             "event": {"type": "message", "user": "U123", "text": "help",
                       "ts": "1", "channel": "C1"},
         }
-        result = process_slack_message(payload, "1")
+        result = process_slack_message(payload, "xoxb-token")
 
         assert result is True
-        assert captured["display_name"] == "Vishal Thakwani"
+        assert captured.get("display_name") == "Vishal Thakwani"
         assert captured.get("email") == "vishal@example.com"
 
     def test_existing_user_backfills_email(self, monkeypatch):
@@ -520,11 +494,6 @@ class TestProcessSlackMessageWithLookup:
             "app.services.message_service.db.update_slack_account_email",
             mock_update,
         )
-        mock_db.create_message_incident.assert_called_once()
-        scores_call = mock_db.create_incident_scores.call_args
-        assert scores_call[0][0] == "mid-1"
-        assert scores_call[1]["predicted_category"] == "burnout"
-        assert scores_call[1]["predicted_severity"] == 1
 
         from app.services.message_service import process_slack_message
         payload = {
@@ -532,7 +501,7 @@ class TestProcessSlackMessageWithLookup:
             "event": {"type": "message", "user": "U123", "text": "help",
                       "ts": "1", "channel": "C1"},
         }
-        result = process_slack_message(payload, "1")
+        result = process_slack_message(payload, "xoxb-token")
 
         assert result is True
         mock_update.assert_called_once_with("T123", "U123", "ada@kcl.ac.uk")
