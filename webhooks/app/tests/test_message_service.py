@@ -50,10 +50,12 @@ def _make_user(**kw):
 
 
 def _make_slack_account(**kw):
-    return SimpleNamespace(
+    defaults = dict(
         company_id=1, team_id="T123", slack_user_id="U999",
-        user_id=uuid.uuid4(), email=None, **kw
+        user_id=uuid.uuid4(), email=None,
     )
+    defaults.update(kw)
+    return SimpleNamespace(**defaults)
 
 
 def _make_mailbox(**kw):
@@ -636,8 +638,8 @@ class TestProcessGmailEvent:
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
         monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: _make_filter_result(is_risk=True),
+            "app.services.message_service.filter_messages",
+            lambda texts: [_make_filter_result(is_risk=True) for _ in texts],
         )
         self._patch_db(monkeypatch, incident=incident)
         from app.services.message_service import process_gmail_event
@@ -653,8 +655,8 @@ class TestProcessGmailEvent:
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
         monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: _make_filter_result(is_risk=True),
+            "app.services.message_service.filter_messages",
+            lambda texts: [_make_filter_result(is_risk=True) for _ in texts],
         )
         captured = {}
         monkeypatch.setattr(
@@ -683,8 +685,8 @@ class TestProcessGmailEvent:
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
         monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: _make_filter_result(is_risk=True),
+            "app.services.message_service.filter_messages",
+            lambda texts: [_make_filter_result(is_risk=True) for _ in texts],
         )
         captured = {}
         monkeypatch.setattr(
@@ -717,8 +719,8 @@ class TestProcessGmailEvent:
             from_="boss@co.com", to="emp@co.com",
         )])
         monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: _make_filter_result(is_risk=True),
+            "app.services.message_service.filter_messages",
+            lambda texts: [_make_filter_result(is_risk=True) for _ in texts],
         )
         captured = {}
         monkeypatch.setattr(
@@ -753,8 +755,8 @@ class TestProcessGmailEvent:
         )
         self._patch_fetch(monkeypatch, [_fake_message()])
         monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: _make_filter_result(category="depression", severity="late"),
+            "app.services.message_service.filter_messages",
+            lambda texts: [_make_filter_result(category="depression", severity="late") for _ in texts],
         )
         monkeypatch.setattr(
             "app.services.message_service.db.set_google_mailbox_history_id",
@@ -783,8 +785,8 @@ class TestProcessGmailEvent:
         )
         self._patch_fetch(monkeypatch, [_fake_message("msg1"), _fake_message("msg2")])
         monkeypatch.setattr(
-            "app.services.message_service.filter_message",
-            lambda t: _make_filter_result(is_risk=True),
+            "app.services.message_service.filter_messages",
+            lambda texts: [_make_filter_result(is_risk=True) for _ in texts],
         )
         incident_calls = []
         scores_calls   = []

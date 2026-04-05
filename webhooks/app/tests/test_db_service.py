@@ -33,7 +33,7 @@ class TestCreateViewerSeat:
         assert result.role == "viewer"
         assert result.status == "active"
         assert result.display_name == "Alice"
-        assert isinstance(result.user_id, uuid.UUID)
+        assert uuid.UUID(str(result.user_id))  # valid UUID (may be str from API)
 
     def test_creates_viewer_without_display_name(self, test_company_id):
         result = db.create_viewer_seat(test_company_id, display_name=None)
@@ -198,15 +198,16 @@ class TestListGoogleMailboxesForCompany:
 class TestCreateWorkspace:
 
     def test_creates_workspace(self, test_company_id):
+        team_id = f"T{uuid.uuid4().hex[:8].upper()}"
         result = db.create_workspace(
             test_company_id,
-            "T123ABC",
+            team_id,
             "xoxb-123-slack-token"
         )
 
         assert result is not None
         assert result.company_id == test_company_id
-        assert result.team_id == "T123ABC"
+        assert result.team_id == team_id
         assert result.access_token == "xoxb-123-slack-token"
 
 
@@ -215,11 +216,12 @@ class TestCreateWorkspace:
 class TestGetWorkspaceByTeamId:
 
     def test_returns_workspace_when_found(self, test_company_id):
-        created = db.create_workspace(test_company_id, "T456", "xoxb-token")
+        team_id = f"T{uuid.uuid4().hex[:8].upper()}"
+        created = db.create_workspace(test_company_id, team_id, "xoxb-token")
 
-        retrieved = db.get_workspace_by_team_id("T456")
+        retrieved = db.get_workspace_by_team_id(team_id)
         assert retrieved is not None
-        assert retrieved.team_id == "T456"
+        assert retrieved.team_id == team_id
         assert retrieved.company_id == test_company_id
 
     def test_returns_none_when_not_found(self):
@@ -232,9 +234,10 @@ class TestGetWorkspaceByTeamId:
 class TestUpdateWorkspaceToken:
 
     def test_updates_token(self, test_company_id):
-        created = db.create_workspace(test_company_id, "T789", "xoxb-old")
+        team_id = f"T{uuid.uuid4().hex[:8].upper()}"
+        created = db.create_workspace(test_company_id, team_id, "xoxb-old")
 
-        result = db.update_workspace_token("T789", "xoxb-new-token")
+        result = db.update_workspace_token(team_id, "xoxb-new-token")
 
         assert result is not None
         assert result.access_token == "xoxb-new-token"
@@ -245,11 +248,13 @@ class TestUpdateWorkspaceToken:
 class TestCreateSlackAccount:
 
     def test_creates_slack_account(self, test_company_id):
+        team_id = f"T{uuid.uuid4().hex[:8].upper()}"
+        db.create_workspace(test_company_id, team_id, "xoxb-token")
         user = db.create_viewer_seat(test_company_id, display_name="Slack User")
 
         result = db.create_slack_account(
             test_company_id,
-            "T123",
+            team_id,
             "U999",
             user.user_id,
             email="slack@example.com"
@@ -257,7 +262,7 @@ class TestCreateSlackAccount:
 
         assert result is not None
         assert result.company_id == test_company_id
-        assert result.team_id == "T123"
+        assert result.team_id == team_id
         assert result.slack_user_id == "U999"
         assert result.user_id == user.user_id
         assert result.email == "slack@example.com"
@@ -268,18 +273,20 @@ class TestCreateSlackAccount:
 class TestGetSlackAccount:
 
     def test_returns_account_when_found(self, test_company_id):
+        team_id = f"T{uuid.uuid4().hex[:8].upper()}"
+        db.create_workspace(test_company_id, team_id, "xoxb-token")
         user = db.create_viewer_seat(test_company_id, display_name="Test")
         created = db.create_slack_account(
             test_company_id,
-            "T111",
+            team_id,
             "U222",
             user.user_id
         )
 
-        retrieved = db.get_slack_account("T111", "U222")
+        retrieved = db.get_slack_account(team_id, "U222")
         assert retrieved is not None
         assert retrieved.slack_user_id == "U222"
-        assert retrieved.team_id == "T111"
+        assert retrieved.team_id == team_id
 
     def test_returns_none_when_not_found(self):
         result = db.get_slack_account("T_FAKE", "U_NONEXISTENT")
@@ -291,20 +298,22 @@ class TestGetSlackAccount:
 class TestUpdateSlackAccountEmail:
 
     def test_updates_email(self, test_company_id):
+        team_id = f"T{uuid.uuid4().hex[:8].upper()}"
+        db.create_workspace(test_company_id, team_id, "xoxb-token")
         user = db.create_viewer_seat(test_company_id, display_name="Test")
         acct = db.create_slack_account(
             test_company_id,
-            "T555",
+            team_id,
             "U666",
             user.user_id,
             email="old@example.com"
         )
 
         # Should not raise
-        db.update_slack_account_email("T555", "U666", "new@example.com")
+        db.update_slack_account_email(team_id, "U666", "new@example.com")
 
         # Verify
-        retrieved = db.get_slack_account("T555", "U666")
+        retrieved = db.get_slack_account(team_id, "U666")
         assert retrieved.email == "new@example.com"
 
 

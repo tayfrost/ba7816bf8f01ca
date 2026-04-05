@@ -45,7 +45,7 @@ def test_plan_id():
 @pytest.fixture(scope="function")
 def test_company_id(test_plan_id):
     """Create a test company via API, return company_id, cleanup after test."""
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
     company_name = f"test-company-{timestamp}"
 
     # Create company

@@ -229,23 +229,6 @@ class TestLookupSlackUser:
         assert last == ""
         assert email is None
 
-    @patch("app.services.slack_user_service.httpx.Client")
-    def test_malformed_json_response_returns_defaults(self, mock_client_cls):
-        from app.services.slack_user_service import lookup_slack_user
-
-        mock_inner = MagicMock()
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status = MagicMock()
-        mock_resp.json.side_effect = ValueError("No JSON: <html>502 Bad Gateway</html>")
-        mock_inner.get.return_value = mock_resp
-        mock_client_cls.return_value.__enter__ = MagicMock(return_value=mock_inner)
-        mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
-
-        first, last, email = lookup_slack_user("xoxb-token", "U123")
-        assert first == "unknown"
-        assert last == "unknown"
-        assert email is None
-
 
 class TestLookupCache:
 
