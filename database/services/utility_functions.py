@@ -264,6 +264,45 @@ def google_mailbox_active_for_user(company_id: int,user_id,*,session: optional[S
     """
     return get_google_mailbox_id_for_user(company_id, user_id, session=session) is not None
 
+def find_user_id_by_email(
+    company_id: int,
+    email: str,
+    *,
+    session: SASession,
+) -> "uuid.UUID | None":
+    """
+    Search slack_accounts and google_mailboxes for an existing user_id
+    that already owns this email within the company.
+    Returns the first match (slack preferred) or None.
+    CITEXT columns make the comparison case-insensitive at the DB level.
+    """
+    import uuid as _uuid
+
+    email = (email or "").strip()
+    if not email:
+        return None
+
+    slack_match = session.execute(
+        select(model.SlackAccount.user_id).where(
+            model.SlackAccount.company_id == int(company_id),
+            model.SlackAccount.email == email,
+        )
+    ).scalar_one_or_none()
+    if slack_match is not None:
+        return slack_match if isinstance(slack_match, _uuid.UUID) else _uuid.UUID(str(slack_match))
+
+    gmail_match = session.execute(
+        select(model.GoogleMailbox.user_id).where(
+            model.GoogleMailbox.company_id == int(company_id),
+            model.GoogleMailbox.email_address == email,
+        )
+    ).scalar_one_or_none()
+    if gmail_match is not None:
+        return gmail_match if isinstance(gmail_match, _uuid.UUID) else _uuid.UUID(str(gmail_match))
+
+    return None
+
+
 def validate_role(role: str) -> None:
     if role not in VALID_ROLES:
         raise ValueError(f"Invalid role: {role}. Must be one of {sorted(VALID_ROLES)}")

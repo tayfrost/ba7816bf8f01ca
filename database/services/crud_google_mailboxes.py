@@ -2,6 +2,7 @@ from database.database import models as model
 from database.services.utility_functions import (
     Session,
     company_exists,
+    find_user_id_by_email,
     user_exists,
 )
 from sqlalchemy import select
@@ -65,6 +66,13 @@ def create_google_mailbox(
     try:
         if not company_exists(company_id, session=session):
             raise ValueError(f"company_id={company_id} not found or deleted.")
+
+        # Cross-platform linking: if this email already belongs to a canonical
+        # user (via a Slack or Gmail account), reuse that user_id.
+        linked_uid = find_user_id_by_email(company_id, email_address, session=session)
+        if linked_uid is not None:
+            user_id = linked_uid
+
         if not user_exists(company_id, user_id, session=session):
             raise ValueError(f"user_id={user_id} not found in company_id={company_id}.")
 

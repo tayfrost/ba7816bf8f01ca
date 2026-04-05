@@ -202,39 +202,3 @@ def update_slack_account_email(
     _patch(f"/internal/slack/accounts/{team_id}/{slack_user_id}/email", {"email": email})
 
 
-# ── Message Incidents ─────────────────────────────────────────────
-
-def create_message_incident(
-    company_id: int,
-    user_id: uuid.UUID,
-    source: str,
-    sent_at: datetime,
-    content_raw: dict,
-    conversation_id: Optional[str] = None,
-    **_,
-) -> SimpleNamespace:
-    data = _post(
-        "/internal/incidents",
-        {
-            "user_id": str(user_id),
-            "source": source,
-            "sent_at": sent_at.isoformat(),
-            "content_raw": content_raw,
-            "conversation_id": conversation_id,
-        },
-        company_id=company_id,
-    )
-    return _ns(data)
-
-
-def create_incident_scores(
-    message_id,
-    *,
-    predicted_category: Optional[str] = None,
-    predicted_severity: Optional[int] = None,
-    **_,
-) -> None:
-    _post(f"/internal/incidents/{message_id}/scores", {
-        "predicted_category": predicted_category,
-        "predicted_severity": predicted_severity,
-    })
