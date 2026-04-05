@@ -1,221 +1,209 @@
+"""db_service.py — thin HTTP client wrapping the internal API.
+
+All functions mirror the previous direct-CRUD interface so that
+oauth_service.py and message_service.py require no call-site changes.
+
+Reads INTERNAL_API_URL from the environment (default: http://api:8000).
+"""
+import os
 import uuid
+import logging
 from datetime import datetime
+from types import SimpleNamespace
 from typing import Optional
- 
-import database.New_database.utils.users_crud as users_crud
-import database.New_database.utils.crud_google_mailboxes as crud_google_mailboxes
-import database.New_database.utils.companies_crud as companies_crud
-import database.New_database.utils.slack_workspaces_crud as slack_workspaces_crud
-import database.New_database.utils.crud_slack_accounts as crud_slack_accounts
-import database.New_database.utils.crud_message_incidents as crud_message_incidents
-from database.New_database import new_oop as model
- 
- 
-# ── Canonical viewer seats ────────────────────────────────────────
- 
-def create_viewer_seat(
-    company_id: int,
-    display_name: str,
-    *,
-    session=None,
-) -> model.User:
-    return users_crud.create_user(
-        company_id,
-        role="viewer",
-        status="active",
-        display_name=display_name,
-        session=session,
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+_BASE = os.getenv("INTERNAL_API_URL", "http://api:8000")
+
+
+# ── HTTP helpers ──────────────────────────────────────────────────
+
+def _get(path: str, **params) -> dict | None:
+    """GET with query params. Returns parsed JSON or None on 404."""
+    r = httpx.get(
+        f"{_BASE}{path}",
+        params={k: v for k, v in params.items() if v is not None},
     )
- 
- 
-def get_user_by_id(
-    company_id: int,
-    user_id: uuid.UUID,
-    *,
-    session=None,
-) -> Optional[model.User]:
-    """Fetch a users row by (company_id, user_id). Returns None if not found."""
-    return users_crud.get_user_by_id(company_id, user_id, session=session)
- 
- 
+    if r.status_code == 404:
+        return None
+    r.raise_for_status()
+    return r.json()
+
+
+def _post(path: str, body: dict, **params) -> dict:
+    """POST JSON body. Raises RuntimeError on non-2xx."""
+    r = httpx.post(
+        f"{_BASE}{path}",
+        json=body,
+        params={k: v for k, v in params.items() if v is not None},
+    )
+    if not r.is_success:
+        raise RuntimeError(f"Internal API {path} → {r.status_code}: {r.text}")
+    return r.json()
+
+
+def _patch(path: str, body: dict) -> dict | None:
+    """PATCH JSON body. Returns None on 404, raises RuntimeError on other errors."""
+    r = httpx.patch(f"{_BASE}{path}", json=body)
+    if r.status_code == 404:
+        return None
+    if not r.is_success:
+        raise RuntimeError(f"Internal API {path} → {r.status_code}: {r.text}")
+    return r.json()
+
+
+def _ns(d: dict | None) -> SimpleNamespace | None:
+    """Convert a response dict to a SimpleNamespace for attribute access."""
+    if d is None:
+        return None
+    return SimpleNamespace(**d)
+
+
+# ── Users ─────────────────────────────────────────────────────────
+
+def create_viewer_seat(company_id: int, display_name: str, **_) -> SimpleNamespace:
+    data = _post("/internal/users/viewer-seat", {
+        "company_id": company_id,
+        "display_name": display_name,
+    })
+    return _ns(data)
+
+
+def get_user_by_id(company_id: int, user_id: uuid.UUID, **_) -> Optional[SimpleNamespace]:
+    return _ns(_get(f"/internal/users/{user_id}", company_id=company_id))
+
+
 # ── Google Mailboxes ──────────────────────────────────────────────
- 
+
 def create_google_mailbox(
     company_id: int,
     user_id: uuid.UUID,
     email_address: str,
-    token_json: dict,
-    *,
-    session=None,
-) -> model.GoogleMailbox:
-    """
-    Create a google_mailboxes row.
-    Raises RuntimeError if the mailbox already exists (from crud).
-    Call get_google_mailbox_by_email first if you need upsert behaviour.
-    """
-    return crud_google_mailboxes.create_google_mailbox(
-        company_id,
-        user_id=user_id,
-        email_address=email_address,
-        token_json=token_json,
-        session=session,
-    )
- 
- 
+    token_json,
+    **_,
+) -> SimpleNamespace:
+    data = _post("/internal/mailboxes", {
+        "company_id": company_id,
+        "user_id": str(user_id),
+        "email_address": email_address,
+        "token_json": token_json,
+    })
+    return _ns(data)
+
+
 def get_google_mailbox_by_email(
     company_id: int,
     email_address: str,
-    *,
-    session=None,
-) -> Optional[model.GoogleMailbox]:
-    """Fetch a google_mailboxes row by (company_id, email_address)."""
-    return crud_google_mailboxes.get_google_mailbox_by_email(
-        company_id, email_address, session=session
-    )
- 
- 
+    **_,
+) -> Optional[SimpleNamespace]:
+    return _ns(_get("/internal/mailboxes/by-email", email=email_address, company_id=company_id))
+
+
 def update_google_mailbox_token(
     google_mailbox_id: int,
-    token_json: dict,
-    *,
-    session=None,
-) -> Optional[model.GoogleMailbox]:
-    return crud_google_mailboxes.update_google_mailbox_token(
-        google_mailbox_id,
-        token_json=token_json,
-        session=session,
-    )
- 
- 
+    token_json,
+    **_,
+) -> Optional[SimpleNamespace]:
+    return _ns(_patch(f"/internal/mailboxes/{google_mailbox_id}/token", {"token_json": token_json}))
+
+
 def set_google_mailbox_history_id(
     google_mailbox_id: int,
     last_history_id: str,
-    *,
-    session=None,
+    **_,
 ) -> None:
-    crud_google_mailboxes.set_google_mailbox_history_id(
-        google_mailbox_id,
-        last_history_id=last_history_id,
-        session=session,
-    )
- 
- 
+    _patch(f"/internal/mailboxes/{google_mailbox_id}/history-id", {"last_history_id": last_history_id})
+
+
 def update_google_mailbox_watch_expiration(
     google_mailbox_id: int,
     watch_expiration: datetime,
-    *,
-    session=None,
+    **_,
 ) -> None:
-    crud_google_mailboxes.update_google_mailbox_watch_expiration(
-        google_mailbox_id,
-        watch_expiration=watch_expiration,
-        session=session,
-    )
- 
- 
-def list_google_mailboxes_for_company(
-    company_id: int,
-    *,
-    session=None,
-) -> list[model.GoogleMailbox]:
-    return crud_google_mailboxes.list_google_mailboxes_for_company(company_id, session=session)
+    _patch(f"/internal/mailboxes/{google_mailbox_id}/watch-expiration", {
+        "watch_expiration": watch_expiration.isoformat(),
+    })
 
-# ── Companies ──────────────────────────────────────────────
-def list_companies(
-    *,
-    session=None,
-) -> list[model.Company]:
-    """Return all active (non-deleted) companies. Used by the watch renewal job."""
-    return companies_crud.list_companies(session=session)
+
+def list_google_mailboxes_for_company(company_id: int, **_) -> list[SimpleNamespace]:
+    data = _get(f"/internal/mailboxes/company/{company_id}") or []
+    return [_ns(m) for m in data]
+
+
+def get_mailbox_by_email_global(email_address: str) -> Optional[SimpleNamespace]:
+    """Look up a mailbox by email across all companies (no company_id filter)."""
+    return _ns(_get("/internal/mailboxes/by-email-global", email=email_address))
+
+
+# ── Companies ─────────────────────────────────────────────────────
+
+def list_companies(**_) -> list[SimpleNamespace]:
+    data = _get("/internal/companies") or []
+    return [_ns(c) for c in data]
 
 
 # ── Slack Workspaces ──────────────────────────────────────────────
- 
+
 def create_workspace(
     company_id: int,
     team_id: str,
     access_token: str,
-    *,
-    session=None,
-) -> model.SlackWorkspace:
-    return slack_workspaces_crud.create_workspace(
-        company_id=company_id,
-        team_id=team_id,
-        access_token=access_token,
-        session=session,
-    )
- 
- 
-def get_workspace_by_team_id(
-    team_id: str,
-    *,
-    session=None,
-) -> Optional[model.SlackWorkspace]:
-    return slack_workspaces_crud.get_workspace_by_team_id(team_id, session=session)
- 
- 
-def update_workspace_token(
-    team_id: str,
-    access_token: str,
-    *,
-    session=None,
-) -> Optional[model.SlackWorkspace]:
-    return slack_workspaces_crud.update_workspace_token(team_id, access_token, session=session)
- 
- 
+    **_,
+) -> SimpleNamespace:
+    data = _post("/internal/slack/workspaces", {
+        "company_id": company_id,
+        "team_id": team_id,
+        "access_token": access_token,
+    })
+    return _ns(data)
+
+
+def get_workspace_by_team_id(team_id: str, **_) -> Optional[SimpleNamespace]:
+    return _ns(_get(f"/internal/slack/workspace/{team_id}"))
+
+
+def update_workspace_token(team_id: str, access_token: str, **_) -> Optional[SimpleNamespace]:
+    return _ns(_patch(f"/internal/slack/workspaces/{team_id}/token", {"access_token": access_token}))
+
+
 # ── Slack Accounts ────────────────────────────────────────────────
- 
+
 def create_slack_account(
     company_id: int,
     team_id: str,
     slack_user_id: str,
     user_id: uuid.UUID,
     email: Optional[str] = None,
-    *,
-    session=None,
-) -> model.SlackAccount:
-    """
-    Create a slack_accounts row.
-    Raises RuntimeError if the account already exists (from crud).
-    Call get_slack_account first if you need upsert behaviour.
-    """
-    return crud_slack_accounts.create_slack_account(
-        company_id,
-        team_id=team_id,
-        slack_user_id=slack_user_id,
-        user_id=user_id,
-        email=email,
-        session=session,
-    )
- 
- 
-def get_slack_account(
-    team_id: str,
-    slack_user_id: str,
-    *,
-    session=None,
-) -> Optional[model.SlackAccount]:
-    """Fetch a slack_accounts row by (team_id, slack_user_id)."""
-    return crud_slack_accounts.get_slack_account(team_id, slack_user_id, session=session)
- 
- 
+    **_,
+) -> SimpleNamespace:
+    data = _post("/internal/slack/accounts", {
+        "company_id": company_id,
+        "team_id": team_id,
+        "slack_user_id": slack_user_id,
+        "user_id": str(user_id),
+        "email": email,
+    })
+    return _ns(data)
+
+
+def get_slack_account(team_id: str, slack_user_id: str, **_) -> Optional[SimpleNamespace]:
+    return _ns(_get(f"/internal/slack/user/{team_id}/{slack_user_id}"))
+
+
 def update_slack_account_email(
     team_id: str,
     slack_user_id: str,
     email: Optional[str],
-    *,
-    session=None,
+    **_,
 ) -> None:
-    """Update the email metadata on a slack_accounts row."""
-    crud_slack_accounts.update_slack_account_email(
-        team_id, slack_user_id,
-        email=email,
-        session=session,
-    )
- 
- 
+    _patch(f"/internal/slack/accounts/{team_id}/{slack_user_id}/email", {"email": email})
+
+
 # ── Message Incidents ─────────────────────────────────────────────
- 
+
 def create_message_incident(
     company_id: int,
     user_id: uuid.UUID,
@@ -223,46 +211,30 @@ def create_message_incident(
     sent_at: datetime,
     content_raw: dict,
     conversation_id: Optional[str] = None,
-    *,
-    session=None,
-) -> model.MessageIncident:
-    """Create a message_incidents row. Returns the created incident."""
-    return crud_message_incidents.create_message_incident(
-        company_id,
-        user_id=user_id,
-        source=source,
-        sent_at=sent_at,
-        content_raw=content_raw,
-        conversation_id=conversation_id,
-        session=session,
+    **_,
+) -> SimpleNamespace:
+    data = _post(
+        "/internal/incidents",
+        {
+            "user_id": str(user_id),
+            "source": source,
+            "sent_at": sent_at.isoformat(),
+            "content_raw": content_raw,
+            "conversation_id": conversation_id,
+        },
+        company_id=company_id,
     )
- 
- 
+    return _ns(data)
+
+
 def create_incident_scores(
-    message_id: uuid.UUID,
+    message_id,
     *,
-    neutral_score: float = 0.0,
-    humor_sarcasm_score: float = 0.0,
-    stress_score: float = 0.0,
-    burnout_score: float = 0.0,
-    depression_score: float = 0.0,
-    harassment_score: float = 0.0,
-    suicidal_ideation_score: float = 0.0,
     predicted_category: Optional[str] = None,
     predicted_severity: Optional[int] = None,
-    session=None,
+    **_,
 ) -> None:
-    """Create an incident_scores row (1:1 with message_incidents)."""
-    crud_message_incidents.create_incident_scores(
-        message_id,
-        neutral_score=neutral_score,
-        humor_sarcasm_score=humor_sarcasm_score,
-        stress_score=stress_score,
-        burnout_score=burnout_score,
-        depression_score=depression_score,
-        harassment_score=harassment_score,
-        suicidal_ideation_score=suicidal_ideation_score,
-        predicted_category=predicted_category,
-        predicted_severity=predicted_severity,
-        session=session,
-    )
+    _post(f"/internal/incidents/{message_id}/scores", {
+        "predicted_category": predicted_category,
+        "predicted_severity": predicted_severity,
+    })

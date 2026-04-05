@@ -21,11 +21,6 @@ from app.services.slack_user_service import lookup_slack_user
 from app.services import db_service as db
 
 SEVERITY_MAP = {"none": 0, "early": 1, "middle": 2, "late": 3}
-
-from database.new_database import new_oop as model
-from database.new_database.utils.utility_functions import Session
-
-from sqlalchemy import select
  
 logger = logging.getLogger(__name__)
  
@@ -138,7 +133,7 @@ def process_gmail_event(payload: dict) -> bool:
         logger.warning("Pub/Sub notification missing emailAddress")
         return False
  
-    account = _get_mailbox_by_email_any_company(user_email)
+    account = db.get_mailbox_by_email_global(user_email)
     if not account:
         logger.warning(f"No google_mailboxes row for {user_email}")
         return False
@@ -208,20 +203,7 @@ def process_gmail_event(payload: dict) -> bool:
  
     return stored > 0
  
-#Need to talk ato db team about this
-def _get_mailbox_by_email_any_company(email_address: str):
 
-    session = Session()
-    try:
-        return session.execute(
-            select(model.GoogleMailbox).where(
-                model.GoogleMailbox.email_address == email_address,
-            )
-        ).scalar_one_or_none()
-    finally:
-        session.close()
- 
- 
 # ── Gmail internals ───────────────────────────────────────────────
  
 def _fetch_new_messages(account, user_email: str) -> Tuple[list, str]:
