@@ -1,12 +1,10 @@
 """Risk assessment state node for the mental health assessment workflow."""
 
-import os
-import json
 import logging
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
 from schema.agent_state import AgentState
 from utils.json_util import safe_json_loads
+from llm import get_llm
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +13,7 @@ async def assess_risk(state: AgentState) -> AgentState:
     """Assess if message indicates mental health risk."""
     from agent import prompt_service
     
-    llm = ChatOpenAI(
-        model=os.getenv("MODEL", "gpt-5-nano"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        use_responses_api=False,
-        temperature=1
-    )
+    llm = get_llm()
     
     logger.info("[NODE: assess_risk] Starting risk assessment")
     logger.debug(f"[NODE: assess_risk] Input state keys: {list(state.keys())}")

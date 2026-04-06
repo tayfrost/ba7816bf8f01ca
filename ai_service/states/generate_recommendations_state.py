@@ -1,14 +1,13 @@
 """Recommendations generation state node for the mental health assessment workflow."""
 
-import os
 import json
 import logging
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_openai import ChatOpenAI
 from schema.agent_state import AgentState
 from services.mcp_service import load_mcp_tools
 from utils.json_util import safe_json_loads
+from llm import get_llm
 
 
 logger = logging.getLogger(__name__)
@@ -18,12 +17,7 @@ async def generate_recommendations(state: AgentState, config: RunnableConfig) ->
     """Generate HR recommendations based on assessment with evidence-based advice from knowledge graph."""
     from agent import prompt_service
     
-    llm = ChatOpenAI(
-        model=os.getenv("MODEL", "gpt-5-nano"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        use_responses_api=True,
-        temperature=1
-    )
+    llm = get_llm(use_responses_api=True)
     
     logger.info("[NODE: generate_recommendations] Starting recommendations generation")
     logger.debug(f"[NODE: generate_recommendations] Input state keys: {list(state.keys())}")
