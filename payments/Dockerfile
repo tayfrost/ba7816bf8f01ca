@@ -6,7 +6,6 @@ COPY payments/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY payments/ ./ 
-COPY database/ ./database/
 
 EXPOSE 8001
 
