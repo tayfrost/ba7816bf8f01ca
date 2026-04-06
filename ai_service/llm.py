@@ -2,10 +2,10 @@ import os
 from langchain_openai import ChatOpenAI
 
 
-def get_llm(use_responses_api: bool = False) -> ChatOpenAI:
+def get_llm() -> ChatOpenAI:
     return ChatOpenAI(
-        model=os.getenv("MODEL", "gpt-5-nano"),
+        model=os.getenv("MODEL", "gemini-2.0-flash"),
         api_key=os.getenv("OPENAI_API_KEY"),
-        use_responses_api=use_responses_api,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         temperature=1,
     )
