@@ -1,0 +1,145 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Stepper from "../components/Stepper";
+import Input from "../components/Input";
+import Button from "../components/Button";
+import AuthCard from "../components/AuthCard";
+import { useOnboarding } from "../state/onboarding";
+import { register } from "../api";
+
+export default function Signup() {
+  const navigate = useNavigate();
+  const { setSignup } = useOnboarding();
+
+  const [companyName, setCompanyName] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleContinue() {
+    // Removed planId requirement here
+    if (!companyName || !adminName || !adminEmail || !password) return;
+
+    setError(null);
+    setIsSubmitting(true);
+
+    const [firstName, ...rest] = adminName.trim().split(" ");
+    const surname = rest.join(" ") || "Admin";
+
+    try {
+      const res = await register({
+        email: adminEmail,
+        password,
+        name: firstName || "Admin",
+        surname,
+        company_name: companyName,
+        plan_id: 1, // Dummy ID to satisfy the backend schema
+      });
+
+      localStorage.setItem("sentinel_access_token", res.access_token);
+
+      setSignup({
+        companyName,
+        adminName,
+        adminEmail,
+      });
+
+      // Bypass /payment and go straight to the next setup step
+      navigate("/connect-accounts");
+    } catch (err) {
+      console.error(err);
+      setError("Registration failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen pb-20 bg-transparent font-sans">
+      <Stepper currentPath="/signup" />
+
+      <div className="flex flex-col items-center mt-16 mb-12">
+        <img
+          src="/logo-icon.png"
+          alt="SentinelAI Logo"
+          className="h-32 md:h-42 w-auto mb-6 drop-shadow-2xl"
+        />
+        <img
+          src="/logo-text.png"
+          alt="SentinelAI"
+          className="h-10 md:h-14 w-auto opacity-90"
+        />
+      </div>
+
+      <AuthCard>
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-serif font-black text-brand-deep leading-tight">
+              Create Your Account
+            </h2>
+            <p className="text-xs uppercase tracking-[0.2em] text-brand-deep/50 font-bold mt-2">
+              Wellness | Protection | Support
+            </p>
+          </div>
+
+          <Input
+            label="Company Name"
+            placeholder="e.g. Purpl Corp"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+          />
+
+          <Input
+            label="Admin Name"
+            placeholder="e.g. Jane Doe"
+            value={adminName}
+            onChange={(e) => setAdminName(e.target.value)}
+          />
+
+          <Input
+            label="Admin Email"
+            type="email"
+            placeholder="admin@company.com"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+          />
+
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Create a password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          {error && (
+            <p className="text-sm font-semibold text-red-600 text-center">
+              {error}
+            </p>
+          )}
+
+          <div className="pt-4 space-y-6">
+            <Button variant="primary" onClick={handleContinue} disabled={isSubmitting}>
+              {isSubmitting ? "Creating Account..." : "Continue"}
+            </Button>
+
+            <div className="text-center pt-2 border-t border-brand-deep/5">
+              <p className="text-sm text-brand-deep/60">
+                Already have an account?{" "}
+                <button
+                  onClick={() => navigate("/login")}
+                  className="text-brand-deep font-bold hover:underline underline-offset-4"
+                >
+                  Log In
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      </AuthCard>
+    </div>
+  );
+}
