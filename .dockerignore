@@ -7,17 +7,12 @@ venv
 node_modules
 *.log
 
-# Secrets
-**/.env
-**/.env.*
+# Secrets (exclude from root, but allow service-specific .env files)
+.env
+.env.*
 
 # Other services (not needed for kg-mcp-server build)
-webhooks/
-filter/
-frontend/
-backend/
-ai_service/
-.mcp-debug-tools/
+# Note: Only exclude services that are not being built
 
 # Data volumes
 pgvector_data/

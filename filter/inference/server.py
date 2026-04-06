@@ -10,6 +10,7 @@
 #          work correctly in all execution contexts.
 
 import os
+import json
 import sys
 from concurrent import futures
 from datetime import datetime
@@ -47,9 +48,12 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         print("[SERVER] Initialising FilterServiceServicer...")
 
         self.model_name = os.environ.get("MODEL_NAME", config.MODEL_NAME)
-        self.max_length = int(os.environ.get("MAX_TOKEN_LENGTH", config.MAX_LENGTH))
-        self.overlap = int(os.environ.get("OVERLAP", 32))
-        self.threshold = float(os.environ.get("THRESHOLD", 0.5))
+        # Keep compatibility with both lowercase and current uppercase envs
+        self.max_length = int(
+            os.environ.get("MAX_TOKEN_LENGTH", os.environ.get("max_token_length", config.MAX_LENGTH))
+        )
+        self.overlap = int(os.environ.get("OVERLAP", os.environ.get("overlap", 32)))
+        self.threshold = float(os.environ.get("THRESHOLD", os.environ.get("threshold", 0.5)))
 
         print("[SERVER] Configuration loaded:")
         print(f"[SERVER]   Model: {self.model_name}")
@@ -69,85 +73,98 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
         print("[SERVER] ✓ FilterServiceServicer initialised successfully")
 
-    def ClassifyMessage(self, request, context):  # pylint: disable=invalid-name
-        """Classify a message using sliding window approach."""
+    @staticmethod
+    def _parse_enveloped_message(raw_message: str) -> tuple[str, str | None]:
+        """Parse optional webhooks envelope and return (text, sent_at)."""
+        try:
+            payload = json.loads(raw_message)
+            if isinstance(payload, dict) and "text" in payload:
+                text = payload.get("text") or ""
+                meta = payload.get("meta") or {}
+                sent_at = meta.get("sent_at") if isinstance(meta, dict) else None
+                return str(text), sent_at if isinstance(sent_at, str) else None
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+        return raw_message, None
+
+    @staticmethod
+    def _normalise_timestamp(sent_at: str | None) -> str:
+        """Convert upstream sent_at to [YYYY-MM-DD HH:MM] or fallback to now."""
+        if sent_at:
+            try:
+                dt = datetime.fromisoformat(sent_at.replace("Z", "+00:00"))
+                return dt.strftime("%Y-%m-%d %H:%M")
+            except ValueError:
+                pass
+        return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    def _build_contextual_message(self, raw_message: str) -> str:
+        """Build classification text with timestamp context and parsed payload text."""
+        text, sent_at = self._parse_enveloped_message(raw_message)
+        ts = self._normalise_timestamp(sent_at)
+        return f"[{ts}] {text}"
+
+    def _classify_single(self, message: str) -> dict:
+        """Core classification logic for a single message. Returns a result dict."""
+        contextual_message = self._build_contextual_message(message)
+        tokens = tokenize_message(self.tokenizer, contextual_message)
+
+        if len(tokens) == 0:
+            return {
+                "category": "neutral",
+                "category_confidence": 1.0,
+                "severity": "none",
+                "severity_confidence": 1.0,
+                "is_risk": False,
+                "all_responses": "",
+            }
+
+        chunks = create_chunks(tokens, self.max_length, self.overlap)
+        category_labels = {v: k for k, v in config.CATEGORY_MAP.items()}
+        severity_labels = {v: k for k, v in config.SEVERITY_MAP.items()}
+
+        chunk_results = []
+        for chunk in chunks:
+            input_ids, attention_mask = prepare_chunk_inputs(
+                chunk, self.cls_token_id, self.sep_token_id,
+                self.pad_token_id, self.max_length,
+            )
+            category_logits, severity_logits = run_chunk_inference(
+                self.onnx_session, input_ids, attention_mask,
+            )
+            result = process_chunk_predictions(
+                category_logits, severity_logits,
+                category_labels, severity_labels, config.RISK_CATEGORIES,
+            )
+            chunk_results.append(result)
+
+        return aggregate_chunk_results(chunk_results, self.threshold)
+
+    def _result_to_response(self, result: dict) -> "filter_pb2.ClassifyResponse":
+        return filter_pb2.ClassifyResponse(
+            category=result["category"],
+            category_confidence=result["category_confidence"],
+            severity=result["severity"],
+            severity_confidence=result["severity_confidence"],
+            is_risk=result["is_risk"],
+            all_responses=result["all_responses"],
+        )
+
+    def ClassifyMessage(self, request, context):
+        """Classify a single message using sliding window approach."""
         print("[REQUEST] Received classification request")
         try:
-            # Prepend timestamp at current time as context
-            now = datetime.now().strftime("%Y-%m-%d %H:%M")
-            message = f"[{now}] {request.message}"
-            print(f"[REQUEST] Message length: {len(message)} chars (context included)")
+            message = request.message
+            print(f"[REQUEST] Message length: {len(message)} chars")
 
-            # Tokenize message
-            tokens = tokenize_message(self.tokenizer, message)
-            print(f"[REQUEST] Tokenized into {len(tokens)} tokens")
+            final_result = self._classify_single(message)
 
-            # Handle empty messages
-            if len(tokens) == 0:
-                return filter_pb2.ClassifyResponse(
-                    category="neutral",
-                    category_confidence=1.0,
-                    severity="none",
-                    severity_confidence=1.0,
-                    is_risk=False,
-                    all_responses=""
-                )
+            print(f"[RESPONSE] Classification complete: category={final_result['category']}({final_result['category_confidence']:.3f}), "
+                  f"severity={final_result['severity']}({final_result['severity_confidence']:.3f}), is_risk={final_result['is_risk']}")
 
-            # Create chunks with sliding window
-            chunks = create_chunks(tokens, self.max_length, self.overlap)
-            print(f"[REQUEST] Split into {len(chunks)} chunks for processing")
+            return self._result_to_response(final_result)
 
-            # Process each chunk
-            category_labels = {v: k for k, v in config.CATEGORY_MAP.items()}
-            severity_labels = {v: k for k, v in config.SEVERITY_MAP.items()}
-
-            chunk_results = []
-            for chunk in chunks:
-                # Prepare inputs
-                input_ids, attention_mask = prepare_chunk_inputs(
-                    chunk,
-                    self.cls_token_id,
-                    self.sep_token_id,
-                    self.pad_token_id,
-                    self.max_length
-                )
-
-                # Run inference
-                category_logits, severity_logits = run_chunk_inference(
-                    self.onnx_session,
-                    input_ids,
-                    attention_mask
-                )
-
-                # Process predictions
-                result = process_chunk_predictions(
-                    category_logits,
-                    severity_logits,
-                    category_labels,
-                    severity_labels,
-                    config.RISK_CATEGORIES
-                )
-                chunk_results.append(result)
-
-            # Aggregate results
-            final_result = aggregate_chunk_results(chunk_results, self.threshold)
-
-            print(f"[RESPONSE] Classification complete: category={final_result['category']}"
-                  f"({final_result['category_confidence']:.3f}), "
-                  f"severity={final_result['severity']}"
-                  f"({final_result['severity_confidence']:.3f}), "
-                  f"is_risk={final_result['is_risk']}")
-
-            return filter_pb2.ClassifyResponse(
-                category=final_result["category"],
-                category_confidence=final_result["category_confidence"],
-                severity=final_result["severity"],
-                severity_confidence=final_result["severity_confidence"],
-                is_risk=final_result["is_risk"],
-                all_responses=final_result["all_responses"]
-            )
-
-        except Exception as e: # pylint: disable=broad-exception-caught
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"[ERROR] Failed to process message: {str(e)}")
 
             import traceback # pylint: disable=import-outside-toplevel
@@ -156,6 +173,37 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Error processing message: {str(e)}")
             return filter_pb2.ClassifyResponse()
+
+    _SAFE_DEFAULT = {
+        "category": "neutral", "category_confidence": 0.0,
+        "severity": "none", "severity_confidence": 0.0,
+        "is_risk": False, "all_responses": "",
+    }
+
+    def ClassifyMessages(self, request, _context):
+        """Classify multiple messages in a single RPC call.
+
+        Individual message failures are caught and returned as safe defaults
+        so that one bad message does not abort the entire batch.
+        """
+        messages = list(request.messages)
+        print(f"[BATCH] Received batch classification request: {len(messages)} messages")
+
+        if not messages:
+            return filter_pb2.BatchClassifyResponse(results=[])
+
+        results = []
+        for i, message in enumerate(messages):
+            try:
+                print(f"[BATCH] Processing message {i+1}/{len(messages)} ({len(message)} chars)")
+                result = self._classify_single(message)
+                results.append(self._result_to_response(result))
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                print(f"[BATCH] Message {i+1} failed, returning safe default: {e}")
+                results.append(self._result_to_response(self._SAFE_DEFAULT))
+
+        print(f"[BATCH] Batch complete: {len(results)} messages classified")
+        return filter_pb2.BatchClassifyResponse(results=results)
 
 
 def serve():

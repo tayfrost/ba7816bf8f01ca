@@ -3,26 +3,36 @@ import { useNavigate } from "react-router-dom";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import AuthCard from "../components/AuthCard";
+import { login } from "../api";
 
 export default function Login() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleLogin() {
+  async function handleLogin() {
     if (!email || !password) return;
-    
-    // Logic for authentication will go here
-    console.log("Logging in with:", email);
-    
 
-    navigate("/usage");
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const res = await login({ email, password });
+      localStorage.setItem("sentinel_access_token", res.access_token);
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Login failed. Please check your credentials.");
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <div className="min-h-screen pb-20 bg-transparent font-sans">
-
       <div className="flex flex-col items-center mt-24 mb-12">
         <img
           src="/logo-icon.png"
@@ -38,7 +48,6 @@ export default function Login() {
 
       <AuthCard>
         <div className="space-y-6">
- 
           <div className="text-center mb-8">
             <h2 className="text-3xl font-serif font-black text-brand-deep leading-tight">
               Welcome Back
@@ -64,16 +73,21 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <div className="pt-4 space-y-6">
-            <Button variant="primary" onClick={handleLogin}>
-              Log In
-            </Button>
+          {error && (
+            <p className="text-sm font-semibold text-red-600 text-center">
+              {error}
+            </p>
+          )}
 
+          <div className="pt-4 space-y-6">
+            <Button variant="primary" onClick={handleLogin} disabled={isSubmitting}>
+              {isSubmitting ? "Logging In..." : "Log In"}
+            </Button>
 
             <div className="text-center pt-2 border-t border-brand-deep/5">
               <p className="text-sm text-brand-deep/60">
                 Don't have an account?{" "}
-                <button 
+                <button
                   onClick={() => navigate("/plan")}
                   className="text-brand-deep font-bold hover:underline underline-offset-4"
                 >

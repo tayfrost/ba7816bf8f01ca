@@ -1,39 +1,39 @@
 -- ============================================================
 -- SentinelAI Payments — Migration
--- 
--- PREREQUISITE: Run backend/create_tables.py FIRST.
+--
+-- PREREQUISITE: Run Derja's database migration FIRST.
 -- This migration ADDS to the existing schema, not replaces it.
 -- ============================================================
 
--- 1. Add Stripe columns to EXISTING tables
+-- 1. Add Stripe columns to EXISTING tables (Derja's schema)
 ALTER TABLE companies
     ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT UNIQUE;
 
-ALTER TABLE subscription_plan
+ALTER TABLE subscription_plans
     ADD COLUMN IF NOT EXISTS stripe_price_id_monthly TEXT,
-    ADD COLUMN IF NOT EXISTS stripe_price_id_yearly TEXT;
+    ADD COLUMN IF NOT EXISTS stripe_price_id_yearly  TEXT;
 
 -- 2. Create NEW payment-specific tables
 
-CREATE TABLE IF NOT EXISTS subscriptions (
-    id              BIGSERIAL PRIMARY KEY,
-    company_id      BIGINT NOT NULL REFERENCES companies(company_id),
-    plan_id         BIGINT NOT NULL REFERENCES subscription_plan(plan_id),
-    stripe_subscription_id TEXT UNIQUE,
-    status          TEXT NOT NULL DEFAULT 'incomplete'
-                    CHECK (status IN ('active','past_due','canceled','incomplete','trialing','unpaid')),
-    interval        TEXT NOT NULL DEFAULT 'month'
-                    CHECK (interval IN ('month','year')),
-    current_period_start TIMESTAMPTZ,
-    current_period_end   TIMESTAMPTZ,
-    cancel_at_period_end BOOLEAN DEFAULT FALSE,
-    canceled_at     TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS stripe_subscriptions (
+    id                      BIGSERIAL PRIMARY KEY,
+    company_id              BIGINT NOT NULL REFERENCES companies(company_id),
+    plan_id                 BIGINT NOT NULL REFERENCES subscription_plans(plan_id),
+    stripe_subscription_id  TEXT UNIQUE,
+    status                  TEXT NOT NULL DEFAULT 'incomplete'
+                            CHECK (status IN ('active','past_due','canceled','incomplete','trialing','unpaid')),
+    interval                TEXT NOT NULL DEFAULT 'month'
+                            CHECK (interval IN ('month','year')),
+    current_period_start    TIMESTAMPTZ,
+    current_period_end      TIMESTAMPTZ,
+    cancel_at_period_end    BOOLEAN DEFAULT FALSE,
+    canceled_at             TIMESTAMPTZ,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_sub_company ON subscriptions(company_id);
-CREATE INDEX IF NOT EXISTS idx_sub_stripe  ON subscriptions(stripe_subscription_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_sub_company ON stripe_subscriptions(company_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_sub_stripe  ON stripe_subscriptions(stripe_subscription_id);
 
 CREATE TABLE IF NOT EXISTS payments (
     id                       BIGSERIAL PRIMARY KEY,

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Stepper from "../components/Stepper";
 import AuthCard from "../components/AuthCard"; 
@@ -10,9 +10,23 @@ import { useOnboarding } from "../state/onboarding";
 export default function Payment() {
   const navigate = useNavigate();
   const { setPaymentSuccess } = useOnboarding();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   function handlePay(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
+    
+    const formData = new FormData(e.currentTarget);
+    const cardNum = (formData.get("cardNumber") as string || "").replace(/\s/g, "");
+    const expiry = formData.get("expiryDate") as string || "";
+    const cvc = formData.get("cvcCode") as string || "";
+    const newErrors: Record<string, string> = {};
+
+    if (!/^\d{16,19}$/.test(cardNum)) newErrors.card = "Card must be 16-19 digits";
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) newErrors.expiry = "Use MM/YY (01-12)";
+    if (!/^\d{3,4}$/.test(cvc)) newErrors.cvc = "CVC must be 3-4 digits";
+
+    if (Object.keys(newErrors).length > 0) return setErrors(newErrors);
+
     setPaymentSuccess(true);
     navigate("/dashboard");
   }
@@ -43,26 +57,38 @@ export default function Payment() {
               required 
             />
             
-            <Input 
-              label="Card Number" 
-              placeholder="0000 0000 0000 0000" 
-              maxLength={19}
-              required 
-            />
+            <div>
+              <Input 
+                name="cardNumber" 
+                label="Card Number" 
+                placeholder="0000 0000 0000 0000" 
+                maxLength={19}
+                required 
+              />
+              {errors.card && <p className="text-red-500 text-[10px] font-bold mt-1 uppercase">{errors.card}</p>}
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Input 
-                label="Expiry Date" 
-                placeholder="MM/YY" 
-                required 
-              />
-              <Input 
-                label="CVC" 
-                placeholder="123" 
-                type="password" 
-                maxLength={3}
-                required 
-              />
+              <div>
+                <Input 
+                  name="expiryDate"
+                  label="Expiry Date" 
+                  placeholder="MM/YY" 
+                  required 
+                />
+                {errors.expiry && <p className="text-red-500 text-[10px] font-bold mt-1 uppercase">{errors.expiry}</p>}
+              </div>
+              <div>
+                <Input 
+                  name="cvcCode"
+                  label="CVC" 
+                  placeholder="123" 
+                  type="password" 
+                  maxLength={4}
+                  required 
+                />
+                {errors.cvc && <p className="text-red-500 text-[10px] font-bold mt-1 uppercase">{errors.cvc}</p>}
+              </div>
             </div>
 
             <div className="pt-4">

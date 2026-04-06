@@ -23,8 +23,8 @@ function seededRandom(seed: number) {
 export function makeSeries(range: { start: string; end: string }, key: MetricKey): MetricSeries {
   const days = enumerateDays(range.start, range.end);
   const points = days.map((d, i) => {
-    const baseSeed = d.split("-").join("") as any;
-    const r = seededRandom(Number(baseSeed) + i);
+    const baseSeed = Number(d.replaceAll("-", ""));
+    const r = seededRandom(baseSeed + i);
     let value = 0;
 
     if (key === "riskScore") value = clamp(Math.round(30 + r * 60), 0, 100);

@@ -7,8 +7,16 @@ import Usage from "./pages/Usage";
 import Dashboard from "./pages/Dashboard";
 import ConnectAccounts from "./pages/ConnectAccounts";
 import RequireOnboarding from "./guards/RequireOnboarding";
+import Employees from "./pages/Employees";
+import Settings from "./pages/Settings";
+import EmployeeProfile from "./pages/EmployeeProfile";
+import RequireAuth from "./guards/RequireAuth";
+import { useThemeToggle } from "./hooks/useThemeToggle";
 
 export default function App() {
+
+  useThemeToggle();
+
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/plan" replace />} />
@@ -20,27 +28,66 @@ export default function App() {
       <Route
         path="/connect-accounts"
         element={
-          <RequireOnboarding>
-            <ConnectAccounts />
-          </RequireOnboarding>
+          //<RequireAuth>
+          //  <RequireOnboarding>
+              <ConnectAccounts />
+          //  </RequireOnboarding>
+          //</RequireAuth>
         }
       />
 
       <Route
         path="/dashboard"
         element={
-          <RequireOnboarding>
-            <Dashboard />
-          </RequireOnboarding>
+          //<RequireAuth>
+            //<RequireOnboarding>
+              <Dashboard />
+            //</Routes></RequireOnboarding>
+          //</RequireAuth>
         }
       />
 
       <Route
+        path="/employees"
+        element={
+          //<RequireAuth>
+            //<RequireOnboarding>
+              <Employees />
+            //</Routes></RequireOnboarding>
+          //</RequireAuth>
+        }
+      />
+
+      <Route
+        path="/employees/:employeeId"
+        element={
+          //<RequireAuth>
+            //<RequireOnboarding>
+              <EmployeeProfile />
+            //</Routes></RequireOnboarding>
+          //</RequireAuth>
+        }
+      />
+      
+      <Route
+        path="/settings"
+        element={
+          //<RequireAuth>
+            //<RequireOnboarding>
+              <Settings />
+            //</Routes></RequireOnboarding>
+          //</RequireAuth>
+      }
+    />
+
+      <Route
         path="/usage"
         element={
-          <RequireOnboarding>
-            <Usage />
-          </RequireOnboarding>
+          //<RequireAuth>
+            //<RequireOnboarding>
+              <Usage />
+            //</Routes></RequireOnboarding>
+          //</RequireAuth>
         }
       />
 
