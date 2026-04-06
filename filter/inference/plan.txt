@@ -1,87 +1,164 @@
-SentinelAI Filter Inference Service - Implementation Plan
-===============================================================
+SentinelAI Filter Inference - Canonical Plan (Post FILTER↔DEV Reconciliation)
+===============================================================================
 
-GOAL: gRPC inference service for SentiBERT with monitoring & optimization
+Date baseline: 2026-04-06
+Branch context: feature/filter after merging dev
 
-─────────────────────────────────────────────────────────────────
+GOAL
+----
+Ship a contract-safe, production-ready Filter service that:
 
-1. PROTO SCHEMA DEFINITION
-   [ ] Create filter.proto in protos/
-       - ClassifyMessage RPC
-       - ClassifyRequest: { string message }
-       - ClassifyResponse: { 
-           string category, float category_confidence,
-           string severity, float severity_confidence,
-           bool is_risk
-         }
+1) Preserves #21 intent (HF SSOT + ONNX + timestamp-aware inference).
+2) Preserves #26 contract (single + batch gRPC interfaces).
+3) Remains compatible with current DEV webhook payload contract.
+4) Avoids regressions during #39/#40 reconciliation and future inference merges.
 
-2. COMPILE PROTO FILES
-   [ ] Generate Python code:
-       python -m grpc_tools.protoc -I./protos \
-         --python_out=./generated \
-         --grpc_python_out=./generated \
-         ./protos/filter.proto
-   [ ] Creates: filter_pb2.py, filter_pb2_grpc.py
 
-3. IMPLEMENT INFERENCE ENGINE
-   [ ] Create engine.py:
-       - InferenceEngine class
-       - Load model via model_factory.load_production_model()
-       - predict(text) -> (category, severity, scores)
-       - Singleton pattern for model caching
+CURRENT TRUTH (WHAT IS ALREADY IN PLACE)
+----------------------------------------
 
-4. IMPLEMENT GRPC SERVER
-   [ ] Create server.py:
-       - FilterServiceServicer implements generated stub
-       - ClassifyMessage handler calls engine.predict()
-       - Error handling (INVALID_ARGUMENT, UNAVAILABLE)
-       - Startup: load model, bind port 50051
-   [ ] Test with sample client
-   [ ] Verify predictions match evaluation results
+[DONE] Proto contract supports single + batch:
+    - ClassifyMessage
+    - ClassifyMessages
+    in: protos/filter/v1/filter.proto
 
-5. TEXT CHUNKING FOR LONG MESSAGES
-   [ ] Implement text splitting in engine.py:
-       - Split messages >128 tokens into chunks
-       - Sliding window or sentence-based splitting
-       - Aggregate predictions (max risk, weighted avg, etc.)
-   [ ] Test with long messages (>200 tokens)
+[DONE] Filter server implements:
+    - _classify_single()
+    - _result_to_response()
+    - ClassifyMessage + ClassifyMessages
+    in: filter/inference/server.py
 
-6. PROMETHEUS METRICS
-   [ ] Add prometheus_client dependency
-   [ ] Instrument metrics:
-       - request_count (Counter)
-       - request_latency_seconds (Histogram with p50/p95/p99)
-       - requests_in_flight (Gauge)
-       - model_inference_seconds (Histogram)
-   [ ] Expose /metrics HTTP endpoint (port 8000)
+[DONE] Timestamp-aware inference context:
+    - Envelope parse support: {"meta": ..., "text": ...}
+    - Uses meta.sent_at when present
+    - Falls back to current timestamp
 
-7. MODEL QUANTIZATION & BENCHMARKING
-   [ ] Implement INT8 quantization:
-       - Use torch.quantization.quantize_dynamic
-       - Compare FP32 vs INT8 latency
-   [ ] Benchmark both versions:
-       - Single request latency
-       - Throughput (requests/sec)
-       - Memory usage
-   [ ] Document results and select optimal version
+[DONE] HF SSOT pathing in filter package:
+    - Dataset pull via HF dataset repo in services/dataset_loader.py
+    - ONNX/tokenizer pull via HF model repo in services/model_factory.py
 
-─────────────────────────────────────────────────────────────────
+[DONE] Known loose ends previously fixed:
+    - tests/test_onnx_workflow.py stale import removed
+    - tests/test_baseline.py import path updated
+    - scripts/upload_to_hf.py training-log path aligned to config.LOGS_DIR
 
-DEPENDENCIES
-------------
-grpcio>=1.60.0
-grpcio-tools>=1.60.0
-protobuf>=4.25.0
-prometheus-client>=0.19.0
 
-FILE STRUCTURE
---------------
-inference/
-├── protos/filter.proto
-├── generated/
-│   ├── filter_pb2.py
-│   └── filter_pb2_grpc.py
-├── engine.py
-├── server.py
-├── client.py (test client)
-└── metrics.py (prometheus setup)
+CANONICAL INTER-SERVICE CONTRACTS (LOCK THESE)
+----------------------------------------------
+
+Contract A: Webhooks -> Filter
+------------------------------
+Transport:
+    gRPC ClassifyMessage (fire-and-forget in current hot path).
+
+Payload shape (stringified JSON envelope):
+    {
+        "meta": {
+            "user_id": "...",
+            "company_id": 123,
+            "source": "slack|gmail",
+            "sent_at": "ISO-8601",
+            ... optional fields ...
+        },
+        "text": "raw message text"
+    }
+
+Rule:
+    Filter must classify the "text" field, NOT the raw JSON blob.
+
+
+Contract B: Filter gRPC Surface
+-------------------------------
+Must remain stable:
+    - ClassifyMessage(ClassifyRequest) -> ClassifyResponse
+    - ClassifyMessages(BatchClassifyRequest) -> BatchClassifyResponse
+
+Batch behavior:
+    - Preserve order
+    - Partial failures produce safe default response entries
+    - Empty list returns empty results
+
+
+Contract C: Timestamp Semantics
+-------------------------------
+Inference input should include temporal context as prefix:
+    [YYYY-MM-DD HH:MM] <message>
+
+Timestamp source priority:
+    1) envelope meta.sent_at (preferred)
+    2) server current time fallback
+
+
+Contract D: Ownership Boundaries
+--------------------------------
+Current DEV path:
+    webhooks dispatches to filter; downstream pipeline handles persistence/escalation.
+
+Do not reintroduce old direct DB writes in webhooks filter gate path.
+
+
+REMAINING WORKSTREAMS (ORDERED)
+-------------------------------
+
+Phase 1 - Merge Hygiene
+    [DONE] Resolve merge conflicts in .gitignore and filter/inference/server.py
+    [TODO] Create merge commit + push feature/filter
+
+Phase 2 - Contract Validation (must run)
+    [TODO] Validate proto generation compatibility (Python stubs)
+    [TODO] Run filter tests:
+                 - tests/test_grpc_server.py
+                 - tests/test_batch_classify.py
+                 - tests/test_onnx_model.py
+                 - tests/test_onnx_workflow.py
+                 - tests/test_dataset.py
+                 - tests/test_baseline.py
+    [TODO] Run webhooks tests touching filter contract:
+                 - webhooks/app/tests/test_batch_filter.py
+                 - webhooks/app/tests/test_filter_integration.py
+
+Phase 3 - Runtime E2E Smoke
+    [TODO] Bring up docker compose stack (at minimum filter + webhooks + api)
+    [TODO] Send one Slack-shaped and one Gmail-shaped envelope through webhooks
+    [TODO] Verify filter receives envelope and classifies text payload correctly
+
+Phase 4 - #39/#40 Reconciliation Inputs
+    [TODO] Treat #39 as donor-only (high-noise integration branch)
+    [TODO] Pull minimal safe deltas from #40 as needed
+    [TODO] Reconcile ai_service store_incident path against current ownership model
+
+Phase 5 - feature/inference Reconciliation
+    [TODO] Compare single old inference commit(s) against current canonical filter server
+    [TODO] Cherry-pick only missing logic, never regress contracts A-D
+
+Phase 6 - Model/Quality Optional Track
+    [TODO] Training run sanity check after merge stability
+    [TODO] Confirm ONNX model output diversity (guard against single-class collapse)
+    [TODO] Optional: add quantization benchmark RFC (not blocking integration)
+
+
+QUALITY GATES (MUST PASS BEFORE #21 MERGE)
+------------------------------------------
+
+Gate 1: No merge markers or unresolved conflicts.
+Gate 2: Proto, filter server, and webhooks contract tests pass.
+Gate 3: Envelope classification verified on real payload shape.
+Gate 4: No regression in #26 batch behavior.
+Gate 5: Timestamp context path verified with meta.sent_at and fallback.
+
+
+RISKS TO WATCH CLOSELY
+----------------------
+
+R1) Classifying raw envelope JSON instead of message text.
+R2) Silent drift between proto and generated stubs.
+R3) Divergence between fire-and-forget path and batch helpers.
+R4) Reintroducing legacy DB-layer assumptions from #39 history.
+R5) ONNX artifact/tokenizer mismatch from HF cache or stale local files.
+
+
+NOTES
+-----
+
+- This plan supersedes the old initial bootstrap checklist.
+- Use this as the live reconciliation ledger for #21, #26, #39/#40, and inference follow-up.

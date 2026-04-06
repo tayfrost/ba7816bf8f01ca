@@ -22,14 +22,14 @@ def compile_protos():
     """Compile proto files using grpc_tools.protoc."""
     # Create output directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     # Create __init__.py files for package structure
     (OUTPUT_DIR / "__init__.py").touch()
     (OUTPUT_DIR / "filter").mkdir(exist_ok=True)
     (OUTPUT_DIR / "filter" / "__init__.py").touch()
     (OUTPUT_DIR / "filter" / "v1").mkdir(exist_ok=True)
     (OUTPUT_DIR / "filter" / "v1" / "__init__.py").touch()
-    
+
     # Compile command
     cmd = [
         sys.executable, "-m", "grpc_tools.protoc",
@@ -39,18 +39,18 @@ def compile_protos():
         f"--grpc_python_out={OUTPUT_DIR}",
         str(PROTO_FILE)
     ]
-    
+
     print(f"Compiling {PROTO_FILE}...")
     print(f"Command: {' '.join(cmd)}")
-    
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+
     if result.returncode == 0:
-        print(f"✓ Proto files compiled successfully")
+        print("✓ Proto files compiled successfully")
         print(f"  Output: {OUTPUT_DIR}")
-        print(f"  Files: filter_pb2.py, filter_pb2_grpc.py")
+        print("  Files: filter_pb2.py, filter_pb2_grpc.py")
     else:
-        print(f"✗ Compilation failed")
+        print("✗ Compilation failed")
         print(f"Error: {result.stderr}")
         sys.exit(1)
 

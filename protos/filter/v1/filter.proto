@@ -4,16 +4,11 @@ package sentinelai.filter.v1;
 
 service FilterService {
   rpc ClassifyMessage(ClassifyRequest) returns (ClassifyResponse);
-  rpc ClassifyMessageWithModel(ModelClassifyRequest) returns (ClassifyResponse);
+  rpc ClassifyMessages(BatchClassifyRequest) returns (BatchClassifyResponse);
 }
 
 message ClassifyRequest {
   string message = 1;
-}
-
-message ModelClassifyRequest {
-  string message = 1;
-  string model_name = 2;  // Options: "fp32", "fp16", "dynamic_int8", "static_int8"
 }
 
 message ClassifyResponse {
@@ -23,4 +18,12 @@ message ClassifyResponse {
   float severity_confidence = 4;
   bool is_risk = 5;
   string all_responses = 6;
+}
+
+message BatchClassifyRequest {
+  repeated string messages = 1;
+}
+
+message BatchClassifyResponse {
+  repeated ClassifyResponse results = 1;
 }

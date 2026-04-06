@@ -19,21 +19,21 @@ settings = get_settings()
 DEFAULT_PLANS = [
     {
         "plan_name": "Starter",
-        "plan_cost_pennies": 4900,       # £49/month
+        "price_pennies": 4900,       # £49/month
         "currency": "GBP",
-        "max_employees": 25,
+        "seat_limit": 25,
     },
     {
         "plan_name": "Professional",
-        "plan_cost_pennies": 14900,      # £149/month
+        "price_pennies": 14900,      # £149/month
         "currency": "GBP",
-        "max_employees": 100,
+        "seat_limit": 100,
     },
     {
         "plan_name": "Enterprise",
-        "plan_cost_pennies": 39900,      # £399/month
+        "price_pennies": 39900,      # £399/month
         "currency": "GBP",
-        "max_employees": 999999,
+        "seat_limit": 999999,
     },
 ]
 
@@ -65,13 +65,13 @@ async def seed_plans(db: AsyncSession) -> list[SubscriptionPlan]:
                 )
                 price_monthly = stripe.Price.create(
                     product=product.id,
-                    unit_amount=plan_data["plan_cost_pennies"],
+                    unit_amount=plan_data["price_pennies"],
                     currency="gbp",
                     recurring={"interval": "month"},
                 )
                 price_yearly = stripe.Price.create(
                     product=product.id,
-                    unit_amount=plan_data["plan_cost_pennies"] * 10,  # ~20% annual discount
+                    unit_amount=plan_data["price_pennies"] * 10,  # ~20% annual discount
                     currency="gbp",
                     recurring={"interval": "year"},
                 )

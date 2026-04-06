@@ -85,11 +85,73 @@ class PaymentResponse(BaseModel):
 
 
 # ──────────────────────────────────────────────
+# Refunds
+# ──────────────────────────────────────────────
+
+class RefundCreate(BaseModel):
+    payment_id: int = Field(..., description="Internal DB payment ID to refund")
+    amount_pennies: Optional[int] = Field(
+        None,
+        description="Amount to refund in pennies. Omit for full refund.",
+        ge=1,
+    )
+    reason: Optional[str] = Field(
+        None,
+        pattern="^(duplicate|fraudulent|requested_by_customer)$",
+        description="Stripe refund reason: duplicate | fraudulent | requested_by_customer",
+    )
+
+
+class RefundResponse(BaseModel):
+    payment_id: int
+    stripe_refund_id: str
+    amount_pennies: int
+    currency: str
+    status: str
+    reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ──────────────────────────────────────────────
 # Customer Portal
 # ──────────────────────────────────────────────
 
 class CustomerPortalResponse(BaseModel):
     portal_url: str
+
+
+# ──────────────────────────────────────────────
+# Invoices
+# ──────────────────────────────────────────────
+
+class InvoiceLineItem(BaseModel):
+    description: str
+    amount_pennies: int
+    currency: str
+
+
+class InvoiceResponse(BaseModel):
+    stripe_invoice_id: str
+    number: Optional[str] = None
+    status: str                          # draft | open | paid | uncollectible | void
+    amount_due_pennies: int
+    amount_paid_pennies: int
+    currency: str
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
+    invoice_pdf: Optional[str] = None   # direct PDF download URL
+    hosted_invoice_url: Optional[str] = None  # Stripe-hosted payment page
+    lines: list[InvoiceLineItem] = []
+
+
+class UpcomingInvoiceResponse(BaseModel):
+    amount_due_pennies: int
+    currency: str
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
+    lines: list[InvoiceLineItem] = []
 
 
 # ──────────────────────────────────────────────

@@ -10,7 +10,13 @@ from pathlib import Path
 FILTER_DIR = Path(__file__).parent
 PROJECT_ROOT = FILTER_DIR.parent
 MODELS_DIR = FILTER_DIR / "models"
+LOGS_DIR = MODELS_DIR / "logs"
 EVAL_DIR = FILTER_DIR / "evaluation"
+RESULTS_DIR = EVAL_DIR / "results"
+IMAGES_DIR = RESULTS_DIR / "images"
+NOTEBOOKS_DIR = FILTER_DIR / "notebooks"
+NOTEBOOK_RESULTS_DIR = NOTEBOOKS_DIR / "results"
+NOTEBOOK_IMAGES_DIR = NOTEBOOK_RESULTS_DIR / "images"
 DATASETS_DIR = PROJECT_ROOT / "datasets"
 
 # Model Configuration
@@ -44,8 +50,25 @@ LORA_TARGET_MODULES = ["query", "value"]
 
 # Hugging Face Configuration
 HF_REPO_ID = "OguzhanKOG/sentinelai-bert-filter"
+HF_DATASETS_REPO_ID = "OguzhanKOG/sentinelai-datasets"
 CHECKPOINT_FILENAME = "dual_head_classifier.pt"
 ADAPTERS_DIRNAME = "lora_adapters"
+
+# ONNX Configuration
+ONNX_MODEL_FILENAME = "sentinelai_model.onnx"
+ONNX_DATA_FILENAME = "sentinelai_model.onnx.data"
+ONNX_FP16_MODEL_FILENAME = "sentinelai_model_fp16.onnx"
+ONNX_DYNAMIC_INT8_MODEL_FILENAME = "sentinelai_model_dynamic_int8.onnx"
+ONNX_STATIC_INT8_MODEL_FILENAME = "sentinelai_model_static_int8.onnx"
+ONNX_VARIANT_MODEL_FILENAMES = [
+    ONNX_MODEL_FILENAME,
+    ONNX_FP16_MODEL_FILENAME,
+    ONNX_DYNAMIC_INT8_MODEL_FILENAME,
+    ONNX_STATIC_INT8_MODEL_FILENAME,
+]
+TOKENIZER_DIRNAME = "tokenizer"
+TOKENIZER_FILENAME = "tokenizer.json"
+ONNX_CACHE_DIR = MODELS_DIR / "onnx_cache"
 
 # Training Hyperparameters (Defaults)
 BATCH_SIZE = 16
