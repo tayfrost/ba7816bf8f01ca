@@ -32,6 +32,35 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 import config
 
+def resolve_onnx_variant_filename(onnx_variant: str) -> str:
+    """Resolve ONNX variant key to artifact filename.
+
+    Supports canonical variant keys and direct `.onnx` filenames.
+    """
+    variant = (onnx_variant or "fp32").strip().lower()
+    variant_map = {
+        "fp32": config.ONNX_MODEL_FILENAME,
+        "base": config.ONNX_MODEL_FILENAME,
+        "default": config.ONNX_MODEL_FILENAME,
+        "fp16": config.ONNX_FP16_MODEL_FILENAME,
+        "dynamic_int8": config.ONNX_DYNAMIC_INT8_MODEL_FILENAME,
+        "dynamic-int8": config.ONNX_DYNAMIC_INT8_MODEL_FILENAME,
+        "static_int8": config.ONNX_STATIC_INT8_MODEL_FILENAME,
+        "static-int8": config.ONNX_STATIC_INT8_MODEL_FILENAME,
+    }
+
+    if variant in variant_map:
+        return variant_map[variant]
+
+    if onnx_variant.endswith(".onnx"):
+        return onnx_variant
+
+    valid = ", ".join(sorted(set(variant_map.keys())))
+    raise ValueError(
+        f"Unsupported ONNX variant '{onnx_variant}'. "
+        f"Use one of: {valid}, or provide a '.onnx' filename."
+    )
+
 
 def create_raw_model(model_name: str = config.MODEL_NAME) -> Any:
     """
@@ -127,6 +156,8 @@ def load_production_model(
 def load_onnx_model_and_tokenizer(
     repo_id: str = config.HF_REPO_ID,
     use_gpu: bool = False,
+    onnx_variant: str = "fp32",
+    fallback_to_base: bool = True,
     force_download: bool = False,
 ) -> Tuple[Optional[Any], Optional[Any]]:
     """
@@ -139,29 +170,54 @@ def load_onnx_model_and_tokenizer(
     local_dir = config.ONNX_CACHE_DIR
     local_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Download ONNX Model
+    # 1. Resolve ONNX model filename from requested variant
     try:
-        onnx_path = hf_hub_download(
+        selected_filename = resolve_onnx_variant_filename(onnx_variant)
+    except ValueError as e:
+        print(f"[ERROR] {e}")
+        return None, None
+
+    def _download_onnx_artifacts(filename: str) -> Optional[str]:
+        onnx_file_path = hf_hub_download(
             repo_id=repo_id,
-            filename=config.ONNX_MODEL_FILENAME,
+            filename=filename,
             local_dir=str(local_dir),
             repo_type="model",
             force_download=force_download,
         )
-        # Optional data file download
+
+        # Optional external data file download (large-model storage format)
+        data_filename = Path(filename).with_suffix(".onnx.data").name
         try:
             hf_hub_download(
                 repo_id=repo_id,
-                filename=config.ONNX_DATA_FILENAME,
+                filename=data_filename,
                 local_dir=str(local_dir),
                 repo_type="model",
                 force_download=force_download,
             )
-        except Exception: # pylint: disable=broad-exception-caught
-            pass  # Data file might not exist for smaller models
-    except Exception as e: # pylint: disable=broad-exception-caught
-        print(f"[ERROR] Failed to download ONNX model: {e}")
-        return None, None
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+
+        return onnx_file_path
+
+    try:
+        print(f"[INFO] Loading ONNX variant: {selected_filename}")
+        onnx_path = _download_onnx_artifacts(selected_filename)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        if fallback_to_base and selected_filename != config.ONNX_MODEL_FILENAME:
+            print(
+                f"[WARN] Failed to download variant '{selected_filename}': {e}. "
+                f"Falling back to base model '{config.ONNX_MODEL_FILENAME}'."
+            )
+            try:
+                onnx_path = _download_onnx_artifacts(config.ONNX_MODEL_FILENAME)
+            except Exception as base_e:  # pylint: disable=broad-exception-caught
+                print(f"[ERROR] Failed to download base ONNX model: {base_e}")
+                return None, None
+        else:
+            print(f"[ERROR] Failed to download ONNX model: {e}")
+            return None, None
 
     # 2. Download Tokenizer
     if Tokenizer is None:
