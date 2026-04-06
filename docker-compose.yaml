@@ -3,11 +3,17 @@ version: '3.8'
 services:
 
   ai_service:
-    build: ./ai_service
+    build:
+      context: .
+      dockerfile: ai_service/Dockerfile
     ports:
       - "8002:8001"
     depends_on:
       - kg-mcp-server
+    env_file:
+      - ./ai_service/.env
+    networks:
+      - sentinelai
 
   filter:
     build:
@@ -16,7 +22,17 @@ services:
     ports:
       - "50051:50051"
       - "9192:8000"
+    volumes:
+      - ./filter/models:/app/models
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 50051), timeout=2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sentinelai
 
   webhooks:
     build:
@@ -27,20 +43,15 @@ services:
     env_file:
       - ./webhooks/.env
     depends_on:
-      - pgvector
+      pgvector:
+        condition: service_started
+      filter:
+        condition: service_healthy
+      ai_service:
+        condition: service_started
     restart: unless-stopped
-
-  payments:
-    build: ./payments
-    ports:
-      - "8004:8001"
-    env_file:
-      - ./payments/.env
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
-    depends_on:
-      - pgvector
-    restart: unless-stopped
+    networks:
+      - sentinelai
 
   api:
     build:
@@ -53,6 +64,8 @@ services:
     depends_on:
       - pgvector
     restart: unless-stopped
+    networks:
+      - sentinelai
 
   pgvector:
     image: pgvector/pgvector:pg16
@@ -63,6 +76,8 @@ services:
     volumes:
       - pgvector_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - sentinelai
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -75,6 +90,9 @@ services:
     depends_on:
       - webhooks
     restart: unless-stopped
+    networks:
+      - sentinelai
+
   kg-mcp-server:
     build:
       context: .
@@ -86,13 +104,14 @@ services:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8001
       - KG_DATA_PATH=/app/data/papers.json
-    #restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8001))"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+    networks:
+      - sentinelai
 
   neo4j:
     image: neo4j:5.15-community
@@ -115,6 +134,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - sentinelai
+
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres-exporter
@@ -129,6 +151,8 @@ services:
       - '--extend.query-path=/etc/postgres-exporter/queries.yaml'
     depends_on:
       - pgvector
+    networks:
+      - sentinelai
 
   prometheus:
     image: prom/prometheus:latest
@@ -145,6 +169,8 @@ services:
       - '--web.enable-lifecycle'
     depends_on:
       - postgres-exporter
+    networks:
+      - sentinelai
 
   grafana:
     image: grafana/grafana:latest
@@ -162,6 +188,23 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     depends_on:
       - prometheus
+    networks:
+      - sentinelai
+
+  sentinel-frontend:
+    build:
+      context: ./frontend/sentinel-frontend
+      dockerfile: Dockerfile
+    container_name: sentinel-frontend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - sentinelai
+
+networks:
+  sentinelai:
+    driver: bridge
 
 volumes:
   pgvector_data:

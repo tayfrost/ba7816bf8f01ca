@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Stripe integration service.
 Handles: customer creation, checkout sessions, subscriptions,
@@ -11,7 +12,6 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Optional
-
 import stripe
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

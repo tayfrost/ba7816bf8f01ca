@@ -1,64 +1,27 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Stepper from "../components/Stepper";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import AuthCard from "../components/AuthCard";
 import { useOnboarding } from "../state/onboarding";
-import { getPlans, register } from "../api";
+import { register } from "../api";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { setSignup, setPlan } = useOnboarding();
-
-  const [searchParams] = useSearchParams();
-  const selectedPlan = searchParams.get("plan") as "free" | "paid" | null;
+  const { setSignup } = useOnboarding();
 
   const [companyName, setCompanyName] = useState("");
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [planId, setPlanId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    async function loadPlans() {
-      try {
-        const plans = await getPlans();
-
-        if (plans.length === 0) {
-          setError("No plans are available right now.");
-          return;
-        }
-
-        if (selectedPlan === "free") {
-          const freePlan =
-            plans.find((p) => p.plan_name.toLowerCase() === "free") ?? plans[0];
-          setPlanId(freePlan.plan_id);
-          return;
-        }
-
-        if (selectedPlan === "paid") {
-          const paidPlan =
-            plans.find((p) => p.plan_name.toLowerCase() !== "free") ?? plans[0];
-          setPlanId(paidPlan.plan_id);
-          return;
-        }
-
-        setPlanId(plans[0].plan_id);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load plans.");
-      }
-    }
-
-    loadPlans();
-  }, [selectedPlan]);
-
   async function handleContinue() {
-    if (!companyName || !adminName || !adminEmail || !password || !planId) return;
+    // Removed planId requirement here
+    if (!companyName || !adminName || !adminEmail || !password) return;
 
     setError(null);
     setIsSubmitting(true);
@@ -73,7 +36,7 @@ export default function Signup() {
         name: firstName || "Admin",
         surname,
         company_name: companyName,
-        plan_id: planId,
+        plan_id: 1, // Dummy ID to satisfy the backend schema
       });
 
       localStorage.setItem("sentinel_access_token", res.access_token);
@@ -84,18 +47,8 @@ export default function Signup() {
         adminEmail,
       });
 
-      if (selectedPlan) {
-        setPlan(selectedPlan);
-
-        if (selectedPlan === "paid") {
-          navigate("/payment");
-        } else {
-          navigate("/connect-accounts");
-        }
-        return;
-      }
-
-      navigate("/plan");
+      // Bypass /payment and go straight to the next setup step
+      navigate("/connect-accounts");
     } catch (err) {
       console.error(err);
       setError("Registration failed. Please try again.");
