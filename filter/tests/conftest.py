@@ -82,3 +82,26 @@ def real_model():
     """Loads the real production model with trained weights. Handles auto-download."""
     device = torch.device("cpu")  # Test on CPU for stability
     return load_production_model(device=device)
+
+
+@pytest.fixture(scope="session")
+def inference_test_messages():
+    """Shared inference-focused sample messages spanning common categories."""
+    return [
+        "Just had another amazing day at work! The team is fantastic.",
+        "I'm feeling overwhelmed with deadlines and can't seem to catch up.",
+        "I'm completely burned out and don't want to work anymore.",
+        "Feeling really down lately, nothing seems to help.",
+        "This harassment needs to stop immediately.",
+    ]
+
+
+@pytest.fixture(scope="session")
+def onnx_model_variant_filenames():
+    """Canonical ONNX model artifact names used in quantization workflow."""
+    return {
+        "fp32": config.ONNX_MODEL_FILENAME,
+        "fp16": config.ONNX_FP16_MODEL_FILENAME,
+        "dynamic_int8": config.ONNX_DYNAMIC_INT8_MODEL_FILENAME,
+        "static_int8": config.ONNX_STATIC_INT8_MODEL_FILENAME,
+    }

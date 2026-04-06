@@ -23,7 +23,7 @@ def test_load_and_infer_onnx():
 
     # Prepare test input
     test_text = "I feel so overwhelmed with work lately."
-    
+
     inputs = tokenizer(
         test_text,
         max_length=config.MAX_LENGTH,
