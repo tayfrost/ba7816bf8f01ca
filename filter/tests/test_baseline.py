@@ -10,10 +10,10 @@ from pathlib import Path
 
 import pytest
 
-# Add scripts directory to path to test baseline
-sys.path.append(str(Path(__file__).parent.parent / "scripts"))
+# Add filter package root to path for package imports
+sys.path.append(str(Path(__file__).parent.parent))
 
-from baseline_keyword import classify_message
+from evaluation.baseline_keyword import classify_message
 
 
 @pytest.mark.parametrize(

@@ -1,37 +1,25 @@
-"""
-Test ONNX conversion, upload, and inference workflow.
-
-Tests:
-1. Load model and convert to ONNX
-2. Upload to HF Space
-3. Download and run inference
-"""
+"""Test ONNX download and inference workflow via model factory."""
 
 import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
-from scripts.prepare_and_upload_onnx import prepare_and_upload_model
 from services.model_factory import load_onnx_model_and_tokenizer
 
 
-def test_conversion_and_upload():
-    """Test model conversion and upload to HF."""
-    print("\n=== TEST 1: Convert and Upload ===")
-    url = prepare_and_upload_model()
-    print(f"✓ Model uploaded to: {url}")
-
-
-def test_inference():
-    """Test ONNX model download and inference."""
-    print("\n=== TEST 2: Download and Inference ===")
+def test_load_and_infer_onnx():
+    """Test ONNX model loading and inference."""
+    print("\n=== TEST: Download and Inference ===")
 
     # Load ONNX model and tokenizer
     session, tokenizer = load_onnx_model_and_tokenizer()
+    assert session is not None, "Failed to load ONNX inference session"
+    assert tokenizer is not None, "Failed to load tokenizer"
 
     # Prepare test input
     test_text = "I feel so overwhelmed with work lately."
@@ -68,5 +56,4 @@ def test_inference():
 
 
 if __name__ == "__main__":
-    test_conversion_and_upload()
-    test_inference()
+    pytest.main([__file__, "-v"])

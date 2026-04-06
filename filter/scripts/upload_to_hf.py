@@ -54,12 +54,13 @@ def main() -> None:
 
     # 3. Paths
     models_dir = config.MODELS_DIR
+    logs_dir = config.LOGS_DIR
 
     # Artifacts to upload
     artifacts = [
         models_dir / config.ADAPTERS_DIRNAME,  # Folder
         models_dir / config.CHECKPOINT_FILENAME,  # File
-        models_dir / "training_log.json",  # File
+        logs_dir / "training_log.json",  # File
         models_dir / "README.md",  # File (Model Card)
         models_dir / config.ONNX_MODEL_FILENAME,  # ONNX File
         models_dir / config.TOKENIZER_DIRNAME,  # Tokenizer Folder
@@ -138,7 +139,7 @@ def main() -> None:
         # Upload Log
         print("Uploading training logs...")
         api.upload_file(
-            path_or_fileobj=str(models_dir / "training_log.json"),
+            path_or_fileobj=str(logs_dir / "training_log.json"),
             path_in_repo="training_log.json",
             repo_id=repo_id,
             repo_type="model",
