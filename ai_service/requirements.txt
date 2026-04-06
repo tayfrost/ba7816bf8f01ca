@@ -99,4 +99,3 @@ Werkzeug==3.1.6
 xxhash==3.6.0
 zstandard==0.25.0
 json-repair
-re
