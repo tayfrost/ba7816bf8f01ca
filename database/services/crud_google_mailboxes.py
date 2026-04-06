@@ -1,7 +1,8 @@
-from database.new_database import new_oop as model
-from database.new_database.utils.utility_functions import (
+from database.database import models as model
+from database.services.utility_functions import (
     Session,
     company_exists,
+    find_user_id_by_email,
     user_exists,
 )
 from sqlalchemy import select
@@ -65,6 +66,13 @@ def create_google_mailbox(
     try:
         if not company_exists(company_id, session=session):
             raise ValueError(f"company_id={company_id} not found or deleted.")
+
+        # Cross-platform linking: if this email already belongs to a canonical
+        # user (via a Slack or Gmail account), reuse that user_id.
+        linked_uid = find_user_id_by_email(company_id, email_address, session=session)
+        if linked_uid is not None:
+            user_id = linked_uid
+
         if not user_exists(company_id, user_id, session=session):
             raise ValueError(f"user_id={user_id} not found in company_id={company_id}.")
 
@@ -337,6 +345,30 @@ def update_google_mailbox_watch_expiration(
     except Exception:
         session.rollback()
         raise
+    finally:
+        if own_session:
+            session.close()
+
+
+def get_google_mailbox_by_email_global(
+    email_address: str,
+    *,
+    session: optional[SASession] = None,
+) -> optional[model.GoogleMailbox]:
+    """Look up a mailbox by email across all companies (no company_id filter).
+    Used by the Gmail webhook pipeline which only knows the recipient email."""
+    email_address = (email_address or "").strip()
+    if not email_address:
+        return None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.GoogleMailbox).where(
+            model.GoogleMailbox.email_address == email_address
+        )
+        return session.execute(stmt).scalar_one_or_none()
     finally:
         if own_session:
             session.close()

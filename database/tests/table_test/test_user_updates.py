@@ -1,5 +1,5 @@
 import pytest
-from database.new_database.utils import users_crud as crud 
+from database.services import users_crud as crud 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 

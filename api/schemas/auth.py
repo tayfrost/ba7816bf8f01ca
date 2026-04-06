@@ -4,8 +4,7 @@ from pydantic import BaseModel
 class RegisterRequest(BaseModel):
     email: str
     password: str
-    name: str
-    surname: str
+    display_name: str | None = None
     company_name: str
     plan_id: int = 1
 

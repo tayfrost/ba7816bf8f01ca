@@ -1,60 +1,76 @@
+import httpx
 import pytest
-from httpx import AsyncClient
 
 
-@pytest.mark.asyncio
-async def test_register_returns_token(client: AsyncClient):
-    response = await client.post("/auth/register", json={
-        "email": "test@example.com",
+def _register(client: httpx.Client, email: str, company_name: str, display_name: str = "Test User") -> dict:
+    resp = client.post("/auth/register", json={
+        "email": email,
         "password": "securepassword123",
-        "name": "Test",
-        "surname": "User",
-        "company_name": "Test Corp",
+        "display_name": display_name,
+        "company_name": company_name,
         "plan_id": 1,
     })
-    assert response.status_code == 201
-    data = response.json()
+    return resp.json()
+
+
+def test_register_returns_token(client: httpx.Client):
+    resp = client.post("/auth/register", json={
+        "email": "register1@example.com",
+        "password": "securepassword123",
+        "display_name": "Test User",
+        "company_name": "Register Corp 1",
+        "plan_id": 1,
+    })
+    assert resp.status_code == 201
+    data = resp.json()
     assert "access_token" in data
     assert data["token_type"] == "bearer"
 
 
-@pytest.mark.asyncio
-async def test_login_works(client: AsyncClient):
-    # Register first
-    await client.post("/auth/register", json={
-        "email": "login@example.com",
-        "password": "securepassword123",
-        "name": "Login",
-        "surname": "User",
-        "company_name": "Login Corp",
-        "plan_id": 1,
-    })
+def test_login_works(client: httpx.Client):
+    _register(client, "login1@example.com", "Login Corp 1")
 
-    # Login
-    response = await client.post("/auth/login", json={
-        "email": "login@example.com",
+    resp = client.post("/auth/login", json={
+        "email": "login1@example.com",
         "password": "securepassword123",
     })
-    assert response.status_code == 200
-    data = response.json()
-    assert "access_token" in data
+    assert resp.status_code == 200
+    assert "access_token" in resp.json()
 
 
-@pytest.mark.asyncio
-async def test_login_fails_with_wrong_password(client: AsyncClient):
-    # Register first
-    await client.post("/auth/register", json={
-        "email": "wrong@example.com",
-        "password": "correctpassword",
-        "name": "Wrong",
-        "surname": "Pass",
-        "company_name": "Wrong Corp",
+def test_login_fails_with_wrong_password(client: httpx.Client):
+    _register(client, "wrongpass@example.com", "Wrong Pass Corp")
+
+    resp = client.post("/auth/login", json={
+        "email": "wrongpass@example.com",
+        "password": "notthepassword",
+    })
+    assert resp.status_code == 401
+
+
+def test_me_endpoint_returns_user(client: httpx.Client):
+    data = _register(client, "me1@example.com", "Me Corp 1")
+    token = data["access_token"]
+
+    resp = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["email"] == "me1@example.com"
+    assert body["role"] == "biller"
+    assert "user_id" in body
+
+
+def test_me_fails_without_token(client: httpx.Client):
+    resp = client.get("/auth/me")
+    assert resp.status_code == 401
+
+
+def test_duplicate_email_rejected(client: httpx.Client):
+    _register(client, "dup@example.com", "Dup Corp 1")
+    resp = client.post("/auth/register", json={
+        "email": "dup@example.com",
+        "password": "anotherpassword",
+        "company_name": "Dup Corp 2",
         "plan_id": 1,
     })
-
-    # Login with wrong password
-    response = await client.post("/auth/login", json={
-        "email": "wrong@example.com",
-        "password": "incorrectpassword",
-    })
-    assert response.status_code == 401
+    assert resp.status_code == 400

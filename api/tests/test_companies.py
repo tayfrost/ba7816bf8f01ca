@@ -1,67 +1,57 @@
+import httpx
 import pytest
-from httpx import AsyncClient
 
 
-async def _register(client: AsyncClient, email: str, company_name: str) -> str:
-    resp = await client.post("/auth/register", json={
+def _register(client: httpx.Client, email: str, company_name: str) -> str:
+    resp = client.post("/auth/register", json={
         "email": email,
         "password": "testpassword123",
-        "name": "Test",
-        "surname": "User",
         "company_name": company_name,
         "plan_id": 1,
     })
+    assert resp.status_code == 201, resp.text
     return resp.json()["access_token"]
 
 
-def _auth_headers(token: str) -> dict:
+def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.mark.asyncio
-async def test_create_company_via_registration(client: AsyncClient):
-    token = await _register(client, "comp1@test.com", "Test Company 1")
-    assert token
+def test_get_company_info(client: httpx.Client):
+    token = _register(client, "compget@test.com", "Get Company Corp")
+    resp = client.get("/companies/me", headers=_auth(token))
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "Get Company Corp"
 
 
-@pytest.mark.asyncio
-async def test_get_company_info(client: AsyncClient):
-    token = await _register(client, "comp2@test.com", "Test Company 2")
-    response = await client.get("/companies/me", headers=_auth_headers(token))
-    assert response.status_code == 200
-    assert response.json()["company_name"] == "Test Company 2"
+def test_update_company_name(client: httpx.Client):
+    token = _register(client, "compupdate@test.com", "Old Name Corp")
+    resp = client.patch("/companies/me", json={"name": "New Name Corp"}, headers=_auth(token))
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "New Name Corp"
 
 
-@pytest.mark.asyncio
-async def test_soft_delete_company(client: AsyncClient):
-    token = await _register(client, "comp3@test.com", "Delete Corp")
-    response = await client.delete("/companies/me", headers=_auth_headers(token))
-    assert response.status_code == 200
-    assert response.json()["detail"] == "Company deleted"
+def test_soft_delete_company(client: httpx.Client):
+    token = _register(client, "compdel@test.com", "Delete Corp")
+    resp = client.delete("/companies/me", headers=_auth(token))
+    assert resp.status_code == 200
+    assert resp.json()["detail"] == "Company deleted"
 
 
-@pytest.mark.asyncio
-async def test_login_fails_after_soft_delete(client: AsyncClient):
-    token = await _register(client, "comp4@test.com", "Gone Corp")
+def test_login_fails_after_soft_delete(client: httpx.Client):
+    token = _register(client, "compgone@test.com", "Gone Corp")
+    client.delete("/companies/me", headers=_auth(token))
 
-    # Soft delete the company
-    await client.delete("/companies/me", headers=_auth_headers(token))
-
-    # Try to login — should fail
-    response = await client.post("/auth/login", json={
-        "email": "comp4@test.com",
+    resp = client.post("/auth/login", json={
+        "email": "compgone@test.com",
         "password": "testpassword123",
     })
-    assert response.status_code == 401
+    assert resp.status_code == 401
 
 
-@pytest.mark.asyncio
-async def test_get_company_fails_after_soft_delete(client: AsyncClient):
-    token = await _register(client, "comp5@test.com", "Invisible Corp")
+def test_get_company_fails_after_soft_delete(client: httpx.Client):
+    token = _register(client, "compinvis@test.com", "Invisible Corp")
+    client.delete("/companies/me", headers=_auth(token))
 
-    # Soft delete
-    await client.delete("/companies/me", headers=_auth_headers(token))
-
-    # Try to get company — should fail (role is now inactive)
-    response = await client.get("/companies/me", headers=_auth_headers(token))
-    assert response.status_code == 401
+    resp = client.get("/companies/me", headers=_auth(token))
+    assert resp.status_code == 401

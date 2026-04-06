@@ -1,5 +1,5 @@
-from database.new_database import new_oop as model
-from database.new_database.utils.utility_functions import (
+from database.database import models as model
+from database.services.utility_functions import (
     Session,
     company_exists,
     user_exists,

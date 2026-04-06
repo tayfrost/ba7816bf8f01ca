@@ -1,18 +1,28 @@
+import uuid
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 
-class FlaggedIncidentRead(BaseModel):
+class MessageIncidentCreate(BaseModel):
+    user_id: uuid.UUID
+    source: str
+    sent_at: datetime
+    content_raw: dict[str, Any]
+    conversation_id: str | None = None
+    recommendation: str | None = None
+
+
+class MessageIncidentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    incident_id: int
+    message_id: uuid.UUID
     company_id: int
-    team_id: str
-    slack_user_id: str
-    message_ts: str
+    user_id: uuid.UUID
+    source: str
+    sent_at: datetime
+    content_raw: dict[str, Any]
+    conversation_id: str | None = None
+    recommendation: str | None = None
     created_at: datetime
-    channel_id: str
-    raw_message_text: dict[str, Any]
-    class_reason: str | None = None

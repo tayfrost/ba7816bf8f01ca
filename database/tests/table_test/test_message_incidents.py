@@ -1,8 +1,8 @@
 import pytest
-from database.new_database.utils import utility_functions as crud
-from database.new_database.utils import companies_crud as company_crud 
-from database.new_database import new_oop as model
-from database.new_database.utils.crud_message_incidents import (
+from database.services import utility_functions as crud
+from database.services import companies_crud as company_crud 
+from database.database import models as model
+from database.services.crud_message_incidents import (
     create_message_incident,
     get_message_incident_by_id,
     list_message_incidents_for_company,
