@@ -17,7 +17,7 @@ async def generate_recommendations(state: AgentState, config: RunnableConfig) ->
     """Generate HR recommendations based on assessment with evidence-based advice from knowledge graph."""
     from agent import prompt_service
     
-    llm = get_llm(use_responses_api=True)
+    llm = get_llm()
     
     logger.info("[NODE: generate_recommendations] Starting recommendations generation")
     logger.debug(f"[NODE: generate_recommendations] Input state keys: {list(state.keys())}")
