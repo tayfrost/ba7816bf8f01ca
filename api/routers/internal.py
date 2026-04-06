@@ -256,22 +256,7 @@ async def update_mailbox_watch_expiration(google_mailbox_id: int, body: MailboxW
 @router.get("/mailboxes/by-email-global")
 async def get_mailbox_by_email_global(email: str):
     """Look up a mailbox by email across all companies (no company_id filter)."""
-    from sqlalchemy import select
-    from database.services.utility_functions import Session
-    from database.database import models as model
-
-    def _query():
-        session = Session()
-        try:
-            return session.execute(
-                select(model.GoogleMailbox).where(
-                    model.GoogleMailbox.email_address == email
-                )
-            ).scalar_one_or_none()
-        finally:
-            session.close()
-
-    m = await asyncio.to_thread(_query)
+    m = await asyncio.to_thread(crud_google_mailboxes.get_google_mailbox_by_email_global, email)
     if not m:
         raise HTTPException(status_code=404, detail="Mailbox not found")
     return _mailbox_dict(m)
@@ -286,6 +271,15 @@ async def list_companies_internal():
         {"company_id": c.company_id, "name": c.name}
         for c in companies
     ]
+
+
+@router.delete("/companies/{company_id}", status_code=204)
+async def hard_delete_company_internal(company_id: int):
+    """Hard-delete a company and all its children (CASCADE).
+    Intended for test teardown only — not exposed to end users."""
+    deleted = await asyncio.to_thread(companies_crud.hard_delete_company, company_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Company not found")
 
 
 # ── Slack Workspaces ──────────────────────────────────────────────

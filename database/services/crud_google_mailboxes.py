@@ -350,6 +350,30 @@ def update_google_mailbox_watch_expiration(
             session.close()
 
 
+def get_google_mailbox_by_email_global(
+    email_address: str,
+    *,
+    session: optional[SASession] = None,
+) -> optional[model.GoogleMailbox]:
+    """Look up a mailbox by email across all companies (no company_id filter).
+    Used by the Gmail webhook pipeline which only knows the recipient email."""
+    email_address = (email_address or "").strip()
+    if not email_address:
+        return None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.GoogleMailbox).where(
+            model.GoogleMailbox.email_address == email_address
+        )
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+
 def hard_delete_google_mailbox(
     google_mailbox_id: int,
     *,

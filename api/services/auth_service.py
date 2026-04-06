@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
@@ -7,6 +8,8 @@ from passlib.context import CryptContext
 from api.config import settings
 from database.services import companies_crud, crud_auth_users, subscriptions_crud
 from database.services import users_crud
+
+logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
@@ -34,41 +37,68 @@ async def register_user(
     company_name: str,
     plan_id: int = 1,
 ) -> str:
-    # 1. Create company
-    company = await asyncio.to_thread(companies_crud.create_company, company_name)
+    """
+    Create company → subscription → user → auth_user in sequence.
 
-    # 2. Create subscription (trial, 30 days)
-    now = datetime.now(timezone.utc)
-    await asyncio.to_thread(
-        subscriptions_crud.create_subscription,
-        company.company_id,
-        plan_id,
-        status="trialing",
-        current_period_start=now,
-        current_period_end=now + timedelta(days=30),
-    )
+    On any failure after company creation, compensating deletes are applied
+    in reverse order so no orphaned rows are left behind:
+      - user hard-deleted  (auth_user cascades with it via FK)
+      - company hard-deleted (subscription cascades with it via FK)
+    """
+    company = None
+    user = None
+    try:
+        # 1. Create company
+        company = await asyncio.to_thread(companies_crud.create_company, company_name)
 
-    # 3. Create user (biller role)
-    user = await asyncio.to_thread(
-        users_crud.create_user,
-        company.company_id,
-        role="biller",
-        status="active",
-        display_name=display_name,
-    )
+        # 2. Create subscription (trial, 30 days)
+        now = datetime.now(timezone.utc)
+        await asyncio.to_thread(
+            subscriptions_crud.create_subscription,
+            company.company_id,
+            plan_id,
+            status="trialing",
+            current_period_start=now,
+            current_period_end=now + timedelta(days=30),
+        )
 
-    # 4. Create auth_user (email + password hash)
-    await asyncio.to_thread(
-        crud_auth_users.create_auth_user,
-        company.company_id,
-        email=email.lower().strip(),
-        password_hash=hash_password(password),
-        user_id=user.user_id,
-    )
+        # 3. Create user (biller role)
+        user = await asyncio.to_thread(
+            users_crud.create_user,
+            company.company_id,
+            role="biller",
+            status="active",
+            display_name=display_name,
+        )
 
-    return create_access_token(
-        {"sub": str(user.user_id), "company_id": company.company_id, "role": "biller"}
-    )
+        # 4. Create auth_user (email + password hash)
+        await asyncio.to_thread(
+            crud_auth_users.create_auth_user,
+            company.company_id,
+            email=email.lower().strip(),
+            password_hash=hash_password(password),
+            user_id=user.user_id,
+        )
+
+        return create_access_token(
+            {"sub": str(user.user_id), "company_id": company.company_id, "role": "biller"}
+        )
+
+    except Exception:
+        # Compensate in reverse — each hard delete cascades its children via FK.
+        if user is not None:
+            try:
+                await asyncio.to_thread(
+                    users_crud.hard_delete_user, company.company_id, user.user_id
+                )
+            except Exception as rb_err:
+                logger.error(f"register_user rollback: failed to delete user_id={user.user_id}: {rb_err}")
+        if company is not None:
+            try:
+                await asyncio.to_thread(companies_crud.hard_delete_company, company.company_id)
+            except Exception as rb_err:
+                logger.error(f"register_user rollback: failed to delete company_id={company.company_id}: {rb_err}")
+        raise
 
 
 async def login_user(email: str, password: str) -> str | None:

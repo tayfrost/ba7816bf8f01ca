@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,6 +10,7 @@ from api.services.auth_service import hash_password
 from database.services import crud_auth_users
 from database.services import users_crud
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["users"])
 
 
@@ -54,12 +56,20 @@ async def invite_user(
             users_crud.create_user, company_id,
             role=role, status="active", display_name=display_name,
         )
-        await asyncio.to_thread(
-            crud_auth_users.create_auth_user, company_id,
-            email=email.lower().strip(),
-            password_hash=hash_password("changeme"),
-            user_id=new_user.user_id,
-        )
+        try:
+            await asyncio.to_thread(
+                crud_auth_users.create_auth_user, company_id,
+                email=email.lower().strip(),
+                password_hash=hash_password("changeme"),
+                user_id=new_user.user_id,
+            )
+        except Exception as e:
+            # auth_user creation failed — roll back the user seat to avoid orphans.
+            try:
+                await asyncio.to_thread(users_crud.hard_delete_user, company_id, new_user.user_id)
+            except Exception as rb_err:
+                logger.error(f"invite_user rollback: failed to delete user_id={new_user.user_id}: {rb_err}")
+            raise
         return _to_role_read(new_user, email)
     except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
