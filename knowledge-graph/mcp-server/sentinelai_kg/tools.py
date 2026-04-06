@@ -1,6 +1,6 @@
 """MCP tool definitions for the SentinelAI Knowledge Graph server."""
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from sentinelai_kg.config import CRISIS_KEYWORDS, DISCLAIMER, MAX_INPUT_LENGTH
 from sentinelai_kg.concerns import detect_concerns

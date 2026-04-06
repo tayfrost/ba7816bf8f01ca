@@ -193,7 +193,7 @@ services:
 
   sentinel-frontend:
     build:
-      context: ./frontend/sentinel-frontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: sentinel-frontend
     ports:

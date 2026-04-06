@@ -6,11 +6,11 @@ import Payment from "./pages/Payment";
 import Usage from "./pages/Usage";
 import Dashboard from "./pages/Dashboard";
 import ConnectAccounts from "./pages/ConnectAccounts";
-import RequireOnboarding from "./guards/RequireOnboarding";
+//import RequireOnboarding from "./guards/RequireOnboarding";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
 import EmployeeProfile from "./pages/EmployeeProfile";
-import RequireAuth from "./guards/RequireAuth";
+//import RequireAuth from "./guards/RequireAuth";
 import { useThemeToggle } from "./hooks/useThemeToggle";
 
 export default function App() {

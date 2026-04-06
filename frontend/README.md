@@ -1,47 +1,73 @@
-# SentinelAI – Front-End Styling & UI System
+# React + TypeScript + Vite
 
-This repository contains the front-end architecture for **SentinelAI**, a burnout-monitoring platform. This documentation covers the static UI elements, branding, and component-based design system.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
----
+Currently, two official plugins are available:
 
-## Branding & Visual Identity
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-The design system is built on a high-contrast, "Glassmorphic-Glow" aesthetic that hopes to enhance user experience and mirrors the sentiment of warmth and wellbeing.
+## React Compiler
 
-### Color Palette
-The primary theme is defined via Tailwind CSS variables to ensure consistency across all components:
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-* **Primary Gradient:** A vertical transition from **Rich Golden Orange** (`#e38d26`) to **Warm Oatmeal** (`#f7e9c1`).
-* **Brand Deep:** A professional **Deep Purple** (`#3f0345`) used for primary text, super-cards, and high-contrast UI containers.
-* **Brand Accent:** A **Bright Golden Halo** (`#fcd34d`) used for interactive highlights and status indicators.
+## Expanding the ESLint configuration
 
-### Typography & Base Styles
-The application uses a sans-serif stack for readability, with high-weight serif headings for the landing and onboarding pages to provide a premium, editorial feel.
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-### Logo Symbolism: The Sentinel Halo
-The brand's visual anchor is the **Glowing Angel Halo**, which serves as a metaphor for the nature of our platform, a "guardian" presence that watches over employee wellbeing.
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
----
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-## Static & Styling Elements
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-The UI is built using a **Component-Based Architecture**, focusing on reusability and glassmorphism effects.
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-### Layout Components
-* *Super Cards:** Utilizes `backdrop-blur-3xl` and `white/10` opacity layers to create depth against the brand gradient.
-* **Bento-Box Dashboard:** A grid-based layout for the `Dashboard` overview that organizes metrics into distinct, scannable widgets.
-* **Glowing Data Viz Shells:** Pre-styled containers designed specifically to house glowing SVG line charts, using `brand-deep` backgrounds to make neon signals pop.
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
----
-
-## Technical Implementation (Styling)
-
-The project leverages **Tailwind CSS v4** with a custom theme configuration:
-
-```css
-@theme {
-  --color-top: #e38d26;
-  --color-bottom: #f7e9c1;
-  --color-brand-deep: #3f0345;
-  --color-brand-accent: #fcd34d;
-}
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
