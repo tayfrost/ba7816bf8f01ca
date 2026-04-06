@@ -25,6 +25,7 @@ COPY ai_service/schema/ ./schema/
 COPY ai_service/services/ ./services/
 COPY ai_service/states/ ./states/
 COPY ai_service/utils/ ./utils/
+COPY ai_service/llm.py .
 
 EXPOSE 8001
 
