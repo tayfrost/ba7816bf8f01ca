@@ -32,6 +32,7 @@ from states.redactor_state import redactor
 from states.assess_risk_state import assess_risk
 from states.grade_message_state import grade_message
 from states.generate_recommendations_state import generate_recommendations
+from states.store_incident_state import store_incident
 
 
 def should_continue(state: AgentState) -> Literal["grade", "end"]:
@@ -48,6 +49,7 @@ workflow.add_node("redactor", redactor)
 workflow.add_node("assess_risk", assess_risk)
 workflow.add_node("grade_message", grade_message)
 workflow.add_node("generate_recommendations", generate_recommendations)
+workflow.add_node("store_incident", store_incident)
 
 workflow.set_entry_point("redactor")
 workflow.add_edge("redactor", "assess_risk")
@@ -60,7 +62,8 @@ workflow.add_conditional_edges(
     }
 )
 workflow.add_edge("grade_message", "generate_recommendations")
-workflow.add_edge("generate_recommendations", END)
+workflow.add_edge("generate_recommendations", "store_incident")
+workflow.add_edge("store_incident", END)
 
 agent = workflow.compile()
 
