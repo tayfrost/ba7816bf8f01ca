@@ -20,7 +20,16 @@ def tokenize_message(tokenizer, message: str) -> List[int]:
         List of token IDs
     """
     encoding = tokenizer.encode(message, add_special_tokens=False)
-    return encoding.ids
+
+    # tokenizers.Tokenizer -> Encoding(ids=...)
+    if hasattr(encoding, "ids"):
+        return encoding.ids
+
+    # transformers tokenizer -> list[int]
+    if isinstance(encoding, list):
+        return encoding
+
+    raise TypeError("Unsupported tokenizer encode() return type")
 
 
 def create_chunks(tokens: List[int], max_length: int, overlap: int) -> List[List[int]]:
@@ -104,14 +113,29 @@ def run_chunk_inference(
     Returns:
         Tuple of (category_logits, severity_logits)
     """
-    outputs = session.run(
-        None,
-        {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask
-        }
-    )
-    return outputs[0], outputs[1]
+    # ONNX Runtime path
+    if hasattr(session, "run"):
+        outputs = session.run(
+            None,
+            {
+                "input_ids": input_ids,
+                "attention_mask": attention_mask
+            }
+        )
+        return outputs[0], outputs[1]
+
+    # PyTorch path
+    import torch  # pylint: disable=import-outside-toplevel
+
+    device = next(session.parameters()).device
+    input_ids_t = torch.from_numpy(input_ids).to(device)
+    attention_mask_t = torch.from_numpy(attention_mask).to(device)
+
+    session.eval()
+    with torch.no_grad():
+        category_logits, severity_logits = session(input_ids_t, attention_mask_t)
+
+    return category_logits.cpu().numpy(), severity_logits.cpu().numpy()
 
 
 def softmax(x: np.ndarray) -> np.ndarray:

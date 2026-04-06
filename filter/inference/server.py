@@ -23,11 +23,14 @@ sys.path.insert(0, str(filter_dir))
 
 import grpc
 from dotenv import load_dotenv
+from transformers import AutoTokenizer
 
 from filter.v1 import filter_pb2  # type: ignore[reportMissingImports]
 from filter.v1 import filter_pb2_grpc  # type: ignore[reportMissingImports]
+
 import config
-from services.model_factory import load_onnx_model_and_tokenizer
+
+from services.model_factory import load_onnx_model_and_tokenizer, load_production_model
 from services.classification_utils import (
     tokenize_message,
     create_chunks,
@@ -54,20 +57,48 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         )
         self.overlap = int(os.environ.get("OVERLAP", os.environ.get("overlap", 32)))
         self.threshold = float(os.environ.get("THRESHOLD", os.environ.get("threshold", 0.5)))
+        self.inference_backend = os.environ.get("INFERENCE_BACKEND", "onnx").strip().lower()
+        self.onnx_variant = os.environ.get("ONNX_VARIANT", "fp32")
 
         print("[SERVER] Configuration loaded:")
         print(f"[SERVER]   Model: {self.model_name}")
         print(f"[SERVER]   Max length: {self.max_length}")
         print(f"[SERVER]   Overlap: {self.overlap}")
         print(f"[SERVER]   Threshold: {self.threshold}")
+        print(f"[SERVER]   Inference backend: {self.inference_backend}")
+        print(f"[SERVER]   ONNX variant: {self.onnx_variant}")
 
-        print("[SERVER] Loading ONNX model and tokenizer...")
-        self.onnx_session, self.tokenizer = load_onnx_model_and_tokenizer()
+        if self.inference_backend == "pytorch":
+            print("[SERVER] Loading PyTorch model and tokenizer...")
+            self.onnx_session = load_production_model()
+            self.tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
+        else:
+            print("[SERVER] Loading ONNX model and tokenizer...")
+            self.onnx_session, self.tokenizer = load_onnx_model_and_tokenizer(
+                onnx_variant=self.onnx_variant,
+            )
 
-        # Get special token IDs from tokenizer
-        self.cls_token_id = self.tokenizer.token_to_id('[CLS]')  # type: ignore
-        self.sep_token_id = self.tokenizer.token_to_id('[SEP]')  # type: ignore
-        self.pad_token_id = self.tokenizer.token_to_id('[PAD]')  # type: ignore
+        if self.onnx_session is None:
+            raise RuntimeError(
+                "Inference model failed to load. "
+                f"Backend='{self.inference_backend}'"
+            )
+
+        if self.tokenizer is None:
+            raise RuntimeError(
+                "Tokenizer failed to load. "
+                f"Backend='{self.inference_backend}'"
+            )
+
+        # Get special token IDs from tokenizer (supports tokenizers + transformers)
+        if hasattr(self.tokenizer, "token_to_id"):
+            self.cls_token_id = self.tokenizer.token_to_id('[CLS]')  # type: ignore
+            self.sep_token_id = self.tokenizer.token_to_id('[SEP]')  # type: ignore
+            self.pad_token_id = self.tokenizer.token_to_id('[PAD]')  # type: ignore
+        else:
+            self.cls_token_id = int(self.tokenizer.cls_token_id)
+            self.sep_token_id = int(self.tokenizer.sep_token_id)
+            self.pad_token_id = int(self.tokenizer.pad_token_id)
         print(f"[SERVER] Special tokens - CLS: {self.cls_token_id}, "
               f"SEP: {self.sep_token_id}, PAD: {self.pad_token_id}")
 
