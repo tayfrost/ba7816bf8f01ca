@@ -202,6 +202,20 @@ services:
     networks:
       - sentinelai
 
+  payments:
+    build: ./payments
+    ports:
+      - "8004:8001"
+    env_file:
+      - ./payments/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
+    depends_on:
+      - pgvector
+    restart: unless-stopped
+    networks:
+      - sentinelai
+
 networks:
   sentinelai:
     driver: bridge
