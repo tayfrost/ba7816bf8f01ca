@@ -10,6 +10,7 @@ REQUIREMENTS:
 ARTIFACTS UPLOADED:
 - lora_adapters/ (Config & Weights)
 - dual_head_classifier.pt (Full checkpoint with heads)
+- ONNX models (FP32 + quantized variants when present)
 - Training logs and README/model card
 """
 
@@ -103,24 +104,27 @@ def main() -> None:
             repo_type="model",
         )
 
-        # Upload ONNX Model if exists
-        onnx_path = models_dir / config.ONNX_MODEL_FILENAME
-        if onnx_path.exists():
-            print(f"Uploading ONNX model: {config.ONNX_MODEL_FILENAME}...")
+        # Upload ONNX models if present (base + quantized variants)
+        for onnx_filename in config.ONNX_VARIANT_MODEL_FILENAMES:
+            onnx_path = models_dir / onnx_filename
+            if not onnx_path.exists():
+                continue
+
+            print(f"Uploading ONNX model: {onnx_filename}...")
             api.upload_file(
                 path_or_fileobj=str(onnx_path),
-                path_in_repo=config.ONNX_MODEL_FILENAME,
+                path_in_repo=onnx_filename,
                 repo_id=repo_id,
                 repo_type="model",
             )
 
-            # Upload ONNX Data file if exists
+            # Upload ONNX external data file if exists
             data_path = onnx_path.with_suffix(".onnx.data")
             if data_path.exists():
-                print(f"Uploading ONNX data file: {config.ONNX_DATA_FILENAME}...")
+                print(f"Uploading ONNX data file: {data_path.name}...")
                 api.upload_file(
                     path_or_fileobj=str(data_path),
-                    path_in_repo=config.ONNX_DATA_FILENAME,
+                    path_in_repo=data_path.name,
                     repo_id=repo_id,
                     repo_type="model",
                 )
