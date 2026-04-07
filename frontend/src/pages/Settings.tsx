@@ -6,7 +6,6 @@ import Button from "../components/Button";
 import Input from "../components/Input";
 
 import SectionCard from "../components/settings/SectionCard";
-import PaymentMethodsList from "../components/settings/PaymentMethodsList";
 import BillingHistoryTable from "../components/settings/BillingHistoryTable";
 
 import SecuritySettings from "../components/settings/SecuritySettings";
@@ -14,17 +13,18 @@ import NotificationsPreferences from "../components/settings/NotificationsPrefer
 import DangerZone from "../components/settings/DangerZone";
 import IntegrationsPanel from "../components/settings/integrations/IntegrationsPanel";
 
-import { MOCK_CARDS, MOCK_INVOICES } from "../state/settingsMock";
-
 import { useCompany } from "../hooks/useCompany";
 import { useTeamUsers } from "../hooks/useTeamUsers";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
 const BRAND_ORANGE = "var(--color-top)";
+const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL;
 
 export default function Settings() {
   const { signup, plan, reset } = useOnboarding();
   const navigate = useNavigate();
+
+  const [invoices, setInvoices] = useState<any[]>([]);
   const planPrice = plan === "paid" ? "$29" : "$0";
 
   const {
@@ -38,11 +38,14 @@ export default function Settings() {
   } = useTeamUsers();
 
   const { company, status, error, isUpdating, saveCompanyName } = useCompany();
+  const companyId = company?.company_id;
   const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
+
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteSurname, setInviteSurname] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "biller" | "viewer">("viewer");
+  
   const {
     status: currentUserStatus,
     user: currentUser,
@@ -58,9 +61,43 @@ export default function Settings() {
   const canManageIntegrations = isAdmin || isBiller;
 
   useEffect(() => {
-    if (company?.company_name) {
-      setCompanyNameDraft(company.company_name);
+    const fetchInvoices = async () => {
+      if (!companyId) return;
+      try {
+        const res = await fetch(`${PAYMENTS_URL}/api/v1/invoices/${companyId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("sentinel_access_token")}`,
+          },
+        });
+        const data = await res.json();
+        setInvoices(data);
+      } catch (err) {
+        console.error("Failed to load invoices", err);
+      }
+    };
+    fetchInvoices();
+  }, [companyId]);
+
+  const handlePortal = async () => {
+    if (!companyId) return alert("No company ID found");
+    try {
+      const res = await fetch(`${PAYMENTS_URL}/api/v1/portal/${companyId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("sentinel_access_token")}`,
+        },
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Portal failed", err);
     }
+  };
+
+  useEffect(() => {
+    if (company?.company_name) setCompanyNameDraft(company.company_name);
   }, [company]);
 
   return (
@@ -76,15 +113,11 @@ export default function Settings() {
     >
       {/* SIDEBAR */}
       <aside
+        className="hidden lg:flex flex-col w-[280px] h-screen sticky top-0 p-10 shrink-0"
         style={{
-          width: "280px",
-          height: "100vh",
           background: "rgba(0, 0, 0, 0.4)",
           backdropFilter: "blur(30px)",
           borderRight: "1px solid rgba(255, 255, 255, 0.05)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "40px 20px",
         }}
       >
         <div
@@ -126,44 +159,28 @@ export default function Settings() {
       </aside>
 
       {/* MAIN */}
-      <main
-        style={{
-          flexGrow: 1,
-          padding: "50px 60px",
-          overflowY: "auto",
-          height: "100vh",
-          position: "relative"
-        }}
-      >
-
-        <div style={{ position: "absolute", top: "50px", right: "60px", display: "flex", gap: "15px" }}>
-          <Button 
-            onClick={() => navigate("/usage?theme=dark")}
-            className="!bg-white/5 !text-white/85 !border-white/30 !w-auto !px-6 !py-2 !text-xs"
-            variant="secondary"
-          >
-            USAGE GUIDE
-          </Button>
-          <Button 
-            onClick={() => navigate("/connect-accounts?theme=dark")}
-            className="!bg-orange-500/10 !text-orange-400 !border-orange-400/40 !w-auto !px-6 !py-2 !text-xs"
-            variant="secondary"
-          >
-            CONNECT ACCOUNTS
-          </Button>
-        </div>
-
-        <header style={{ marginBottom: "50px" }}>
-          <h1
-            style={{
-              fontSize: "38px",
-              fontWeight: "900",
-              margin: 0,
-              letterSpacing: "-1px",
-            }}
-          >
+      <main className="flex-grow min-w-0 p-4 md:p-10 lg:p-[60px] overflow-y-auto h-screen relative">
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
+          <h1 style={{ fontSize: "38px", fontWeight: "900", margin: 0, letterSpacing: "-1px" }}>
             Account <span style={{ color: BRAND_ORANGE }}>Settings</span>
           </h1>
+
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              onClick={() => navigate("/usage?theme=dark")}
+              className="!bg-white/5 !text-white/85 !border-white/30 !w-auto !px-6 !py-2 !text-xs"
+              variant="secondary"
+            >
+              USAGE GUIDE
+            </Button>
+            <Button 
+              onClick={() => navigate("/connect-accounts?theme=dark")}
+              className="!bg-orange-500/10 !text-orange-400 !border-orange-400/40 !w-auto !px-6 !py-2 !text-xs"
+              variant="secondary"
+            >
+              CONNECT ACCOUNTS
+            </Button>
+          </div>
         </header>
 
         {status === "loading" && (
@@ -190,13 +207,7 @@ export default function Settings() {
           </div>
         )}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "40px",
-          }}
-        >
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
           {/* LEFT COLUMN */}
           <div className="space-y-8">
             {/* Identity */}
@@ -331,7 +342,7 @@ export default function Settings() {
                     Change Plan for Next Cycle
                   </Button>
 
-                  <BillingHistoryTable invoices={MOCK_INVOICES} />
+                  <BillingHistoryTable invoices={invoices} />
                 </>
               )}
             </SectionCard>
@@ -341,16 +352,17 @@ export default function Settings() {
           <div className="space-y-8">
             {canManageBilling && (
               <SectionCard title="Payment Methods">
-                <PaymentMethodsList cards={MOCK_CARDS} />
+                <p style={{ opacity: 0.6, fontSize: "13px", marginBottom: "16px" }}>
+                  Manage your payment methods and billing details securely via Stripe.
+                </p>
 
-                {MOCK_CARDS.length < 3 && (
-                  <Button
-                    variant="secondary"
-                    className="!text-white !bg-white/10 !border-dashed border-white/30 hover:!bg-white/20"
-                  >
-                    + Add New Payment Method
-                  </Button>
-                )}
+                <Button
+                  onClick={handlePortal}
+                  variant="secondary"
+                  className="!text-white !bg-white/10 !border-white/30"
+                >
+                  Manage Billing $ Cards (Stripe)
+                </Button>
 
                 <p
                   style={{
@@ -360,7 +372,7 @@ export default function Settings() {
                     textAlign: "center",
                   }}
                 >
-                  MINIMUM 2 PAYMENT METHODS REQUIRED.
+                  PAYMENTS ARE SECURELY HANDLED BY STRIPE
                 </p>
               </SectionCard>
                 )}
@@ -384,16 +396,7 @@ export default function Settings() {
               )}
 
               {canManageTeam && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.3fr 1fr 1fr 0.8fr auto",
-                  gap: "10px",
-                  marginBottom: "20px",
-                  paddingBottom: "20px",
-                  borderBottom: "1px solid rgba(255,255,255,0.06)",
-                }}
-              >
+              <div className="flex flex-col md:grid md:grid-cols-[1.3fr_1fr_1fr_0.8fr_auto] gap-3 mb-5 pb-5 border-b border-white/5">
                 <input
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
@@ -578,7 +581,21 @@ export default function Settings() {
             {canManageBilling && <DangerZone />}
           </div>
         </div>
+        <div className="h-24 lg:hidden" />
       </main>
+
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-6 py-4 flex justify-around items-center" 
+        style={{
+          background: "rgba(20, 1, 22, 0.9)",
+          backdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+        }}
+        >
+        <SidebarLink to="/dashboard" label="Home" end />
+        <SidebarLink to="/employees" label="Employees" />
+        <SidebarLink to="/settings" label="Settings" />
+      </nav>
+
     </div>
   );
 }

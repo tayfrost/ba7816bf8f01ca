@@ -5,7 +5,6 @@ export type RegisterPayload = {
   password: string;
   name: string;
   surname: string;
-  display_name: string;
   company_name: string;
   plan_id: number;
 };
@@ -21,7 +20,7 @@ export type AuthResponse = {
 };
 
 export type MeResponse = {
-  user_id: number;
+  user_id: string;
   name: string;
   surname: string;
   email: string;

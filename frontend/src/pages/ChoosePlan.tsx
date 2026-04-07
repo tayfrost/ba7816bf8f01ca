@@ -6,10 +6,11 @@ import { useOnboarding } from "../state/onboarding";
 
 export default function ChoosePlan() {
   const navigate = useNavigate();
-  const { setPlan } = useOnboarding();
+  const { setPlan, setPlanInterval } = useOnboarding();
 
-  function selectPlan(plan: "free" | "paid") {
+  function selectPlan(plan: "free" | "paid", interval: "month" | "year" = "month") {
     setPlan(plan);
+    setPlanInterval(interval);
     navigate(`/signup?plan=${plan}`);
   }
 
@@ -46,7 +47,7 @@ export default function ChoosePlan() {
             />
           </div>
 
-          <div onClick={() => selectPlan("paid")} className="w-full max-w-[320px] cursor-pointer">
+          <div onClick={() => selectPlan("paid", "month")} className="w-full max-w-[320px] cursor-pointer">
             <SubscriptionCard 
               title="Monthly" 
               price="$29" 
@@ -55,7 +56,7 @@ export default function ChoosePlan() {
             />
           </div>
 
-          <div onClick={() => selectPlan("paid")} className="w-full max-w-[320px] cursor-pointer">
+          <div onClick={() => selectPlan("paid", "year")} className="w-full max-w-[320px] cursor-pointer">
             <SubscriptionCard 
               title="Annual" 
               price="$249" 

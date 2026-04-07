@@ -1,6 +1,6 @@
 import { apiFetch } from "./client";
 
-export type Provider = "slack" | "gmail" | "outlook";
+export type Provider = "slack" | "gmail";
 
 export type IntegrationStatus = {
   provider: Provider;

@@ -1,35 +1,63 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Stepper from "../components/Stepper";
-import AuthCard from "../components/AuthCard"; 
-import Input from "../components/Input";
+import AuthCard from "../components/AuthCard";
 import Button from "../components/Button";
 import LandingHeader from "../components/LandingHeader";
 import { useOnboarding } from "../state/onboarding";
+import { useCompany } from "../hooks/useCompany";
+import { getPlans } from "../api/plans";
+import { useEffect, useState } from "react";
+
+const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL;
 
 export default function Payment() {
-  const navigate = useNavigate();
-  const { setPaymentSuccess } = useOnboarding();
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const { plan, planInterval } = useOnboarding();
+  const { company } = useCompany();
+  const [planId, setPlanId] = useState<number | null>(null);
 
-  function handlePay(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    
-    const formData = new FormData(e.currentTarget);
-    const cardNum = (formData.get("cardNumber") as string || "").replace(/\s/g, "");
-    const expiry = formData.get("expiryDate") as string || "";
-    const cvc = formData.get("cvcCode") as string || "";
-    const newErrors: Record<string, string> = {};
+  const companyId = company?.company_id; 
 
-    if (!/^\d{16,19}$/.test(cardNum)) newErrors.card = "Card must be 16-19 digits";
-    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) newErrors.expiry = "Use MM/YY (01-12)";
-    if (!/^\d{3,4}$/.test(cvc)) newErrors.cvc = "CVC must be 3-4 digits";
+  useEffect(() => {
+    async function loadPlanId() {
+      const plans = await getPlans();
+      const match = plans.find(p =>
+        plan === "free"
+          ? p.plan_name.toLowerCase() === "free"
+          : p.plan_name.toLowerCase() !== "free"
+      );
+      if (match) setPlanId(match.plan_id);
+    }
+    loadPlanId();
+  }, [plan]);
 
-    if (Object.keys(newErrors).length > 0) return setErrors(newErrors);
+  const handleCheckout = async () => {
+    if (!company?.company_id || !planId) {
+      alert("Missing company or plan");
+      return;
+    }
 
-    setPaymentSuccess(true);
-    navigate("/dashboard");
-  }
+    try {
+      const res = await fetch(`${PAYMENTS_URL}/api/v1/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          company_id: company.company_id,
+          plan_id: planId,
+          interval: planInterval, 
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } 
+
+    } catch (err) {
+      console.error("Checkout failed", err);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-transparent font-sans overflow-y-auto">
@@ -39,67 +67,31 @@ export default function Payment() {
         <div className="mb-8 mt-12">
           <Stepper currentPath="/payment" />
         </div>
-        
+
         <AuthCard>
           <div className="text-center mb-8">
             <h1 className="text-3xl font-serif font-black text-brand-deep leading-tight">
               Secure Payment
             </h1>
             <p className="text-brand-deep/60 mt-2">
-              Enter your corporate card details to continue.
+              You will be redirected to Stripe to complete your payment securely.
             </p>
           </div>
 
-          <form onSubmit={handlePay} className="space-y-6">
-            <Input 
-              label="Cardholder Name" 
-              placeholder="e.g. Purpl Corp Admin" 
-              required 
-            />
-            
-            <div>
-              <Input 
-                name="cardNumber" 
-                label="Card Number" 
-                placeholder="0000 0000 0000 0000" 
-                maxLength={19}
-                required 
-              />
-              {errors.card && <p className="text-red-500 text-[10px] font-bold mt-1 uppercase">{errors.card}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  name="expiryDate"
-                  label="Expiry Date" 
-                  placeholder="MM/YY" 
-                  required 
-                />
-                {errors.expiry && <p className="text-red-500 text-[10px] font-bold mt-1 uppercase">{errors.expiry}</p>}
-              </div>
-              <div>
-                <Input 
-                  name="cvcCode"
-                  label="CVC" 
-                  placeholder="123" 
-                  type="password" 
-                  maxLength={4}
-                  required 
-                />
-                {errors.cvc && <p className="text-red-500 text-[10px] font-bold mt-1 uppercase">{errors.cvc}</p>}
-              </div>
-            </div>
-
+          <div className="space-y-6">
             <div className="pt-4">
-              <Button type="submit" variant="primary">
-                Confirm & Activate Plan
+              <Button
+                onClick={handleCheckout}
+                variant="primary"
+                disabled={!companyId || !planId}
+              >
+                {!companyId || !planId ? "Loading..." : "Proceed to Payment"}
               </Button>
             </div>
-          </form>
+          </div>
 
           <p className="text-center text-[10px] text-brand-deep/40 uppercase tracking-[0.2em] font-bold mt-8">
-            Encrypted & Secure 256-bit SSL
+            Payments are securely handled by Stripe
           </p>
         </AuthCard>
       </div>

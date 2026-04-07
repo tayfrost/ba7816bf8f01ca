@@ -3,7 +3,6 @@ import type { IntegrationStatus, Provider } from "../integrations";
 let state: IntegrationStatus[] = [
   { provider: "slack", connected: false, connectedAt: null as unknown as string | undefined },
   { provider: "gmail", connected: false, connectedAt: null as unknown as string | undefined },
-  { provider: "outlook", connected: false, connectedAt: null as unknown as string | undefined },
 ];
 
 export async function getIntegrations(): Promise<IntegrationStatus[]> {

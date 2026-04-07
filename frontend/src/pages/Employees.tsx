@@ -51,16 +51,14 @@ export default function Employees() {
     }}>
       
       {/* SIDEBAR */}
-      <aside style={{
-        width: "280px",
-        height: "100vh",
-        background: "rgba(0, 0, 0, 0.4)",
-        backdropFilter: "blur(30px)",
-        borderRight: "1px solid rgba(255, 255, 255, 0.05)",
-        display: "flex",
-        flexDirection: "column",
-        padding: "40px 20px"
-      }}>
+      <aside
+        className="hidden lg:flex flex-col w-[280px] h-screen sticky top-0 p-10 shrink-0"
+        style={{
+          background: "rgba(0, 0, 0, 0.4)",
+          backdropFilter: "blur(30px)",
+          borderRight: "1px solid rgba(255, 255, 255, 0.05)",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "50px" }}>
           <img src="/logo-text.png" alt="SentinelAI" style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px" }} />
         </div>
@@ -80,9 +78,9 @@ export default function Employees() {
       </aside>
 
       {/* MAIN SECTION */}
-      <main style={{ flexGrow: 1, padding: "50px 60px", overflowY: "auto", height: "100vh" }}>
+      <main className="flex-grow p-4 md:p-10 lg:p-[60px] overflow-y-auto h-screen">
  
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "50px" }}>
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
           <div>
             <h1 style={{ fontSize: "38px", fontWeight: "900", margin: 0, letterSpacing: "-1px" }}>
               Welcome, <span style={{ color: BRAND_ORANGE, textShadow: `0 0 20px rgba(227, 141, 38, 0.3)` }}>{signup?.companyName}</span>
@@ -134,16 +132,8 @@ export default function Employees() {
           </div>
         )}
 
-        <section style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ 
-            display: "flex", 
-            gap: "15px", 
-            background: "rgba(0,0,0,0.5)", 
-            padding: "10px 20px", 
-            borderRadius: "50px", 
-            border: "1px solid rgba(255,255,255,0.08)",
-            width: "400px"
-          }}>
+        <section className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+          <div className="flex gap-[15px] bg-black/50 px-5 py-2.5 rounded-full border border-white/10 w-full max-w-[400px]">
              <span style={{ color: BRAND_ORANGE, fontWeight: "900", fontSize: "12px" }}>SEARCH</span>
              <input 
               type="text"
@@ -216,13 +206,7 @@ export default function Employees() {
 
         {/* EMPLOYEE DATA GRID */}
         {directoryView === "cards" ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-              gap: "30px",
-            }}
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {employees.map((emp) => (
               <div
                 key={emp.id}
@@ -265,7 +249,21 @@ export default function Employees() {
 
         {employees.length === 0 && <EmptyEmployees />}
 
+        <div className="h-24 lg:hidden" />
       </main>
+
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-6 py-4 flex justify-around items-center" 
+        style={{
+          background: "rgba(20, 1, 22, 0.9)",
+          backdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+        }}
+        >
+        <SidebarLink to="/dashboard" label="Home" end />
+        <SidebarLink to="/employees" label="Employees" />
+        <SidebarLink to="/settings" label="Settings" />
+      </nav>
+
     </div>
   );
 }

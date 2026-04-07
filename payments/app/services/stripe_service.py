@@ -1,4 +1,3 @@
-from __future__ import annotations
 """
 Stripe integration service.
 Handles: customer creation, checkout sessions, subscriptions,
@@ -12,6 +11,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Optional
+
 import stripe
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,10 +103,10 @@ class StripeService:
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=(
-                f"{settings.FRONTEND_URL}/payments/success"
+                f"{settings.FRONTEND_URL}/connect-accounts"
                 f"?session_id={{CHECKOUT_SESSION_ID}}"
             ),
-            cancel_url=f"{settings.FRONTEND_URL}/payments/cancel",
+            cancel_url=f"{settings.FRONTEND_URL}/plan",
             metadata={
                 "company_id": str(company_id),
                 "plan_id": str(plan_id),
@@ -128,7 +128,7 @@ class StripeService:
     async def get_subscription(
         db: AsyncSession,
         company_id: int,
-    ) -> Optional[Subscription]:
+    ) -> Optional[StripeSubscription]:
         """Get the active subscription for a company."""
         result = await db.execute(
             select(StripeSubscription)
@@ -140,7 +140,7 @@ class StripeService:
                     StripeSubscriptionStatus.PAST_DUE.value,
                 ])
             )
-            .order_by(Subscription.created_at.desc())
+            .order_by(StripeSubscription.created_at.desc())
         )
         return result.scalar_one_or_none()
 
@@ -149,7 +149,7 @@ class StripeService:
         db: AsyncSession,
         company_id: int,
         cancel_at_period_end: bool = True,
-    ) -> Subscription:
+    ) -> StripeSubscription:
         """Cancel a subscription (immediately or at period end)."""
         sub = await StripeService.get_subscription(db, company_id)
         if not sub:
@@ -524,7 +524,7 @@ async def _handle_subscription_updated(db: AsyncSession, stripe_sub: dict) -> No
     if not sub:
         return
 
-    valid_statuses = {s.value for s in SubscriptionStatus}
+    valid_statuses = {s.value for s in StripeSubscriptionStatus}
     new_status = stripe_sub.get("status")
     if new_status in valid_statuses:
         sub.status = new_status

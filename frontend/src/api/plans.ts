@@ -11,5 +11,11 @@ export type Plan = {
 };
 
 export async function getPlans(): Promise<Plan[]> {
-  return apiFetch<Plan[]>("/plans");
+  try {
+    const plans = await apiFetch<Plan[]>("/plans");
+    return plans ?? [];
+  } catch (err) {
+    console.error("Failed to fetch plans:", err);
+    return [];
+  }
 }

@@ -24,6 +24,7 @@ export default function EmployeeProfile() {
   if (status === "loading") {
     return (
       <div
+        className="px-6 text-center" // Adds padding and centers text for mobile
         style={{
           minHeight: "100vh",
           background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
@@ -41,6 +42,7 @@ export default function EmployeeProfile() {
   if (error) {
     return (
       <div
+        className="px-6 text-center" // Adds padding and centers text for mobile
         style={{
           minHeight: "100vh",
           background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
@@ -108,15 +110,11 @@ export default function EmployeeProfile() {
       }}
     >
       <aside
+        className="hidden lg:flex flex-col w-[280px] h-screen sticky top-0 p-10 shrink-0"
         style={{
-          width: "280px",
-          height: "100vh",
           background: "rgba(0, 0, 0, 0.4)",
           backdropFilter: "blur(30px)",
           borderRight: "1px solid rgba(255, 255, 255, 0.05)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "40px 20px",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "50px" }}>
@@ -146,7 +144,7 @@ export default function EmployeeProfile() {
         </button>
       </aside>
 
-      <main style={{ flexGrow: 1, padding: "50px 60px", overflowY: "auto", height: "100vh" }}>
+      <main className="flex-grow min-w-0 p-4 md:p-10 lg:p-[60px] overflow-y-auto h-screen">
         <button
           onClick={() => navigate("/employees")}
           style={{
@@ -162,21 +160,29 @@ export default function EmployeeProfile() {
           ← BACK TO EMPLOYEES
         </button>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.2fr 0.8fr",
-            gap: "30px",
-            marginBottom: "30px",
-          }}
-        >
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 lg:gap-8 mb-8">
           <EmployeeProfileHeader employee={employee} />
 
           <EmployeeWorkloadSummary employee={employee} />
         </div>
 
         <EmployeeIncidentTimeline incidents={incidents} />
+
+        <div className="h-24 lg:hidden" />
       </main>
+
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-6 py-4 flex justify-around items-center" 
+        style={{
+          background: "rgba(20, 1, 22, 0.9)",
+          backdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+        }}
+        >
+        <SidebarLink to="/dashboard" label="Home" end />
+        <SidebarLink to="/employees" label="Employees" />
+        <SidebarLink to="/settings" label="Settings" />
+      </nav>  
+
     </div>
   );
 }

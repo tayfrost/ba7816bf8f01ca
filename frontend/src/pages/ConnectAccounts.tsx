@@ -4,8 +4,7 @@ import Button from "../components/Button";
 import LandingHeader from "../components/LandingHeader";
 import { useOnboarding } from "../state/onboarding";
 import { getIntegrations, startIntegration, disconnectIntegration } from "../api";
-
-type Provider = "slack" | "gmail" | "outlook";
+import type { Provider } from "../state/onboarding";
 
 function providerTitle(p: Provider) {
   if (p === "slack") return "Slack";
@@ -29,7 +28,7 @@ export default function ConnectAccounts() {
   const isDark = searchParams.get("theme") === "dark";
 
   const { integrations, setIntegrationConnected } = useOnboarding();
-  const providers = useMemo<Provider[]>(() => ["slack", "gmail", "outlook"], []);
+  const providers = useMemo<Provider[]>(() => ["slack", "gmail"], []);
 
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +115,7 @@ export default function ConnectAccounts() {
     setNotice(null);
 
     try {
-      await disconnectIntegration(provider);
+      await disconnectIntegration(provider); 
       setIntegrationConnected(provider, false);
       setNotice(`${providerTitle(provider)} disconnected.`);
     } catch (err) {
@@ -144,7 +143,7 @@ export default function ConnectAccounts() {
       <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-6">
         <div 
           style={{ background: "var(--dynamic-card)" }}
-          className="max-w-4xl w-full backdrop-blur-3xl border border-white/30 shadow-xl rounded-[48px] p-10 md:p-14"
+          className="max-w-4xl w-full backdrop-blur-3xl border border-white/30 shadow-xl rounded-[32px] md:rounded-[48px] p-6 md:p-14"
         >
           <div className="mb-12">
             <h1 
@@ -185,7 +184,8 @@ export default function ConnectAccounts() {
               return (
                 <div
                   key={p}
-                  className="group relative flex flex-col md:flex-row items-center justify-between p-6 md:p-8 rounded-[32px] bg-white/30 border border-white/50 shadow-sm transition-all duration-500 hover:shadow-xl hover:bg-white/60 hover:-translate-y-1"
+                  style={{ background: "var(--dynamic-card)", borderColor: "var(--dynamic-border)" }}
+                  className="group relative flex flex-col md:flex-row items-center justify-between p-6 md:p-8 rounded-[32px] border shadow-sm transition-all duration-500 hover:shadow-xl hover:-translate-y-1"
                 >
                   <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
                     <div className="w-14 h-14 flex items-center justify-center p-3 rounded-2xl bg-white/50 border border-white transition-transform group-hover:scale-105">
@@ -194,7 +194,7 @@ export default function ConnectAccounts() {
 
                     <div>
                       <div className="flex items-center justify-center md:justify-start gap-3 mb-1">
-                        <h3 className="text-xl font-bold text-brand-deep tracking-tight">
+                        <h3 style={{ color: "var(--dynamic-text)" }} className="text-xl font-bold tracking-tight">
                           {providerTitle(p)}
                         </h3>
                         {isConnected && (
@@ -203,17 +203,17 @@ export default function ConnectAccounts() {
                           </span>
                         )}
                       </div>
-                      <p className="text-[15px] text-brand-deep/80 font-medium leading-relaxed max-w-md">
+                      <p style={{ color: "var(--dynamic-text)" }} className="text-[15px] opacity-80 font-medium leading-relaxed max-w-md">
                         {providerDesc(p)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-6 md:mt-0 flex flex-row items-center gap-4">
+                  <div className="mt-6 md:mt-0 flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
                     {isConnected ? (
                       <Button
                         onClick={() => handleDisconnect(p)}
-                        className="min-w-[120px] px-6 py-2.5 text-xs font-bold"
+                        className="w-full md:w-auto min-w-[120px] px-6 py-2.5 text-xs font-bold"
                         variant="secondary"
                         disabled={isBusy}
                       >
@@ -253,11 +253,11 @@ export default function ConnectAccounts() {
     </p>
             </div>
 
-            <div className="flex flex-row items-center gap-4 shrink-0">
+            <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0 w-full lg:w-auto">
               <Button
                 onClick={continueToDashboard}
                 variant="secondary"
-                className="whitespace-nowrap px-6 py-3 text-sm font-bold opacity-70 hover:opacity-100 transition-all"
+                className="w-full sm:w-autowhitespace-nowrap px-6 py-3 text-sm font-bold opacity-70 hover:opacity-100 transition-all"
               >
                 Skip for now
               </Button>
@@ -265,7 +265,7 @@ export default function ConnectAccounts() {
               <Button
                 onClick={continueToDashboard}
                 disabled={!integrations.some((i) => i.connected)}
-                className="whitespace-nowrap px-8 py-3 text-sm font-black shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] hover:shadow-none transition-all"
+                className="w-full sm:w-auto whitespace-nowrap px-8 py-3 text-sm font-black shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] hover:shadow-none transition-all"
               >
                 Continue
               </Button>

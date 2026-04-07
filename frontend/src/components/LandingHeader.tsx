@@ -18,9 +18,9 @@ export default function LandingHeader({ isLoggedIn = false, theme = 'light', onT
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-md border-b border-white/20">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between gap-2">
         <div className="flex items-center gap-10">
-          <div className="flex items-center cursor-pointer gap-4" onClick={() => navigate("/")}>
+          <div className="flex items-center cursor-pointer gap-4 shrink-0 min-w-0" onClick={() => navigate("/")}>
             <img src="/logo-icon.png" alt="Sentinel Icon" className="w-18 h-auto" />
             
             {isLoggedIn && (
@@ -47,12 +47,12 @@ export default function LandingHeader({ isLoggedIn = false, theme = 'light', onT
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4 shrink-0">
           {showToggle && (
             <button 
               onClick={onToggleTheme}
               style={{ color: "var(--dynamic-text)" }}
-              className="text-[13px] cursor-pointer font-black tracking-widest opacity-100 hover:opacity-60 transition-all mr-4"
+              className="hidden sm:block text-[11px] md:text-[13px] cursor-pointer font-black tracking-widest transition-all mr-2 md:mr-4"
             >
               {isDark ? "DARK MODE" : "LIGHT MODE"}
             </button>

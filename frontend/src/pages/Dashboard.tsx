@@ -65,16 +65,14 @@ export default function Dashboard() {
     }}>
       
       {/* SIDEBAR */}
-      <aside style={{
-        width: "280px",
-        height: "100vh",
-        background: "rgba(0, 0, 0, 0.4)",
-        backdropFilter: "blur(30px)",
-        borderRight: "1px solid rgba(255, 255, 255, 0.05)",
-        display: "flex",
-        flexDirection: "column",
-        padding: "40px 20px"
-      }}>
+      <aside
+        className="hidden lg:flex flex-col w-[280px] h-screen sticky top-0 p-10 shrink-0"
+        style={{
+          background: "rgba(0, 0, 0, 0.4)",
+          backdropFilter: "blur(30px)",
+          borderRight: "1px solid rgba(255, 255, 255, 0.05)",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "50px" }}>
           <img src="/logo-text.png" alt="SentinelAI" style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px" }} />
         </div>
@@ -94,7 +92,7 @@ export default function Dashboard() {
       </aside>
 
       {/* MAIN SECTION */}
-      <main style={{ flexGrow: 1, padding: "50px 60px", overflowY: "auto", height: "100vh" }}>
+      <main className="flex-grow min-w-0 p-4 md:p-10 lg:p-[60px] overflow-y-auto h-screen">
         
         <DashboardHeader
           companyName={signup?.companyName}
@@ -103,14 +101,7 @@ export default function Dashboard() {
           riskScore={riskScore}
         />
 
-        <section
-          style={{
-            marginBottom: "40px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
           <RangeSelector preset={preset} setPreset={setPreset} />
           <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
         </section>
@@ -153,7 +144,7 @@ export default function Dashboard() {
           <div 
             style={{ 
               display: "grid", 
-              gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
               gap: "30px" 
             }}
           >
@@ -183,20 +174,15 @@ export default function Dashboard() {
                 >
                   {s.label}
                 </h3>
-                <SimpleLineChart points={s.points} width={380} />
+                <div className="w-full overflow-x-auto flex justify-center">
+                  <SimpleLineChart points={s.points} width={380} />
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "0.9fr 1.1fr",
-            gap: "30px",
-            marginTop: "40px",
-          }}
-        >
+        <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-[30px] mt-10">
           <IncidentStatsPanel stats={incidentStats} />
           {/* Updated to handle click */}
           <RecentIncidentsFeed 
@@ -204,6 +190,8 @@ export default function Dashboard() {
             onIncidentClick={(incident) => setSelectedIncident(incident)} 
           />
         </div>
+        
+        <div className="h-24 lg:hidden" />
       </main>
 
       <IncidentModal
@@ -212,6 +200,19 @@ export default function Dashboard() {
         onClose={() => setSelectedIncident(null)}
         advice="Sentinel AI analysis suggests this pattern of communication may involve sensitive credentials or internal keys. We recommend a proactive review of the user's recent file sharing activity and ensuring all shared links are appropriately restricted to internal domains."
       />
+
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-6 py-4 flex justify-around items-center" 
+        style={{
+          background: "rgba(20, 1, 22, 0.9)",
+          backdropFilter: "blur(20px)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+        }}
+        >
+        <SidebarLink to="/dashboard" label="Home" end />
+        <SidebarLink to="/employees" label="Employees" />
+        <SidebarLink to="/settings" label="Settings" />
+      </nav>
+
     </div>
   );
 }

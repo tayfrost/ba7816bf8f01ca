@@ -5,7 +5,7 @@ import { startIntegration, disconnectIntegration } from "../../../api";
 export default function IntegrationsPanel() {
   const { integrations, setIntegrationConnected } = useOnboarding();
 
-  async function connect(provider: "slack" | "gmail" | "outlook") {
+  async function connect(provider: "slack" | "gmail") {
     try {
       const res = await startIntegration(provider);
 
@@ -19,7 +19,7 @@ export default function IntegrationsPanel() {
     }
   }
 
-  async function disconnect(provider: "slack" | "gmail" | "outlook") {
+  async function disconnect(provider: "slack" | "gmail") {
     try {
       await disconnectIntegration(provider);
       setIntegrationConnected(provider, false);
