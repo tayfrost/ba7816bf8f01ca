@@ -9,9 +9,16 @@ services:
     ports:
       - "8002:8001"
     depends_on:
-      - kg-mcp-server
+      kg-mcp-server:
+        condition: service_healthy
     env_file:
       - ./ai_service/.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - sentinelai
 
@@ -27,6 +34,9 @@ services:
     environment:
       - INFERENCE_BACKEND=pytorch
     # restart: unless-stopped
+    depends_on:
+      ai_service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 50051), timeout=2)"]
       interval: 15s
@@ -47,11 +57,17 @@ services:
     depends_on:
       pgvector:
         condition: service_started
+      api:
+        condition: service_healthy
       filter:
         condition: service_healthy
-      ai_service:
-        condition: service_started
     # restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/metrics')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - sentinelai
 
@@ -66,6 +82,12 @@ services:
     depends_on:
       - pgvector
     # restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/internal/companies')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - sentinelai
 
@@ -186,6 +208,9 @@ services:
     container_name: sentinel-frontend
     ports:
       - "8080:80"
+    depends_on:
+      webhooks:
+        condition: service_healthy
     # restart: unless-stopped
     networks:
       - sentinelai
