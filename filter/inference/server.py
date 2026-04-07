@@ -137,6 +137,17 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
     def _classify_single(self, message: str) -> dict:
         """Core classification logic for a single message. Returns a result dict."""
+        # Preserve empty-input behavior contract before adding contextual timestamp.
+        if not (message or "").strip():
+            return {
+                "category": "neutral",
+                "category_confidence": 1.0,
+                "severity": "none",
+                "severity_confidence": 1.0,
+                "is_risk": False,
+                "all_responses": "",
+            }
+
         contextual_message = self._build_contextual_message(message)
         tokens = tokenize_message(self.tokenizer, contextual_message)
 
