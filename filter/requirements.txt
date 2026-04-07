@@ -1,6 +1,6 @@
 torch
-transformers
-peft
+transformers==4.46.3
+peft==0.18.1
 scikit-learn
 numpy
 matplotlib
