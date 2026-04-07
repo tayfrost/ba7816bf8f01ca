@@ -19,7 +19,6 @@ import sys
 import urllib.request
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from pathlib import Path
 
 # Add parent and generated proto files to path BEFORE other imports
@@ -154,26 +153,14 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             pass
         return raw_message, None
 
-    @staticmethod
-    def _normalise_timestamp(sent_at: str | None) -> str:
-        """Convert upstream sent_at to [YYYY-MM-DD HH:MM] or fallback to now."""
-        if sent_at:
-            try:
-                dt = datetime.fromisoformat(sent_at.replace("Z", "+00:00"))
-                return dt.strftime("%Y-%m-%d %H:%M")
-            except ValueError:
-                pass
-        return datetime.now().strftime("%Y-%m-%d %H:%M")
-
     def _build_contextual_message(self, raw_message: str) -> str:
-        """Build classification text with timestamp context and parsed payload text."""
-        text, sent_at = self._parse_enveloped_message(raw_message)
-        ts = self._normalise_timestamp(sent_at)
-        return f"[{ts}] {text}"
+        """Build classification text from parsed payload content only."""
+        text, _ = self._parse_enveloped_message(raw_message)
+        return text
 
     def _classify_single(self, message: str) -> dict:
         """Core classification logic for a single message. Returns a result dict."""
-        # Preserve empty-input behavior contract before adding contextual timestamp.
+        # Preserve empty-input behavior contract before payload text extraction.
         if not (message or "").strip():
             return {
                 "category": "neutral",
@@ -236,8 +223,8 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             print(f"[REQUEST] Message length: {len(message)} chars")
 
             # Parse envelope for AI dispatch context.
-            # _classify_single receives the original message so _parse_enveloped_message
-            # can still extract sent_at for timestamp-aware classification.
+            # _classify_single receives the original message so payload text extraction
+            # remains consistent with webhook envelopes.
             try:
                 envelope = json.loads(message)
                 text = envelope.get("text", message) if isinstance(envelope, dict) else message

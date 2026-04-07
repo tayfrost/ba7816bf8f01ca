@@ -157,8 +157,6 @@ def main():
     failures = 0
     for item in tqdm(test_data, desc="Classifying"):
         message = item["message"]
-        if "timestamp" in item and item["timestamp"]:
-            message = f"[{item['timestamp']}] {message}"
 
         true_label_str = item["category"]
         true_label = CATEGORY_MAP[true_label_str]
