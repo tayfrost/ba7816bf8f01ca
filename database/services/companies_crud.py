@@ -48,8 +48,9 @@ def create_company(name: str,*,session: optional[SASession] = None) -> model.Com
 
         company = model.Company(name=name)
         session.add(company)
-        session.flush() 
-        session.commit()
+        session.flush()
+        if own_session:
+            session.commit()
         session.refresh(company)
         return company
 

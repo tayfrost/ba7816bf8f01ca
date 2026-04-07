@@ -76,7 +76,8 @@ def create_user(company_id: int, *, role: str, status: str = "active", display_n
 
         session.add(user)
         session.flush()
-        session.commit()
+        if own_session:
+            session.commit()
         session.refresh(user)
         return user
 

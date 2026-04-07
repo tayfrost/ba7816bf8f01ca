@@ -67,7 +67,8 @@ def create_auth_user(
         )
         session.add(au)
         session.flush()
-        session.commit()
+        if own_session:
+            session.commit()
         session.refresh(au)
         return au
 

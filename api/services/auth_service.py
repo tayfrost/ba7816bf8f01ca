@@ -38,18 +38,15 @@ async def register_user(
     plan_id: int = 1,
 ) -> str:
     """
-    Create company → subscription → user → auth_user in sequence.
-
-    On any failure after company creation, compensating deletes are applied
-    in reverse order so no orphaned rows are left behind:
-      - user hard-deleted  (auth_user cascades with it via FK)
-      - company hard-deleted (subscription cascades with it via FK)
+    Create company → subscription → user → auth_user in a single DB transaction.
+    On any failure the whole transaction is rolled back atomically.
     """
-    company = None
-    user = None
+    session = companies_crud.Session()
     try:
         # 1. Create company
-        company = await asyncio.to_thread(companies_crud.create_company, company_name)
+        company = await asyncio.to_thread(
+            companies_crud.create_company, company_name, session=session
+        )
 
         # 2. Create subscription (trial, 30 days)
         now = datetime.now(timezone.utc)
@@ -60,6 +57,7 @@ async def register_user(
             status="trialing",
             current_period_start=now,
             current_period_end=now + timedelta(days=30),
+            session=session,
         )
 
         # 3. Create user (biller role)
@@ -69,6 +67,7 @@ async def register_user(
             role="biller",
             status="active",
             display_name=display_name,
+            session=session,
         )
 
         # 4. Create auth_user (email + password hash)
@@ -78,27 +77,19 @@ async def register_user(
             email=email.lower().strip(),
             password_hash=hash_password(password),
             user_id=user.user_id,
+            session=session,
         )
 
+        session.commit()
         return create_access_token(
             {"sub": str(user.user_id), "company_id": company.company_id, "role": "biller"}
         )
 
     except Exception:
-        # Compensate in reverse — each hard delete cascades its children via FK.
-        if user is not None:
-            try:
-                await asyncio.to_thread(
-                    users_crud.hard_delete_user, company.company_id, user.user_id
-                )
-            except Exception as rb_err:
-                logger.error(f"register_user rollback: failed to delete user_id={user.user_id}: {rb_err}")
-        if company is not None:
-            try:
-                await asyncio.to_thread(companies_crud.hard_delete_company, company.company_id)
-            except Exception as rb_err:
-                logger.error(f"register_user rollback: failed to delete company_id={company.company_id}: {rb_err}")
+        session.rollback()
         raise
+    finally:
+        session.close()
 
 
 async def login_user(email: str, password: str) -> str | None:

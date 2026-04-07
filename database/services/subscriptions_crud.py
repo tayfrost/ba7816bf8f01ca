@@ -66,7 +66,8 @@ def create_subscription(company_id: int,plan_id: int,*,status: str,current_perio
         )
         session.add(sub)
         session.flush()
-        session.commit()
+        if own_session:
+            session.commit()
         session.refresh(sub)
         return sub
 
