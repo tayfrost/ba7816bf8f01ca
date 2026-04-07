@@ -27,6 +27,12 @@ try:
 except ImportError:
     Tokenizer = None
 
+try:
+    import peft.tuners.tuners_utils
+    peft.tuners.tuners_utils._torch_supports_distributed = False
+except ImportError:
+    pass
+
 # Ensure internal imports work regardless of execution context
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -99,12 +105,6 @@ def load_production_model(
     import torch
     import types
     from peft import get_peft_model
-
-    # Compatibility shim for certain torch builds (notably some Windows wheels)
-    # where `torch.distributed` exists but `torch.distributed.tensor` is absent.
-    # Newer PEFT versions may probe `torch.distributed.tensor.DTensor`.
-    if hasattr(torch, "distributed") and not hasattr(torch.distributed, "tensor"):
-        torch.distributed.tensor = types.SimpleNamespace(DTensor=type("_DummyDTensor", (), {}))
 
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -21,20 +21,18 @@ from transformers import get_linear_schedule_with_warmup
 
 import wandb
 
+try:
+    import peft.tuners.tuners_utils
+    peft.tuners.tuners_utils._torch_supports_distributed = False
+except ImportError:
+    pass
+
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
 from services.dataset_loader import load_dataset, get_dataset_path
 from services.model_factory import create_raw_model, get_lora_config
-
-
-def _ensure_peft_torch_compat() -> None:
-    """Patch torch.distributed.tensor for PEFT on certain Windows torch builds."""
-    import types
-
-    if hasattr(torch, "distributed") and not hasattr(torch.distributed, "tensor"):
-        torch.distributed.tensor = types.SimpleNamespace(DTensor=type("_DummyDTensor", (), {}))
 
 
 def train_epoch(
@@ -168,7 +166,6 @@ def main() -> None:
     model = create_raw_model()
 
     # Apply LoRA to BERT backbone
-    _ensure_peft_torch_compat()
     lora_config = get_lora_config()
     model.bert = get_peft_model(model.bert, lora_config)
     model.to(device)
