@@ -25,7 +25,7 @@ export function useDashboardData(range: DateRange) {
         const res = await getUsage({ start: range.start, end: range.end });
         if (cancelled) return;
 
-        setSeries(res.series);
+        setSeries(res?.series ?? []);
         setStatus("success");
       } catch (e) {
         if (cancelled) return;
