@@ -29,7 +29,11 @@ from transformers import AutoTokenizer
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
-from services.dataset_loader import MentalHealthDataset, CATEGORY_MAP
+from services.dataset_loader import (
+    MentalHealthDataset,
+    CATEGORY_MAP,
+    get_dataset_path,
+)
 from services.model_factory import load_production_model
 
 
@@ -38,9 +42,9 @@ def load_email_dataset(tokenizer, max_length: int = 128) -> DataLoader:
     Loads specific email samples (ID > 5000) from v0.3 dataset.
     Does NOT mix with training data. Pure validation set.
     """
-    v03_path = config.DATASETS_DIR / "sentinelai_dataset_v0.3.json"
+    v03_path = get_dataset_path("sentinelai_dataset_v0.3.json")
 
-    with open(v03_path, 'r', encoding='utf-8') as f:
+    with open(v03_path, "r", encoding="utf-8") as f:
         full_data = json.load(f)
 
     # Filter for emails only (ID > 5000)
@@ -124,7 +128,7 @@ def main():
         "notes": "Evaluation on v0.3 email subset (IDs > 5000). OOD Check."
     }
 
-    output_path = config.EVAL_DIR / "email_realism_results.json"
+    output_path = config.RESULTS_DIR / "email_realism_results.json"
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output, f, indent=2)
 

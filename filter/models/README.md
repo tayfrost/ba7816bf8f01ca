@@ -65,19 +65,30 @@ Training:
 
 ### Hardware & Performance
 
-- **GPU:** NVIDIA GeForce GTX 1080 (8GB VRAM)
-- **Training Time:** ~3 minutes (1 min/epoch)
+- **GPU 1:** NVIDIA GeForce GTX 1080 (8GB VRAM)
+- **GPU 2:** NVIDIA GeForce RTX 3050 Ti Laptop GPU
+- **Training Time:** ~3-4 minutes (1 min/epoch)
 - **Training Regime:** fp32
 
 ## Results
 
 ### Test Set Performance
 
+#### Run 1
+
 | Metric | Score |
 | :----- | :---- |
 | **Category Accuracy** | 76.29% |
 | **Severity Accuracy** | 78.29% |
 | **Test Loss** | 1.1840 |
+
+#### Run 2 (with ONNX versions inheriting)
+
+| Metric | Score |
+| :----- | :---- |
+| **Category Accuracy** | 75.14% |
+| **Severity Accuracy** | 79.00% |
+| **Test Loss** | 1.2204 |
 
 **Performance Context:**
 
@@ -159,3 +170,5 @@ Branch: `feature/filter`
 ### Framework versions
 
 - PEFT 0.18.1
+- Torch 2.5.1+cu121
+- Transformers 4.46.3

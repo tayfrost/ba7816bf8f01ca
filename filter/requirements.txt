@@ -9,7 +9,9 @@ huggingface_hub
 tqdm
 google-genai
 nlpaug
+onnx
 onnxruntime
+onnxconverter-common
 python-dotenv
 grpcio
 grpcio-tools

@@ -79,7 +79,7 @@ def main():
     print("=" * 80)
 
     # Paths
-    eval_dir = config.EVAL_DIR
+    eval_dir = config.RESULTS_DIR
     bert_path = eval_dir / "evaluation_results.json"
     baseline_path = eval_dir / "baseline_keyword_results.json"
     gemini_path = eval_dir / "baseline_gemini_results.json"

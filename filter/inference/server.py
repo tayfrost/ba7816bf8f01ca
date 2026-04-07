@@ -1,22 +1,41 @@
-import grpc
-from concurrent import futures
-import sys
-import os
-from pathlib import Path
-from dotenv import load_dotenv
+"""gRPC server implementation for SentinelAI Filter Service.
 
-# Add parent and generated proto files to path
+Currently uses PyTorch as the primary inference backend for stability 
+and consistent classification logic.
+"""
+
+# pylint: disable=wrong-import-position,import-error,no-name-in-module
+
+# NOTE: Only respect disabled linting if you are adhering to best practices
+#       in retrospect. The import structure is designed to allow the server
+#       to run without issues regardless of execution context.
+
+# WARNING: Only ignore import errors if you have verified that the imports
+#          work correctly in all execution contexts.
+
+import os
+import json
+import sys
+from concurrent import futures
+from datetime import datetime
+from pathlib import Path
+
+# Add parent and generated proto files to path BEFORE other imports
 filter_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(filter_dir / "generated"))
 sys.path.insert(0, str(filter_dir))
 
-load_dotenv()
+import grpc
+from dotenv import load_dotenv
+from transformers import AutoTokenizer
 
-from filter.v1 import filter_pb2
-from filter.v1 import filter_pb2_grpc
+from filter.v1 import filter_pb2  # type: ignore[reportMissingImports]
+from filter.v1 import filter_pb2_grpc  # type: ignore[reportMissingImports]
+
 import config
-from inference_services.onnx_factory import load_onnx_model_and_tokenizer
-from inference_services.classification_utils import (
+
+from services.model_factory import load_onnx_model_and_tokenizer, load_production_model
+from services.classification_utils import (
     tokenize_message,
     create_chunks,
     prepare_chunk_inputs,
@@ -25,37 +44,116 @@ from inference_services.classification_utils import (
     aggregate_chunk_results
 )
 
+load_dotenv()
+
 
 class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
+    """gRPC Servicer for the Filter Service."""
+
     def __init__(self):
-        """Initialize tokenizer and ONNX model."""
-        print("[SERVER] Initializing FilterServiceServicer...")
-        
+        """Initialise tokenizer and ONNX model."""
+        print("[SERVER] Initialising FilterServiceServicer...")
+
         self.model_name = os.environ.get("MODEL_NAME", config.MODEL_NAME)
-        self.max_length = int(os.environ.get("max_token_length", config.MAX_LENGTH))
-        self.overlap = int(os.environ.get("overlap", 32))
-        self.threshold = float(os.environ.get("threshold", 0.5))
-        
-        print(f"[SERVER] Configuration loaded:")
+        # Keep compatibility with both lowercase and current uppercase envs
+        self.max_length = int(
+            os.environ.get("MAX_TOKEN_LENGTH", os.environ.get("max_token_length", config.MAX_LENGTH))
+        )
+        self.overlap = int(os.environ.get("OVERLAP", os.environ.get("overlap", 32)))
+        self.threshold = float(os.environ.get("THRESHOLD", os.environ.get("threshold", 0.5)))
+        self.inference_backend = os.environ.get("INFERENCE_BACKEND", "pytorch").strip().lower()
+        self.onnx_variant = os.environ.get("ONNX_VARIANT", "fp32")
+
+        print("[SERVER] Configuration loaded:")
         print(f"[SERVER]   Model: {self.model_name}")
         print(f"[SERVER]   Max length: {self.max_length}")
         print(f"[SERVER]   Overlap: {self.overlap}")
         print(f"[SERVER]   Threshold: {self.threshold}")
-        
-        print(f"[SERVER] Loading ONNX model and tokenizer...")
-        self.onnx_session, self.tokenizer = load_onnx_model_and_tokenizer()
-        
-        # Get special token IDs from tokenizer
-        self.cls_token_id = self.tokenizer.token_to_id('[CLS]')
-        self.sep_token_id = self.tokenizer.token_to_id('[SEP]')
-        self.pad_token_id = self.tokenizer.token_to_id('[PAD]')
-        print(f"[SERVER] Special tokens - CLS: {self.cls_token_id}, SEP: {self.sep_token_id}, PAD: {self.pad_token_id}")
-        
-        print(f"[SERVER] ✓ FilterServiceServicer initialized successfully")
-    
+        print(f"[SERVER]   Inference backend: {self.inference_backend}")
+        print(f"[SERVER]   ONNX variant: {self.onnx_variant}")
+
+        if self.inference_backend == "pytorch":
+            print("[SERVER] Loading PyTorch model and tokenizer...")
+            self.onnx_session = load_production_model()
+            self.tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
+        else:
+            print("[SERVER] Loading ONNX model and tokenizer...")
+            self.onnx_session, self.tokenizer = load_onnx_model_and_tokenizer(
+                onnx_variant=self.onnx_variant,
+            )
+
+        if self.onnx_session is None:
+            raise RuntimeError(
+                "Inference model failed to load. "
+                f"Backend='{self.inference_backend}'"
+            )
+
+        if self.tokenizer is None:
+            raise RuntimeError(
+                "Tokenizer failed to load. "
+                f"Backend='{self.inference_backend}'"
+            )
+
+        # Get special token IDs from tokenizer (supports tokenizers + transformers)
+        if hasattr(self.tokenizer, "token_to_id"):
+            self.cls_token_id = self.tokenizer.token_to_id('[CLS]')  # type: ignore
+            self.sep_token_id = self.tokenizer.token_to_id('[SEP]')  # type: ignore
+            self.pad_token_id = self.tokenizer.token_to_id('[PAD]')  # type: ignore
+        else:
+            self.cls_token_id = int(self.tokenizer.cls_token_id)
+            self.sep_token_id = int(self.tokenizer.sep_token_id)
+            self.pad_token_id = int(self.tokenizer.pad_token_id)
+        print(f"[SERVER] Special tokens - CLS: {self.cls_token_id}, "
+              f"SEP: {self.sep_token_id}, PAD: {self.pad_token_id}")
+
+        print("[SERVER] ✓ FilterServiceServicer initialised successfully")
+
+    @staticmethod
+    def _parse_enveloped_message(raw_message: str) -> tuple[str, str | None]:
+        """Parse optional webhooks envelope and return (text, sent_at)."""
+        try:
+            payload = json.loads(raw_message)
+            if isinstance(payload, dict) and "text" in payload:
+                text = payload.get("text") or ""
+                meta = payload.get("meta") or {}
+                sent_at = meta.get("sent_at") if isinstance(meta, dict) else None
+                return str(text), sent_at if isinstance(sent_at, str) else None
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+        return raw_message, None
+
+    @staticmethod
+    def _normalise_timestamp(sent_at: str | None) -> str:
+        """Convert upstream sent_at to [YYYY-MM-DD HH:MM] or fallback to now."""
+        if sent_at:
+            try:
+                dt = datetime.fromisoformat(sent_at.replace("Z", "+00:00"))
+                return dt.strftime("%Y-%m-%d %H:%M")
+            except ValueError:
+                pass
+        return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    def _build_contextual_message(self, raw_message: str) -> str:
+        """Build classification text with timestamp context and parsed payload text."""
+        text, sent_at = self._parse_enveloped_message(raw_message)
+        ts = self._normalise_timestamp(sent_at)
+        return f"[{ts}] {text}"
+
     def _classify_single(self, message: str) -> dict:
         """Core classification logic for a single message. Returns a result dict."""
-        tokens = tokenize_message(self.tokenizer, message)
+        # Preserve empty-input behavior contract before adding contextual timestamp.
+        if not (message or "").strip():
+            return {
+                "category": "neutral",
+                "category_confidence": 1.0,
+                "severity": "none",
+                "severity_confidence": 1.0,
+                "is_risk": False,
+                "all_responses": "",
+            }
+
+        contextual_message = self._build_contextual_message(message)
+        tokens = tokenize_message(self.tokenizer, contextual_message)
 
         if len(tokens) == 0:
             return {
@@ -100,7 +198,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
     def ClassifyMessage(self, request, context):
         """Classify a single message using sliding window approach."""
-        print(f"[REQUEST] Received classification request")
+        print("[REQUEST] Received classification request")
         try:
             message = request.message
             print(f"[REQUEST] Message length: {len(message)} chars")
@@ -112,10 +210,12 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
             return self._result_to_response(final_result)
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"[ERROR] Failed to process message: {str(e)}")
-            import traceback
+
+            import traceback # pylint: disable=import-outside-toplevel
             traceback.print_exc()
+
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Error processing message: {str(e)}")
             return filter_pb2.ClassifyResponse()
@@ -126,7 +226,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         "is_risk": False, "all_responses": "",
     }
 
-    def ClassifyMessages(self, request, context):
+    def ClassifyMessages(self, request, _context):
         """Classify multiple messages in a single RPC call.
 
         Individual message failures are caught and returned as safe defaults
@@ -144,7 +244,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
                 print(f"[BATCH] Processing message {i+1}/{len(messages)} ({len(message)} chars)")
                 result = self._classify_single(message)
                 results.append(self._result_to_response(result))
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"[BATCH] Message {i+1} failed, returning safe default: {e}")
                 results.append(self._result_to_response(self._SAFE_DEFAULT))
 
@@ -153,26 +253,27 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
 
 def serve():
+    """Start the gRPC server."""
     print("[SERVER] Starting gRPC server...")
     print("[SERVER] Creating thread pool executor with 10 workers...")
-    
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    
-    print("[SERVER] Initializing FilterServiceServicer...")
+
+    print("[SERVER] Initialising FilterServiceServicer...")
     filter_pb2_grpc.add_FilterServiceServicer_to_server(
         FilterServiceServicer(), server
     )
-    
+
     print("[SERVER] Binding to port 50051...")
     server.add_insecure_port('[::]:50051')
-    
+
     print("[SERVER] Starting server...")
     server.start()
-    
+
     print("="*60)
     print("[SERVER] ✓ Filter gRPC server is ready and listening on port 50051")
     print("="*60)
-    
+
     server.wait_for_termination()
 
 

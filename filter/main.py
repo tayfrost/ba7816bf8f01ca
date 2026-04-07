@@ -1,8 +1,7 @@
 """
 SentinelAI Filter Service - Entry Point
 
-This will serve as the service wrapper for the BERT filter.
-To be implemented.
+This serves as the primary gRPC service wrapper for the SentiBERT filter.
 """
 
 # pylint: disable=wrong-import-position
@@ -15,8 +14,6 @@ from pathlib import Path
 # Add parent directory to path to allow importing models and services
 sys.path.append(str(Path(__file__).parent.parent))
 
-# import config
-#from services.model_factory import load_production_model
 from inference.server import serve
 
 
@@ -25,6 +22,8 @@ def init_app():
     print("[MAIN] SentinelAI Filter Service starting...")
     print("[MAIN] Python version:", sys.version)
     print("[MAIN] Working directory:", Path.cwd())
+
+    # Start the gRPC server
     serve()
 
 

@@ -47,13 +47,19 @@ def test_dataset_item_format(sample_data, tokenizer):
     assert item["category_label"] == CATEGORY_MAP[sample_data[0]["category"]]
     assert item["severity_label"] == SEVERITY_MAP[sample_data[0]["stage"]]
 
+    # Check for temporal context [YYYY-MM-DD HH:MM] prefix
+    # BERT tokenizer adds spaces around brackets and punctuation
+    decoded_text = tokenizer.decode(item["input_ids"], skip_special_tokens=True)
+    import re
+    assert re.search(r"\[\s*\d{4}\s*-\s*\d{2}\s*-\s*\d{2}\s*\d{2}\s*:\s*\d{2}\s*\]", decoded_text)
+
 
 @pytest.mark.parametrize(
     "idx,expected_cat,expected_sev",
     [
-        (1, 0, 0),  # neutral, none
-        (2, 6, 3),  # suicidal_ideation, late
-        (0, 2, 1),  # stress, early
+        (1, CATEGORY_MAP["neutral"], SEVERITY_MAP["none"]),
+        (2, CATEGORY_MAP["suicidal_ideation"], SEVERITY_MAP["late"]),
+        (0, CATEGORY_MAP["stress"], SEVERITY_MAP["early"]),
     ],
 )
 def test_dataset_label_encoding(

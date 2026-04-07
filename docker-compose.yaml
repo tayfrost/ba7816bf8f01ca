@@ -16,6 +16,8 @@ services:
     ports:
       - "50051:50051"
       - "9192:8000"
+    environment:
+      - INFERENCE_BACKEND=pytorch
     restart: unless-stopped
 
   webhooks:
