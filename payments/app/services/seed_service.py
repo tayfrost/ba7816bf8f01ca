@@ -78,7 +78,7 @@ async def seed_plans(db: AsyncSession) -> list[SubscriptionPlan]:
                 plan.stripe_price_id_monthly = price_monthly.id
                 plan.stripe_price_id_yearly = price_yearly.id
                 logger.info(f"Created Stripe product: {plan_data['plan_name']}")
-            except stripe.error.StripeError as e:
+            except stripe.StripeError as e:
                 logger.warning(f"Stripe error for {plan_data['plan_name']}: {e}")
 
         db.add(plan)
