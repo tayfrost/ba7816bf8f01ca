@@ -26,7 +26,7 @@ services:
       - filter_models:/app/models
     environment:
       - INFERENCE_BACKEND=pytorch
-    restart: unless-stopped
+    # restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 50051), timeout=2)"]
       interval: 15s
@@ -51,7 +51,7 @@ services:
         condition: service_healthy
       ai_service:
         condition: service_started
-    restart: unless-stopped
+    # restart: unless-stopped
     networks:
       - sentinelai
 
@@ -65,7 +65,7 @@ services:
       - ./api/.env
     depends_on:
       - pgvector
-    restart: unless-stopped
+    # restart: unless-stopped
     networks:
       - sentinelai
 
@@ -77,7 +77,7 @@ services:
       - "5433:5432"
     volumes:
       - pgvector_data:/var/lib/postgresql/data
-    restart: unless-stopped
+    # restart: unless-stopped
     networks:
       - sentinelai
 
@@ -116,7 +116,7 @@ services:
       NEO4J_dbms_memory_heap_max__size: 512m
     volumes:
       - neo4j_data:/data
-    restart: unless-stopped
+    # restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
       interval: 10s
@@ -128,7 +128,7 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres-exporter
-    restart: unless-stopped
+    # restart: unless-stopped
     ports:
       - "9187:9187"
     env_file:
@@ -145,7 +145,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
-    restart: unless-stopped
+    # restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
@@ -163,7 +163,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    restart: unless-stopped
+    # restart: unless-stopped
     ports:
       - "3002:3000"
     volumes:
@@ -186,7 +186,7 @@ services:
     container_name: sentinel-frontend
     ports:
       - "8080:80"
-    restart: unless-stopped
+    # restart: unless-stopped
     networks:
       - sentinelai
 
@@ -200,7 +200,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
     depends_on:
       - pgvector
-    restart: unless-stopped
+    # restart: unless-stopped
     networks:
       - sentinelai
 
