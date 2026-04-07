@@ -1,4 +1,8 @@
-"""gRPC server implementation for SentinelAI Filter Service."""
+"""gRPC server implementation for SentinelAI Filter Service.
+
+Currently uses PyTorch as the primary inference backend for stability 
+and consistent classification logic.
+"""
 
 # pylint: disable=wrong-import-position,import-error,no-name-in-module
 
@@ -57,7 +61,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         )
         self.overlap = int(os.environ.get("OVERLAP", os.environ.get("overlap", 32)))
         self.threshold = float(os.environ.get("THRESHOLD", os.environ.get("threshold", 0.5)))
-        self.inference_backend = os.environ.get("INFERENCE_BACKEND", "onnx").strip().lower()
+        self.inference_backend = os.environ.get("INFERENCE_BACKEND", "pytorch").strip().lower()
         self.onnx_variant = os.environ.get("ONNX_VARIANT", "fp32")
 
         print("[SERVER] Configuration loaded:")

@@ -24,7 +24,6 @@ COPY filter/inference/ ./inference/
 COPY filter/services/ ./services/
 COPY filter/models/ ./models/
 COPY filter/config.py .
-COPY filter/.env .
 COPY filter/main.py .
 
 # Expose gRPC port
