@@ -103,5 +103,4 @@ def onnx_model_variant_filenames():
         "fp32": config.ONNX_MODEL_FILENAME,
         "fp16": config.ONNX_FP16_MODEL_FILENAME,
         "dynamic_int8": config.ONNX_DYNAMIC_INT8_MODEL_FILENAME,
-        "static_int8": config.ONNX_STATIC_INT8_MODEL_FILENAME,
     }

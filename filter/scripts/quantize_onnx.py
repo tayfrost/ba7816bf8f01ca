@@ -1,8 +1,7 @@
 """
-Quantize ONNX model to multiple precision formats.
+Quantize ONNX model to production precision variants.
 
-Creates FP16, dynamic INT8, and static INT8 quantized versions of the base model.
-Static quantization uses stratified validation data for calibration.
+Creates FP16 and dynamic INT8 quantized versions of the base model.
 """
 
 # pylint: disable=wrong-import-position
@@ -10,84 +9,22 @@ Static quantization uses stratified validation data for calibration.
 import sys
 from pathlib import Path
 
-import numpy as np
-
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
-from services.dataset_loader import load_dataset, get_dataset_path
 
 try:
     import onnx
     from onnxruntime.quantization import (
         quantize_dynamic,
-        quantize_static,
         QuantType,
-        CalibrationDataReader,
     )
     from onnxconverter_common import float16
 except ImportError as e:
     print("Error: Missing required packages. Install with:")
     print("pip install onnx onnxruntime onnxconverter-common")
     raise e
-
-
-class CalibrationDataReaderImpl(CalibrationDataReader):
-    """
-    Data reader for static quantization calibration.
-    
-    Provides representative data from validation set to calibrate
-    quantization parameters for optimal accuracy.
-    """
-
-    def __init__(self, val_loader, max_samples=100):
-        """
-        Args:
-            val_loader: Validation DataLoader
-            max_samples: Number of samples to use for calibration
-        """
-        self.val_loader = val_loader
-        self.max_samples = max_samples
-        self.data = []
-
-        print(f"[CALIBRATION] Preparing {max_samples} samples from validation set...")
-
-        # Collect calibration data
-        sample_count = 0
-        for batch in val_loader:
-            input_ids = batch["input_ids"].numpy().astype(np.int64)
-            attention_mask = batch["attention_mask"].numpy().astype(np.int64)
-
-            # Add each sample individually
-            for i in range(input_ids.shape[0]):
-                if sample_count >= max_samples:
-                    break
-
-                self.data.append({
-                    "input_ids": input_ids[i:i+1],
-                    "attention_mask": attention_mask[i:i+1]
-                })
-                sample_count += 1
-
-            if sample_count >= max_samples:
-                break
-
-        print(f"[CALIBRATION] Collected {len(self.data)} calibration samples")
-        self.iter_index = 0
-
-    def get_next(self):
-        """Get next calibration sample."""
-        if self.iter_index >= len(self.data):
-            return None
-
-        sample = self.data[self.iter_index]
-        self.iter_index += 1
-        return sample
-
-    def rewind(self):
-        """Reset iterator."""
-        self.iter_index = 0
 
 
 def quantize_to_fp16(
@@ -177,43 +114,6 @@ def quantize_to_dynamic_int8(
     print(f"[DYNAMIC INT8] Original: {original_size:.2f} MB → Dynamic INT8: {quantized_size:.2f} MB ({ratio:.1f}%)")
 
 
-def quantize_to_static_int8(
-    input_model_path: Path,
-    output_model_path: Path,
-    calibration_reader: CalibrationDataReader
-) -> None:
-    """
-    Quantize model to static INT8.
-
-    Static quantization quantizes both weights and activations using calibration data.
-    Provides best performance but requires representative data.
-
-    Args:
-        input_model_path: Path to base ONNX model
-        output_model_path: Path for static INT8 quantized model
-        calibration_reader: Data reader for calibration
-    """
-    print("\n[STATIC INT8] Quantizing to static INT8...")
-    print(f"[STATIC INT8] Input: {input_model_path}")
-    print(f"[STATIC INT8] Output: {output_model_path}")
-    print("[STATIC INT8] Running quantization with calibration...")
-
-    quantize_static(
-        model_input=str(input_model_path),
-        model_output=str(output_model_path),
-        calibration_data_reader=calibration_reader,
-        weight_type=QuantType.QInt8,
-    )
-
-    # Report size
-    original_size = input_model_path.stat().st_size / (1024**2)
-    quantized_size = output_model_path.stat().st_size / (1024**2)
-    ratio = (quantized_size / original_size) * 100
-
-    print("[STATIC INT8] ✓ Complete")
-    print(f"[STATIC INT8] Original: {original_size:.2f} MB → Static INT8: {quantized_size:.2f} MB ({ratio:.1f}%)")
-
-
 def main() -> None:
     """Main quantization pipeline."""
     print("="*80)
@@ -236,29 +136,6 @@ def main() -> None:
     # Output paths
     fp16_path = models_dir / config.ONNX_FP16_MODEL_FILENAME
     dynamic_int8_path = models_dir / config.ONNX_DYNAMIC_INT8_MODEL_FILENAME
-    static_int8_path = models_dir / config.ONNX_STATIC_INT8_MODEL_FILENAME
-
-    # Load validation data for static quantization calibration
-    print("\n[DATA] Loading validation dataset for calibration...")
-    dataset_path = str(get_dataset_path("sentinelai_dataset_v0.3.json"))
-
-    try:
-        _, val_loader, _, _ = load_dataset(
-            dataset_path=dataset_path,
-            train_split=0.8,
-            val_split=0.1,
-            max_length=config.MAX_LENGTH,
-            seed=config.SEED,
-            mix_datasets=False,
-        )
-        print("[DATA] ✓ Validation data loaded")
-    except FileNotFoundError:
-        print(f"[ERROR] Dataset not found: {dataset_path}")
-        print("[ERROR] Please ensure dataset exists")
-        return
-
-    # Create calibration data reader
-    calibration_reader = CalibrationDataReaderImpl(val_loader, max_samples=100)
 
     # 1. FP16 Quantization
     try:
@@ -272,12 +149,6 @@ def main() -> None:
     except (RuntimeError, ValueError, OSError) as e:
         print(f"[DYNAMIC INT8] ✗ Failed: {e}")
 
-    # 3. Static INT8 Quantization
-    try:
-        quantize_to_static_int8(base_model_path, static_int8_path, calibration_reader)
-    except (RuntimeError, ValueError, OSError) as e:
-        print(f"[STATIC INT8] ✗ Failed: {e}")
-
     # Summary
     print("\n" + "="*80)
     print("Quantization Summary")
@@ -287,7 +158,6 @@ def main() -> None:
         ("Base (FP32)", base_model_path),
         ("FP16", fp16_path),
         ("Dynamic INT8", dynamic_int8_path),
-        ("Static INT8", static_int8_path),
     ]
 
     for name, path in models:
@@ -297,7 +167,7 @@ def main() -> None:
         else:
             print(f"✗ {name:20s} {'N/A':>8s}     {path.name}")
 
-    print("\n[INFO] All quantized models ready for upload to HuggingFace")
+    print("\n[INFO] Quantized models ready for upload to HuggingFace")
 
 
 if __name__ == "__main__":

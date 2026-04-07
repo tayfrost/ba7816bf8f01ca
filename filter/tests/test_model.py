@@ -105,10 +105,6 @@ def test_resolve_onnx_variant_filename_known_variants():
         resolve_onnx_variant_filename("dynamic_int8")
         == config.ONNX_DYNAMIC_INT8_MODEL_FILENAME
     )
-    assert (
-        resolve_onnx_variant_filename("static-int8")
-        == config.ONNX_STATIC_INT8_MODEL_FILENAME
-    )
 
 
 def test_resolve_onnx_variant_filename_custom_filename_and_invalid_key():
@@ -116,8 +112,9 @@ def test_resolve_onnx_variant_filename_custom_filename_and_invalid_key():
     custom = "my_experimental_quant.onnx"
     assert resolve_onnx_variant_filename(custom) == custom
 
-    try:
-        resolve_onnx_variant_filename("int4")
-        assert False, "Expected ValueError for unsupported ONNX variant"
-    except ValueError:
-        pass
+    for invalid_variant in ("int4", "fp8"):
+        try:
+            resolve_onnx_variant_filename(invalid_variant)
+            assert False, "Expected ValueError for unsupported ONNX variant"
+        except ValueError:
+            pass

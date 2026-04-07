@@ -45,8 +45,6 @@ def resolve_onnx_variant_filename(onnx_variant: str) -> str:
         "fp16": config.ONNX_FP16_MODEL_FILENAME,
         "dynamic_int8": config.ONNX_DYNAMIC_INT8_MODEL_FILENAME,
         "dynamic-int8": config.ONNX_DYNAMIC_INT8_MODEL_FILENAME,
-        "static_int8": config.ONNX_STATIC_INT8_MODEL_FILENAME,
-        "static-int8": config.ONNX_STATIC_INT8_MODEL_FILENAME,
     }
 
     if variant in variant_map:

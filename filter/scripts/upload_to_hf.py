@@ -104,7 +104,7 @@ def main() -> None:
             repo_type="model",
         )
 
-        # Upload ONNX models if present (base + quantized variants)
+        # Upload ONNX models if present (single source of truth from config)
         for onnx_filename in config.ONNX_VARIANT_MODEL_FILENAMES:
             onnx_path = models_dir / onnx_filename
             if not onnx_path.exists():

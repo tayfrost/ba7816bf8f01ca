@@ -59,12 +59,10 @@ ONNX_MODEL_FILENAME = "sentinelai_model.onnx"
 ONNX_DATA_FILENAME = "sentinelai_model.onnx.data"
 ONNX_FP16_MODEL_FILENAME = "sentinelai_model_fp16.onnx"
 ONNX_DYNAMIC_INT8_MODEL_FILENAME = "sentinelai_model_dynamic_int8.onnx"
-ONNX_STATIC_INT8_MODEL_FILENAME = "sentinelai_model_static_int8.onnx"
 ONNX_VARIANT_MODEL_FILENAMES = [
     ONNX_MODEL_FILENAME,
     ONNX_FP16_MODEL_FILENAME,
     ONNX_DYNAMIC_INT8_MODEL_FILENAME,
-    ONNX_STATIC_INT8_MODEL_FILENAME,
 ]
 TOKENIZER_DIRNAME = "tokenizer"
 TOKENIZER_FILENAME = "tokenizer.json"
