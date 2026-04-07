@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.middleware.error_handler import register_error_handlers
 from api.middleware.metrics import PrometheusMiddleware, metrics_endpoint
-from api.routers import auth, company, integrations, internal, messages, plans, slack, subscriptions, usage, users
+from api.routers import auth, company, employees, integrations, internal, messages, plans, slack, subscriptions, usage, users
 
 app = FastAPI(title="SentinelAI API", version="0.1.0")
 register_error_handlers(app)
@@ -21,6 +21,7 @@ app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 
 app.include_router(auth.router)
 app.include_router(company.router)
+app.include_router(employees.router)
 app.include_router(integrations.router)
 app.include_router(internal.router)
 app.include_router(messages.router)

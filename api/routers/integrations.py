@@ -36,14 +36,13 @@ async def start_integration(
     provider: str,
     user: CurrentUser = Depends(require_role("biller", "admin")),
 ):
-    oauth_urls = {
-        "slack": "https://slack.com/oauth/v2/authorize",
-        "gmail": "https://accounts.google.com/o/oauth2/v2/auth",
-        #"outlook": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", Decided not to move on with outlook
+    login_paths = {
+        "slack": f"/slack/oauth/login?company_id={user.company_id}",
+        "gmail": f"/gmail/oauth/login?company_id={user.company_id}",
     }
-    if provider not in oauth_urls:
+    if provider not in login_paths:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown provider: {provider}")
-    return {"url": oauth_urls[provider]}
+    return {"url": login_paths[provider]}
 
 
 @router.delete("/{provider}", status_code=status.HTTP_200_OK)

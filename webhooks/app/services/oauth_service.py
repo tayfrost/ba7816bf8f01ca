@@ -6,7 +6,7 @@ import os
 import json
 import logging
 from datetime import datetime, timezone
-from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse, quote
 
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
@@ -23,10 +23,12 @@ GMAIL_CLIENT_ID     = os.getenv("GMAIL_CLIENT_ID")
 GMAIL_CLIENT_SECRET = os.getenv("GMAIL_CLIENT_SECRET")
 GMAIL_PUBSUB_TOPIC  = os.getenv("GMAIL_PUBSUB_TOPIC")
 BASE_URL            = os.getenv("BASE_URL")
- 
+
 SLACK_CLIENT_ID     = os.getenv("SLACK_CLIENT_ID")
 SLACK_CLIENT_SECRET = os.getenv("SLACK_CLIENT_SECRET")
 SLACK_REDIRECT_URI  = os.getenv("SLACK_REDIRECT_URI")
+
+SLACK_SCOPES = "app_mentions:read,channels:history,channels:read,chat:write,groups:history,users:read"
  
 GMAIL_REDIRECT_URI  = f"{BASE_URL}/gmail/oauth/callback" if BASE_URL else None
  
@@ -36,6 +38,22 @@ GMAIL_SCOPES = [
 ]
 
 GMAIL_PUBSUB_TOPIC = os.getenv("GMAIL_PUBSUB_TOPIC")
+
+def get_slack_auth_url(company_id: int) -> str:
+    """
+    Build the full Slack OAuth URL with all required parameters.
+    company_id is encoded as state so it survives the round trip.
+    """
+    if not SLACK_CLIENT_ID or not SLACK_REDIRECT_URI:
+        raise RuntimeError("Missing env vars: SLACK_CLIENT_ID / SLACK_REDIRECT_URI")
+    params = {
+        "client_id":    SLACK_CLIENT_ID,
+        "scope":        SLACK_SCOPES,
+        "redirect_uri": SLACK_REDIRECT_URI,
+        "state":        str(company_id),
+    }
+    return f"https://slack.com/oauth/v2/authorize?{urlencode(params)}"
+
 
 def process_slack_oauth(oauth_data: dict) -> WorkspaceCredentials:
     if not oauth_data.get("ok"):

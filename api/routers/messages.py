@@ -4,34 +4,99 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.dependencies import CurrentUser, get_current_user, require_role
-from api.schemas.incident import MessageIncidentCreate, MessageIncidentRead
-from database.services import crud_message_incidents
+from api.schemas.incident import (
+    MessageIncidentCreate,
+    MessageIncidentRead,
+    IncidentFeedItem,
+    IncidentFeedStats,
+)
+from database.services import (
+    crud_message_incidents,
+    crud_slack_accounts,
+    crud_google_mailboxes,
+)
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 
-@router.get("/stats")
+def _build_feed_items(
+    incidents: list,
+    skip: int,
+    slack_by_user: dict,
+    mailbox_by_user: dict,
+) -> list[IncidentFeedItem]:
+    items = []
+    for idx, inc in enumerate(incidents, start=skip + 1):
+        uid_str = str(inc.user_id)
+        slack = slack_by_user.get(uid_str)
+        mailbox = mailbox_by_user.get(uid_str)
+
+        if slack:
+            team_id = slack.team_id
+            slack_user_id = slack.slack_user_id
+        elif mailbox:
+            team_id = "gmail"
+            slack_user_id = mailbox.email_address
+        else:
+            team_id = inc.source
+            slack_user_id = uid_str
+
+        content = inc.content_raw or {}
+        text = content.get("text", "")
+
+        items.append(IncidentFeedItem(
+            incident_id=idx,
+            company_id=inc.company_id,
+            team_id=team_id,
+            slack_user_id=slack_user_id,
+            message_ts=inc.sent_at.isoformat(),
+            created_at=inc.created_at.isoformat(),
+            channel_id=inc.conversation_id or inc.source,
+            raw_message_text={"text": text} if text else None,
+            class_reason=content.get("filter_category") or "unknown",
+            recommendation=inc.recommendation,
+        ))
+    return items
+
+
+@router.get("/stats", response_model=IncidentFeedStats)
 async def incident_stats(user: CurrentUser = Depends(get_current_user)):
     incidents = await asyncio.to_thread(
         crud_message_incidents.list_message_incidents_for_company,
         user.company_id, limit=10000,
     )
-    by_source: dict[str, int] = {}
+    by_reason: dict[str, int] = {}
     for inc in incidents:
-        by_source[inc.source] = by_source.get(inc.source, 0) + 1
-    return {"total": len(incidents), "by_source": by_source}
+        category = (inc.content_raw or {}).get("filter_category") or "unknown"
+        by_reason[category] = by_reason.get(category, 0) + 1
+    return IncidentFeedStats(total=len(incidents), by_reason=by_reason)
 
 
-@router.get("", response_model=list[MessageIncidentRead])
+@router.get("", response_model=list[IncidentFeedItem])
 async def list_incidents(
     user: CurrentUser = Depends(get_current_user),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ):
-    return await asyncio.to_thread(
-        crud_message_incidents.list_message_incidents_for_company,
-        user.company_id, limit=limit, offset=skip,
+    incidents, slack_accounts, mailboxes = await asyncio.gather(
+        asyncio.to_thread(
+            crud_message_incidents.list_message_incidents_for_company,
+            user.company_id, limit=limit, offset=skip,
+        ),
+        asyncio.to_thread(
+            crud_slack_accounts.list_slack_accounts_for_company,
+            user.company_id, limit=10000,
+        ),
+        asyncio.to_thread(
+            crud_google_mailboxes.list_google_mailboxes_for_company,
+            user.company_id,
+        ),
     )
+
+    slack_by_user = {str(a.user_id): a for a in slack_accounts}
+    mailbox_by_user = {str(m.user_id): m for m in mailboxes}
+
+    return _build_feed_items(incidents, skip, slack_by_user, mailbox_by_user)
 
 
 @router.get("/{incident_id}", response_model=MessageIncidentRead)

@@ -13,13 +13,27 @@ import os
 import httpx
 from fastapi import APIRouter, Request, HTTPException
 
+from fastapi.responses import RedirectResponse
 from app.services.slack_service import verify_slack_signature
-from app.services.oauth_service import process_slack_oauth
+from app.services.oauth_service import process_slack_oauth, get_slack_auth_url
 from app.services.message_service import process_slack_message
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/slack", tags=["slack"])
+
+
+@router.get("/oauth/login")
+def slack_login(company_id: int):
+    """
+    Redirects the user to Slack's consent screen.
+    company_id is encoded in state so it survives the round trip and is
+    available in the callback. Frontend connect button should hit:
+      GET /slack/oauth/login?company_id=<id>
+    """
+    if not company_id:
+        raise HTTPException(status_code=400, detail="Missing company_id")
+    return RedirectResponse(get_slack_auth_url(company_id))
 
 
 @router.get("/oauth/callback")
