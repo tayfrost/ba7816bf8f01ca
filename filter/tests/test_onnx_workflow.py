@@ -24,20 +24,25 @@ def test_load_and_infer_onnx():
     # Prepare test input
     test_text = "I feel so overwhelmed with work lately."
 
-    inputs = tokenizer(
-        test_text,
-        max_length=config.MAX_LENGTH,
-        padding="max_length",
-        truncation=True,
-        return_tensors="np"
-    )
+    encoding = tokenizer.encode(test_text)
+    input_ids = encoding.ids[: config.MAX_LENGTH]
+    attention_mask = encoding.attention_mask[: config.MAX_LENGTH]
+
+    if len(input_ids) < config.MAX_LENGTH:
+        pad_id = tokenizer.token_to_id("[PAD]")
+        pad_len = config.MAX_LENGTH - len(input_ids)
+        input_ids = input_ids + ([pad_id] * pad_len)
+        attention_mask = attention_mask + ([0] * pad_len)
+
+    input_ids_np = np.array([input_ids], dtype=np.int64)
+    attention_mask_np = np.array([attention_mask], dtype=np.int64)
 
     # Run inference
     outputs = session.run(
         None,
         {
-            "input_ids": inputs["input_ids"].astype(np.int64),
-            "attention_mask": inputs["attention_mask"].astype(np.int64)
+            "input_ids": input_ids_np,
+            "attention_mask": attention_mask_np,
         }
     )
 
