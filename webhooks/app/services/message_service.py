@@ -5,8 +5,8 @@ Handles Slack and Gmail webhook events.
 Responsibilities:
   1. Decode the incoming event.
   2. Resolve or register the canonical user (create viewer seat if new).
-  3. Send message to filter service synchronously.
-  4. If filter deems it a risk, dispatch to AI service.
+  3. Fire-and-forget dispatch to filter service via gRPC.
+     The filter service callback handles AI dispatch if a risk is detected.
 """
 
 import json
@@ -15,15 +15,13 @@ import logging
 import re
 from typing import Optional, Tuple
 from datetime import datetime, timezone
-import os
-import requests
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from app.services.filter_service import filter_message, filter_messages, FilterResult
+from app.services.filter_service import dispatch_to_filter
 from app.services.slack_user_service import lookup_slack_user
 from app.services import db_service as db
 
@@ -33,29 +31,15 @@ GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
-AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:8001/analyze")
-
-
-# ── Send to AI Service ────────────────────────────────────────────────────────
-
-def _dispatch_to_ai(payload: dict) -> None:
-    """Send a risk-flagged message to the AI service for analysis."""
-    try:
-        logger.info(f"Dispatching incident to AI Service: {AI_SERVICE_URL}")
-        response = requests.post(AI_SERVICE_URL, json=payload, timeout=60)
-        response.raise_for_status()
-        logger.info("AI Service successfully processed the incident.")
-    except Exception as e:
-        logger.error(f"Failed to dispatch to AI Service: {e}")
-
 
 # ── Slack ─────────────────────────────────────────────────────────
 
 def process_slack_message(payload: dict, timestamp: str) -> bool:
     """
     Process a Slack event_callback message event.
-    Filters the message; if risk, dispatches to AI service.
-    Returns True if dispatched, False otherwise.
+    Resolves the user, then fires-and-forgets to the filter service.
+    The filter callback dispatches to AI if a risk is detected.
+    Returns True if dispatched to filter, False otherwise.
     """
     event = payload.get("event", {})
 
@@ -73,12 +57,6 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
 
     logger.info(f"Processing Slack message team={team_id} user={slack_uid}")
 
-    result = filter_message(text)
-    if not result or not result.is_risk:
-        return False
-
-    logger.info(f"Filter response: category={result.category}, is_risk={result.is_risk}, confidence={result.category_confidence:.3f}")
-
     workspace = db.get_workspace_by_team_id(team_id)
     if not workspace:
         logger.warning(f"No active workspace for team_id={team_id}")
@@ -86,9 +64,7 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
 
     company_id: int = workspace.company_id
 
-    first_name, last_name, email = lookup_slack_user(
-        workspace.access_token, slack_uid
-    )
+    first_name, last_name, email = lookup_slack_user(workspace.access_token, slack_uid)
     display_name = (
         f"{first_name} {last_name}".strip()
         if first_name != "unknown" else f"Slack user {slack_uid}"
@@ -112,17 +88,20 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
     except (ValueError, TypeError):
         sent_at = datetime.now(tz=timezone.utc).isoformat()
 
-    _dispatch_to_ai({
-        "message":          text,
-        "filter_category":  result.category,
-        "filter_severity":  result.severity,
-        "company_id":       company_id,
-        "user_id":          str(user_id),
-        "source":           "slack",
-        "sent_at":          sent_at,
-        "conversation_id":  channel_id,
-        "content_raw":      {"text": text},
-    })
+    dispatch_to_filter(
+        meta={
+            "user_id":         str(user_id),
+            "company_id":      company_id,
+            "source":          "slack",
+            "sent_at":         sent_at,
+            "conversation_id": channel_id,
+            "team_id":         team_id,
+            "slack_user_id":   slack_uid,
+            "email":           email,
+            "content_raw":     {"text": text},
+        },
+        text=text,
+    )
     return True
 
 
@@ -131,9 +110,9 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
 def process_gmail_event(payload: dict) -> bool:
     """
     Process an incoming Gmail Pub/Sub notification.
-    Fetches new messages via the History API, batch-filters them,
-    and dispatches any risks to the AI service.
-    Returns True if at least one message was dispatched.
+    Fetches new messages via the History API and fire-and-forgets each
+    to the filter service. The filter callback dispatches to AI if a risk
+    is detected. Returns True if at least one message was dispatched to filter.
     """
     try:
         msg_data = payload["message"]["data"]
@@ -162,31 +141,12 @@ def process_gmail_event(payload: dict) -> bool:
     messages, latest_history_id = _fetch_new_messages(account, user_email)
     db.set_google_mailbox_history_id(account.google_mailbox_id, latest_history_id)
 
-    # Extract bodies first so we can batch-filter
-    extracted = []
+    dispatched = 0
     for message in messages:
         body, _ = _extract_best_body(message)
-        extracted.append((message, body))
-
-    bodies      = [body for _, body in extracted if body]
-    body_indices = [i for i, (_, body) in enumerate(extracted) if body]
-
-    if not bodies:
-        return False
-
-    logger.info(f"Gmail: filtering {len(bodies)} message(s) for {user_email}")
-
-    filter_results = filter_messages(bodies)
-
-    dispatched = 0
-    for filter_idx, extracted_idx in enumerate(body_indices):
-        result = filter_results[filter_idx]
-        if not result or not result.is_risk:
+        if not body:
             continue
 
-        logger.info(f"Filter response: category={result.category}, is_risk={result.is_risk}, confidence={result.category_confidence:.3f}")
-
-        message, body = extracted[extracted_idx]
         headers = {
             h["name"]: h["value"]
             for h in message.get("payload", {}).get("headers", [])
@@ -198,26 +158,27 @@ def process_gmail_event(payload: dict) -> bool:
         except (ValueError, TypeError):
             sent_at = datetime.now(tz=timezone.utc).isoformat()
 
-        _dispatch_to_ai({
-            "message":         body,
-            "filter_category": result.category,
-            "filter_severity": result.severity,
-            "company_id":      account.company_id,
-            "user_id":         str(account.user_id),
-            "source":          "gmail",
-            "sent_at":         sent_at,
-            "conversation_id": "gmail",
-            "content_raw": {
-                "text":    body,
-                "subject": headers.get("Subject", ""),
-                "from":    headers.get("From", ""),
-                "to":      headers.get("To", ""),
+        dispatch_to_filter(
+            meta={
+                "user_id":         str(account.user_id),
+                "company_id":      account.company_id,
+                "source":          "gmail",
+                "sent_at":         sent_at,
+                "conversation_id": "gmail",
+                "email":           user_email,
+                "content_raw": {
+                    "text":    body,
+                    "subject": headers.get("Subject", ""),
+                    "from":    headers.get("From", ""),
+                    "to":      headers.get("To", ""),
+                },
             },
-        })
+            text=body,
+        )
         dispatched += 1
 
     if dispatched:
-        logger.info(f"Gmail: dispatched {dispatched} message(s) to AI service for {user_email}")
+        logger.info(f"Gmail: dispatched {dispatched} message(s) to filter for {user_email}")
     return dispatched > 0
 
 

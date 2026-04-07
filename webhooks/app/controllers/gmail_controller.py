@@ -8,6 +8,7 @@ Controllers handle HTTP request/response concerns and delegate
 business logic to services.
 """
 
+import asyncio
 import logging
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
@@ -76,6 +77,6 @@ async def gmail_events(request: Request):
     verify_gmail_token(request)
 
     payload = await request.json()
-    stored = process_gmail_event(payload)
+    stored = await asyncio.to_thread(process_gmail_event, payload)
 
     return {"ok": True, "stored": stored}

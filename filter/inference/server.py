@@ -16,7 +16,9 @@ and consistent classification logic.
 import os
 import json
 import sys
+import urllib.request
 from concurrent import futures
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -45,6 +47,36 @@ from services.classification_utils import (
 )
 
 load_dotenv()
+
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:8001/analyze")
+_AI_DISPATCH_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai-dispatch")
+
+
+def _dispatch_to_ai(meta: dict, text: str, result: dict) -> None:
+    """POST a risk-flagged message to the AI service. Runs in _AI_DISPATCH_POOL."""
+    payload = {
+        "message":         text,
+        "filter_category": result["category"],
+        "filter_severity": result["severity"],
+        "company_id":      meta.get("company_id"),
+        "user_id":         str(meta.get("user_id", "")),
+        "source":          meta.get("source", ""),
+        "sent_at":         meta.get("sent_at", ""),
+        "conversation_id": meta.get("conversation_id", ""),
+        "content_raw":     meta.get("content_raw", {"text": text}),
+    }
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            AI_SERVICE_URL,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            print(f"[AI] Dispatched to AI service — status={resp.status} user_id={meta.get('user_id')}")
+    except Exception as e:
+        print(f"[AI] Failed to dispatch to AI service for user_id={meta.get('user_id')}: {e}")
 
 
 class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
@@ -203,10 +235,25 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             message = request.message
             print(f"[REQUEST] Message length: {len(message)} chars")
 
+            # Parse envelope for AI dispatch context.
+            # _classify_single receives the original message so _parse_enveloped_message
+            # can still extract sent_at for timestamp-aware classification.
+            try:
+                envelope = json.loads(message)
+                text = envelope.get("text", message) if isinstance(envelope, dict) else message
+                meta = envelope.get("meta", {}) if isinstance(envelope, dict) else {}
+            except (json.JSONDecodeError, AttributeError):
+                text = message
+                meta = {}
+
             final_result = self._classify_single(message)
 
             print(f"[RESPONSE] Classification complete: category={final_result['category']}({final_result['category_confidence']:.3f}), "
                   f"severity={final_result['severity']}({final_result['severity_confidence']:.3f}), is_risk={final_result['is_risk']}")
+
+            if final_result["is_risk"] and meta:
+                print(f"[AI] Risk detected — dispatching to AI service for user_id={meta.get('user_id')}")
+                _AI_DISPATCH_POOL.submit(_dispatch_to_ai, meta, text, final_result)
 
             return self._result_to_response(final_result)
 

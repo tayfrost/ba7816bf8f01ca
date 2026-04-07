@@ -49,6 +49,5 @@ async def store_incident(state: AgentState) -> AgentState:
 
     except Exception as e:
         logger.error(f"[NODE: store_incident] Failed to store incident: {e}", exc_info=True)
-        raise
 
     return state

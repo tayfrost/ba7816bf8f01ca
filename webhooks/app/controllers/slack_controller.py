@@ -6,6 +6,7 @@ Handles Slack-related endpoints including OAuth callbacks and event webhooks.
 Controllers handle HTTP request/response concerns and delegate business logic to services.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -84,6 +85,6 @@ async def slack_events(request: Request):
         logger.warning("Invalid signature")
         raise HTTPException(status_code=403, detail="Invalid signature")
 
-    process_slack_message(payload, timestamp)
+    await asyncio.to_thread(process_slack_message, payload, timestamp)
 
     return {"ok": True}

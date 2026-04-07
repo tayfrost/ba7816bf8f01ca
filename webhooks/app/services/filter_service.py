@@ -38,19 +38,19 @@ class FilterResult:
 def dispatch_to_filter(meta: dict, text: str) -> None:
     """
     Fire-and-forget: send message + identifiers to the filter service.
-    Does not block; the filter service owns the rest of the pipeline.
+    Does not block. The filter service owns the rest of the pipeline —
+    if a risk is detected it calls the AI service directly.
 
     meta should contain at minimum:
         user_id, company_id, source
     and optionally:
-        team_id, slack_user_id, email, conversation_id
+        team_id, slack_user_id, email, conversation_id, sent_at, content_raw
     """
     payload = json.dumps({"meta": meta, "text": text}, default=str)
     try:
         future = _stub.ClassifyMessage.future(
             filter_pb2.ClassifyRequest(message=payload)
         )
-        # Attach a no-op callback so gRPC doesn't log unhandled errors loudly.
         future.add_done_callback(lambda f: _on_dispatch_done(f, meta))
     except Exception as e:
         logger.error(f"dispatch_to_filter failed to send: {e}")
@@ -62,7 +62,7 @@ def _on_dispatch_done(future, meta: dict) -> None:
     except grpc.RpcError as e:
         logger.warning(
             f"filter dispatch RPC error for user_id={meta.get('user_id')}: "
-            f"{e.code()} - {e.details()}"
+            f"{getattr(e, 'code', lambda: 'unknown')()} - {getattr(e, 'details', lambda: '')()} "
         )
     except Exception as e:
         logger.warning(f"filter dispatch unexpected error: {e}")
