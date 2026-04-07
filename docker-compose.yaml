@@ -81,20 +81,6 @@ services:
     networks:
       - sentinelai
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run sentinelai
-    dns:
-      - 1.1.1.1
-      - 1.0.0.1
-    volumes:
-      - ./cloudflared:/etc/cloudflared
-    depends_on:
-      - webhooks
-    restart: unless-stopped
-    networks:
-      - sentinelai
-
   kg-mcp-server:
     build:
       context: .
