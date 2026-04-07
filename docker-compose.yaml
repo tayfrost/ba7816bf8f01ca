@@ -80,10 +80,13 @@ services:
     env_file:
       - ./api/.env
     depends_on:
-      - pgvector
+      pgvector:
+        condition: service_started
+      payments:
+        condition: service_healthy
     # restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/internal/companies')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -226,6 +229,12 @@ services:
     depends_on:
       - pgvector
     # restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - sentinelai
 
