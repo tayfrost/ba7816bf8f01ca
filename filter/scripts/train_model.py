@@ -25,7 +25,7 @@ import wandb
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
-from services.dataset_loader import load_dataset
+from services.dataset_loader import load_dataset, get_dataset_path
 from services.model_factory import create_raw_model, get_lora_config
 
 
@@ -135,7 +135,7 @@ def evaluate(
     }
 
 
-def main():
+def main() -> None:
     """Main training function."""
     print("=" * 80)
     print("SentinelAI BERT Filter Training")
@@ -147,7 +147,7 @@ def main():
 
     # Load dataset
     print("\nLoading dataset...")
-    dataset_path = config.DATASETS_DIR / "sentinelai_dataset_v0.2.json"
+    dataset_path = get_dataset_path("sentinelai_dataset_v0.2.json")
     train_loader, val_loader, test_loader, _ = load_dataset(
         str(dataset_path),
         model_name=config.MODEL_NAME,
@@ -155,8 +155,8 @@ def main():
         seed=config.SEED,
     )
 
-    # Initialize model
-    print("\nInitializing model...")
+    # Initialise model
+    print("\nInitialising model...")
     model = create_raw_model()
 
     # Apply LoRA to BERT backbone
@@ -308,7 +308,9 @@ def main():
     print(f"Model checkpoint saved to: {model_path}")
 
     # Save training log
-    log_path = model_dir / "training_log.json"
+    log_dir = config.LOGS_DIR
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "training_log.json"
     with open(log_path, "w", encoding="utf-8") as f:
         json.dump(training_log, f, indent=2)
     print(f"Training log saved to: {log_path}")

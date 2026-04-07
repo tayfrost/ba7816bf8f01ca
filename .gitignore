@@ -42,8 +42,15 @@ build/
 
 #database configs
 *.db
+
 # Big models
 *.pt
+
+lora_adapters/
+**/tokenizer/
+**/onnx_cache/
+*.onnx
+*.onnx.data
 
 # Generated proto files
 filter/generated/
@@ -51,6 +58,10 @@ filter/generated/
 *.pb2_grpc.py
 *.pb2.pyi
 
-#mcp-debug tools
+# AI debugging tools
 .mcp-debug-tools/
 .claude
+
+# Datasets
+datasets/*.csv
+datasets/*.json

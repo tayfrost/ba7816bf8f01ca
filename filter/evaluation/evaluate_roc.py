@@ -25,7 +25,7 @@ from sklearn.metrics import auc, roc_curve
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
-from services.dataset_loader import load_dataset
+from services.dataset_loader import load_dataset, get_dataset_path
 from services.model_factory import load_production_model
 
 
@@ -114,7 +114,7 @@ def main():
     # 1. Load Data (SSOT)
     print("Loading test dataset...")
     _, _, test_loader, _ = load_dataset(
-        dataset_path=str(config.DATASETS_DIR / "sentinelai_dataset_v0.2.json"),
+        dataset_path=str(get_dataset_path("sentinelai_dataset_v0.2.json")),
         mix_datasets=True,
     )
 
@@ -154,7 +154,7 @@ def main():
     )
 
     # 6. Save Artifacts
-    plot_roc_curve(fpr, tpr, roc_auc, config.EVAL_DIR / "roc_curve.png")
+    plot_roc_curve(fpr, tpr, roc_auc, config.IMAGES_DIR / "roc_curve.png")
 
     results = {
         "roc_auc": float(roc_auc),
@@ -172,7 +172,7 @@ def main():
         },
     }
 
-    results_path = config.EVAL_DIR / "roc_evaluation_results.json"
+    results_path = config.RESULTS_DIR / "roc_evaluation_results.json"
     with open(results_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
     print(f"Results saved to: {results_path}")

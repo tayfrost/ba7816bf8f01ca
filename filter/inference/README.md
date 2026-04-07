@@ -6,7 +6,8 @@ gRPC-based inference service for the SentiBERT dual-head classifier. Provides fa
 
 ## Optimizations
 
-- **ONNX Runtime**: Converted model to ONNX format, removed torch/transformers from production build
+- **PyTorch-first Runtime**: Default backend is PyTorch for stable production behavior
+- **Optional ONNX Runtime**: ONNX backend is available via `INFERENCE_BACKEND=onnx`
 - **Sliding Window**: Overlap-based chunking with OR/MAX aggregation for long messages
 - **Risk Gating**: Returns highest risk score across all chunks
 
@@ -24,14 +25,19 @@ grpc_tools_node_protoc --js_out=import_style=commonjs,binary:. --grpc_out=grpc_j
 
 ## Usage Example
 
-See `tests/test_onnx_workflow.py` for complete inference example:
+See `tests/test_onnx_workflow.py` for ONNX inference example:
 
 ```python
 from services.model_factory import load_onnx_model_and_tokenizer
 
-session, tokenizer = load_onnx_model_and_tokenizer()
-inputs = tokenizer(text, max_length=128, padding="max_length", truncation=True, return_tensors="np")
-category_logits, severity_logits = session.run(None, {"input_ids": inputs["input_ids"], "attention_mask": inputs["attention_mask"]})
+session, tokenizer = load_onnx_model_and_tokenizer(onnx_variant="dynamic_int8")
+encoding = tokenizer.encode(text)
+input_ids = np.array([encoding.ids], dtype=np.int64)
+attention_mask = np.array([encoding.attention_mask], dtype=np.int64)
+category_logits, severity_logits = session.run(
+    ["category_logits", "severity_logits"],
+    {"input_ids": input_ids, "attention_mask": attention_mask},
+)
 ```
 
 ## Why gRPC?
@@ -44,7 +50,7 @@ category_logits, severity_logits = session.run(None, {"input_ids": inputs["input
 
 ## Architecture
 
-```
+```text
 ┌─────────────────┐
 │   Backend API   │
 │  (Node.js/Go)   │
@@ -64,7 +70,8 @@ category_logits, severity_logits = session.run(None, {"input_ids": inputs["input
 ## Service Contract
 
 **Input**: Raw message text  
-**Output**: 
+**Output**:
+
 - Category prediction (7 classes)
 - Severity stage (4 levels)
 - Risk flag (binary gate)
@@ -82,14 +89,16 @@ category_logits, severity_logits = session.run(None, {"input_ids": inputs["input
 - **Repo**: `OguzhanKOG/sentinelai-bert-filter`
 - **Performance**: 97% recall, 95% precision (binary risk detection)
 - **Latency Target**: <100ms p99 for single prediction
+- **Default Backend**: `pytorch`
+- **Optional Backends**: `onnx` with variants `fp32`, `fp16`, `dynamic_int8`
 
 ## Dependencies
 
 - `grpcio` / `grpcio-tools` - gRPC runtime and code generation
-- `onnxruntime` - ONNX model inference (replaces torch in production)
-- `transformers` - Tokenizer only
+- `torch` / `transformers` / `peft` - Default PyTorch inference path
+- `onnxruntime` - Optional ONNX inference backend
 - `protobuf` - Protocol Buffers
 
 ## Status
 
-✅ **Operational** - ONNX-based inference server with sliding window aggregation.
+✅ **Operational** - PyTorch-first inference server with optional ONNX backend.

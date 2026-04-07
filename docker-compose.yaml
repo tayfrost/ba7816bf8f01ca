@@ -23,7 +23,9 @@ services:
       - "50051:50051"
       - "9192:8000"
     volumes:
-      - ./filter/models:/app/models
+      - filter_models:/app/models
+    environment:
+      - INFERENCE_BACKEND=pytorch
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 50051), timeout=2)"]
@@ -225,3 +227,4 @@ volumes:
   prometheus_data:
   grafana_data:
   neo4j_data:
+  filter_models:

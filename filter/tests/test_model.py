@@ -15,7 +15,11 @@ from peft import PeftModel, get_peft_model
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
-from services.model_factory import create_raw_model, get_lora_config
+from services.model_factory import (
+    create_raw_model,
+    get_lora_config,
+    resolve_onnx_variant_filename,
+)
 
 
 def test_model_initialization():
@@ -90,3 +94,27 @@ def test_real_model_inference(real_model, tokenizer):
 
     # Checking model is actually predicting with its trained weights
     assert cat_pred in [2, 3, 4]
+
+
+def test_resolve_onnx_variant_filename_known_variants():
+    """Known ONNX variant keys should map to canonical artifact names."""
+    assert resolve_onnx_variant_filename("fp32") == config.ONNX_MODEL_FILENAME
+    assert resolve_onnx_variant_filename("base") == config.ONNX_MODEL_FILENAME
+    assert resolve_onnx_variant_filename("fp16") == config.ONNX_FP16_MODEL_FILENAME
+    assert (
+        resolve_onnx_variant_filename("dynamic_int8")
+        == config.ONNX_DYNAMIC_INT8_MODEL_FILENAME
+    )
+
+
+def test_resolve_onnx_variant_filename_custom_filename_and_invalid_key():
+    """Custom `.onnx` filename should pass, invalid key should fail."""
+    custom = "my_experimental_quant.onnx"
+    assert resolve_onnx_variant_filename(custom) == custom
+
+    for invalid_variant in ("int4", "fp8"):
+        try:
+            resolve_onnx_variant_filename(invalid_variant)
+            assert False, "Expected ValueError for unsupported ONNX variant"
+        except ValueError:
+            pass

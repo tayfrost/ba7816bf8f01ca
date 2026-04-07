@@ -6,6 +6,7 @@ Handles tokenization, label encoding, and PyTorch dataset creation.
 """
 
 # pylint: disable=wrong-import-position
+# pylint: disable=line-too-long
 
 import json
 import sys
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import torch
+from huggingface_hub import hf_hub_download
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer
 
@@ -25,6 +27,33 @@ import config
 CATEGORY_MAP = config.CATEGORY_MAP
 SEVERITY_MAP = config.SEVERITY_MAP
 RISK_CATEGORIES = config.RISK_CATEGORIES
+
+
+def get_dataset_path(filename: str) -> Path:
+    """
+    Get the path to a dataset file. Downloads from HF if not found locally.
+    """
+    local_path = config.DATASETS_DIR / filename
+
+    if not local_path.exists():
+        print(
+            f"Dataset {filename} not found locally. Attempting to download from {config.HF_DATASETS_REPO_ID}..."
+        )
+        try:
+            downloaded_path = hf_hub_download(
+                repo_id=config.HF_DATASETS_REPO_ID,
+                filename=filename,
+                repo_type="dataset",
+                local_dir=str(config.DATASETS_DIR),
+            )
+            return Path(downloaded_path)
+        except Exception as e:
+            print(f"Error downloading dataset from Hugging Face: {e}")
+            raise FileNotFoundError(
+                f"Dataset {filename} not found locally or on HF Hub."
+            ) from e
+
+    return local_path
 
 
 class MentalHealthDataset(Dataset):
@@ -50,9 +79,14 @@ class MentalHealthDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         item = self.data[idx]
 
+        # Interleave timestamp as context if available
+        message = item["message"]
+        if "timestamp" in item and item["timestamp"]:
+            message = f"[{item['timestamp']}] {message}"
+
         # Tokenize message
         encoding = self.tokenizer(
-            item["message"],
+            message,
             max_length=self.max_length,
             padding="max_length",
             truncation=True,
@@ -99,9 +133,8 @@ def load_dataset(
     # Load dataset(s)
     if mix_datasets:
         # Mix v0.1 (all 5k) + v0.2 (random 2k) for balanced quality + diversity
-        dataset_dir = Path(dataset_path).parent
-        v01_path = dataset_dir / "sentinelai_dataset_v0.1.json"
-        v02_path = dataset_dir / "sentinelai_dataset_v0.2.json"
+        v01_path = get_dataset_path("sentinelai_dataset_v0.1.json")
+        v02_path = get_dataset_path("sentinelai_dataset_v0.2.json")
 
         with open(v01_path, "r", encoding="utf-8") as f:
             data_v01 = json.load(f)
@@ -121,9 +154,15 @@ def load_dataset(
             f"Mixed dataset: {len(data_v01)} v0.1 + {len(v02_indices)} v0.2 = {len(data)} total"
         )
     else:
-        with open(dataset_path, "r", encoding="utf-8") as f:
+        # Use the provided path directly if local, else resolve via helper
+        if Path(dataset_path).exists():
+            resolved_path = Path(dataset_path)
+        else:
+            resolved_path = get_dataset_path(Path(dataset_path).name)
+
+        with open(resolved_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        print(f"Loaded dataset: {len(data)} examples from {Path(dataset_path).name}")
+        print(f"Loaded dataset: {len(data)} examples from {resolved_path.name}")
 
     # Shuffle data
     torch.manual_seed(seed)
@@ -139,7 +178,7 @@ def load_dataset(
     val_data = data[train_end:val_end]
     test_data = data[val_end:]
 
-    # Initialize tokenizer
+    # Initialise tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # Create datasets

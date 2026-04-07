@@ -10,6 +10,7 @@ REQUIREMENTS:
 ARTIFACTS UPLOADED:
 - lora_adapters/ (Config & Weights)
 - dual_head_classifier.pt (Full checkpoint with heads)
+- ONNX models (FP32 + quantized variants when present)
 - Training logs and README/model card
 """
 
@@ -27,8 +28,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 import config
 
 
-def main():
-    """Main function to handle the upload process."""
+def main() -> None:
+    """Main function to handle the model upload process."""
     print("=" * 80)
     print("SentinelAI HuggingFace Model Uploader")
     print("=" * 80)
@@ -54,17 +55,20 @@ def main():
 
     # 3. Paths
     models_dir = config.MODELS_DIR
+    logs_dir = config.LOGS_DIR
 
     # Artifacts to upload
     artifacts = [
         models_dir / config.ADAPTERS_DIRNAME,  # Folder
         models_dir / config.CHECKPOINT_FILENAME,  # File
-        models_dir / "training_log.json",  # File
+        logs_dir / "training_log.json",  # File
         models_dir / "README.md",  # File (Model Card)
+        models_dir / config.ONNX_MODEL_FILENAME,  # ONNX File
+        models_dir / config.TOKENIZER_DIRNAME,  # Tokenizer Folder
     ]
 
-    # Verify paths
-    for art in artifacts:
+    # Verify critical paths (ONNX/Tokenizer might not exist yet)
+    for art in artifacts[:4]:
         if not art.exists():
             print(f"Error: Artifact not found: {art}")
             return
@@ -72,7 +76,7 @@ def main():
     # 4. Create Repo
     api = HfApi(token=hf_token)
     try:
-        url = create_repo(repo_id, token=hf_token, exist_ok=True, private=False)
+        url = create_repo(repo_id, repo_type="model", token=hf_token, exist_ok=True, private=False)
         print(f"Repository ready: {url}")
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Repo creation failed: {e}")
@@ -85,25 +89,64 @@ def main():
         # Upload LoRA Adapters (Folder)
         print("Uploading LoRA adapters...")
         api.upload_folder(
-            folder_path=str(models_dir / "lora_adapters"),
+            folder_path=str(models_dir / config.ADAPTERS_DIRNAME),
             repo_id=repo_id,
-            path_in_repo="lora_adapters",
+            path_in_repo=config.ADAPTERS_DIRNAME,
+            repo_type="model",
         )
 
         # Upload Full Checkpoint
-        print("Uploading dual_head_classifier.pt...")
+        print(f"Uploading {config.CHECKPOINT_FILENAME}...")
         api.upload_file(
-            path_or_fileobj=str(models_dir / "dual_head_classifier.pt"),
-            path_in_repo="dual_head_classifier.pt",
+            path_or_fileobj=str(models_dir / config.CHECKPOINT_FILENAME),
+            path_in_repo=config.CHECKPOINT_FILENAME,
             repo_id=repo_id,
+            repo_type="model",
         )
+
+        # Upload ONNX models if present (single source of truth from config)
+        for onnx_filename in config.ONNX_VARIANT_MODEL_FILENAMES:
+            onnx_path = models_dir / onnx_filename
+            if not onnx_path.exists():
+                continue
+
+            print(f"Uploading ONNX model: {onnx_filename}...")
+            api.upload_file(
+                path_or_fileobj=str(onnx_path),
+                path_in_repo=onnx_filename,
+                repo_id=repo_id,
+                repo_type="model",
+            )
+
+            # Upload ONNX external data file if exists
+            data_path = onnx_path.with_suffix(".onnx.data")
+            if data_path.exists():
+                print(f"Uploading ONNX data file: {data_path.name}...")
+                api.upload_file(
+                    path_or_fileobj=str(data_path),
+                    path_in_repo=data_path.name,
+                    repo_id=repo_id,
+                    repo_type="model",
+                )
+
+        # Upload Tokenizer Folder if exists
+        tokenizer_dir = models_dir / config.TOKENIZER_DIRNAME
+        if tokenizer_dir.exists():
+            print("Uploading tokenizer folder...")
+            api.upload_folder(
+                folder_path=str(tokenizer_dir),
+                path_in_repo=config.TOKENIZER_DIRNAME,
+                repo_id=repo_id,
+                repo_type="model",
+            )
 
         # Upload Log
         print("Uploading training logs...")
         api.upload_file(
-            path_or_fileobj=str(models_dir / "training_log.json"),
+            path_or_fileobj=str(logs_dir / "training_log.json"),
             path_in_repo="training_log.json",
             repo_id=repo_id,
+            repo_type="model",
         )
 
         # Upload README (Model Card) to root
@@ -112,6 +155,7 @@ def main():
             path_or_fileobj=str(models_dir / "README.md"),
             path_in_repo="README.md",
             repo_id=repo_id,
+            repo_type="model",
         )
 
         print("\n" + "=" * 80)

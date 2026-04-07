@@ -21,9 +21,9 @@ RUN mkdir -p generated && \
 
 # Copy application code
 COPY filter/inference/ ./inference/
-COPY filter/inference_services/ ./inference_services/
+COPY filter/services/ ./services/
+COPY filter/models/ ./models/
 COPY filter/config.py .
-COPY filter/.env .
 COPY filter/main.py .
 
 # Expose gRPC port

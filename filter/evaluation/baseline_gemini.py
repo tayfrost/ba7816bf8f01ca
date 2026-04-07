@@ -44,7 +44,7 @@ from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent))
 
 import config
-from services.dataset_loader import CATEGORY_MAP
+from services.dataset_loader import CATEGORY_MAP, get_dataset_path
 
 # Valid categories for prompting
 VALID_CATEGORIES = list(CATEGORY_MAP.keys())
@@ -116,9 +116,9 @@ def main():
     client = genai.Client(api_key=api_key)
 
     # Paths
-    dataset_path = config.DATASETS_DIR / "sentinelai_dataset_v0.2.json"
-    output_dir = config.EVAL_DIR
-    output_dir.mkdir(exist_ok=True)
+    dataset_path = get_dataset_path("sentinelai_dataset_v0.2.json")
+    output_dir = config.RESULTS_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load raw data (Exact same logic as baseline_keyword.py for 1:1 alignment)
     print(f"Loading test dataset from {dataset_path.name}...")
@@ -126,7 +126,7 @@ def main():
     with open(dataset_path, "r", encoding="utf-8") as f:
         full_data = json.load(f)
 
-    v01_path = config.DATASETS_DIR / "sentinelai_dataset_v0.1.json"
+    v01_path = get_dataset_path("sentinelai_dataset_v0.1.json")
     with open(v01_path, "r", encoding="utf-8") as f:
         data_v01 = json.load(f)
 
@@ -157,6 +157,9 @@ def main():
     failures = 0
     for item in tqdm(test_data, desc="Classifying"):
         message = item["message"]
+        if "timestamp" in item and item["timestamp"]:
+            message = f"[{item['timestamp']}] {message}"
+
         true_label_str = item["category"]
         true_label = CATEGORY_MAP[true_label_str]
 
