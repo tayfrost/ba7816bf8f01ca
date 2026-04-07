@@ -1,6 +1,6 @@
 import psycopg
 
-DB_URL = "postgresql://postgres:postgres@localhost:5433/sentinelai"
+DB_URL = "postgresql://postgres:postgres@pgvector:5432/sentinelai"
 
 DDL = """
 CREATE EXTENSION IF NOT EXISTS vector;
