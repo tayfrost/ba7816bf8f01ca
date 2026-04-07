@@ -5,6 +5,7 @@ export type RegisterPayload = {
   password: string;
   name: string;
   surname: string;
+  display_name: string;
   company_name: string;
   plan_id: number;
 };

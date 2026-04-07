@@ -35,6 +35,7 @@ export default function Signup() {
         password,
         name: firstName || "Admin",
         surname,
+        display_name: `${firstName || "Admin"} ${surname}`.trim(),
         company_name: companyName,
         plan_id: 1, // Dummy ID to satisfy the backend schema
       });
