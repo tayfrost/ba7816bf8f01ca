@@ -86,15 +86,25 @@ async def analyze_message(request: AnalyzeRequest, mcp_client: Client = Depends(
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
 
     try:
-        return await _analyze_single(request.message, mcp_client)
+        return await _analyze_single(request, mcp_client)
     except Exception as e:
         logger.error(f"[API] Analysis failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
-async def _analyze_single(message: str, mcp_client: Client) -> AgentOutput:
+async def _analyze_single(request: AnalyzeRequest, mcp_client: Client) -> AgentOutput:
     """Run the agent workflow on a single message. Reused by both endpoints."""
-    initial_state: AgentState = {"raw_message": message}
+    initial_state: AgentState = {
+        "raw_message": request.message,
+        "user_id": request.user_id,
+        "company_id": request.company_id,
+        "source": request.source,
+        "sent_at": request.sent_at,
+        "conversation_id": request.conversation_id,
+        "content_raw": request.content_raw,
+        "filter_category": request.filter_category,
+        "filter_severity": request.filter_severity,
+    }
     result = await agent.ainvoke(
         initial_state,
         config={"configurable": {"mcp_client": mcp_client}},
@@ -123,7 +133,7 @@ _BATCH_SEMAPHORE = asyncio.Semaphore(5)
 async def _analyze_single_throttled(message: str, mcp_client: Client) -> AgentOutput:
     """Throttled wrapper around _analyze_single to limit concurrency."""
     async with _BATCH_SEMAPHORE:
-        return await _analyze_single(message, mcp_client)
+        return await _analyze_single(AnalyzeRequest(message=message), mcp_client)
 
 
 @app.post("/analyze/batch", response_model=BatchAgentOutput)
