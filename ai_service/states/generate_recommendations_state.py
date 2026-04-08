@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableConfig
 from schema.agent_state import AgentState
 from services.mcp_service import load_mcp_tools
 from utils.json_util import safe_json_loads
-from llm import get_llm
+from llm import get_llm_for_tools
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ async def generate_recommendations(state: AgentState, config: RunnableConfig) ->
     """Generate HR recommendations based on assessment with evidence-based advice from knowledge graph."""
     from agent import prompt_service
     
-    llm = get_llm()
+    llm = get_llm_for_tools()
     
     logger.info("[NODE: generate_recommendations] Starting recommendations generation")
     logger.debug(f"[NODE: generate_recommendations] Input state keys: {list(state.keys())}")
