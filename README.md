@@ -2,6 +2,22 @@
 
 SentinelAI is a multi-service platform for workplace wellbeing monitoring, risk triage, and operational analytics.
 
+<https://github.kcl.ac.uk/k24000626/SentinelAI>
+
+App: <https://sentinelai.work>
+
+Model Link: <https://huggingface.co/OguzhanKOG/sentinelai-bert-filter>
+
+Kishan Prakash – k23153494
+Mariam Hafiz – k23115695
+Dmytro Syzonenko – k24000626
+Derja Sulevani – k24022340
+Davyd Shtepa – k23109664
+Lupupa Chansa – k23006355
+Oguzhan Cagirir – k23175144
+Daria Pampukha – k24057303
+Vishal Thakwani - k24059655
+
 ## Core Services
 
 - **API** (`api/`) — auth, company/user management, integrations, incidents, metrics.
