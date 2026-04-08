@@ -24,7 +24,7 @@ import IncidentModal from "../components/dashboard/IncidentModal";
 const BRAND_ORANGE = "var(--color-top)"; 
 
 export default function Dashboard() {
-  const { signup, plan, integrations, reset } = useOnboarding();
+  const { signup, plan, integrations } = useOnboarding();
   const navigate = useNavigate();
 
   const [preset, setPreset] = useState<RangePreset>("week");
@@ -85,12 +85,6 @@ export default function Dashboard() {
           <SidebarLink to="/settings" label="Account Settings" />
         </nav>
 
-        <button onClick={() => { reset(); navigate("/login"); }} style={{
-          background: "transparent", border: "1px solid rgba(255,255,255,0.1)",
-          color: "rgba(255,255,255,0.4)", padding: "10px", borderRadius: "8px", cursor: "pointer", fontSize: "11px", fontWeight: "bold"
-        }}>
-          RESET SYSTEM
-        </button>
       </aside>
 
       {/* MAIN SECTION */}
