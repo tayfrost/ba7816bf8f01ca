@@ -4,7 +4,7 @@ pg_sentinelai_incidents:
       count(*) AS total,
       count(*) FILTER (WHERE created_at > now() - interval '1 hour') AS last_hour,
       count(*) FILTER (WHERE created_at > now() - interval '24 hours') AS last_24h
-    FROM flagged_incidents
+    FROM message_incidents
   metrics:
     - total:
         usage: "GAUGE"
@@ -35,13 +35,12 @@ pg_sentinelai_companies:
         description: "Soft-deleted companies"
 
 pg_sentinelai_users:
-  query: "SELECT count(*) AS total FROM saas_user_data"
+  query: "SELECT count(*) AS total FROM users WHERE deleted_at IS NULL"
   metrics:
     - total:
         usage: "GAUGE"
-        description: "Total registered users"
+        description: "Total active users"
 
-# might need to revisit this if we add more databases
 pg_sentinelai_db_size:
   query: "SELECT pg_database_size('sentinelai') AS size_bytes"
   metrics:
