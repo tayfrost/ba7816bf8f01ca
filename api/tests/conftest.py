@@ -2,12 +2,13 @@
 Container integration test configuration.
 Tests hit the real API at http://localhost:8006 backed by pgvector at localhost:5433.
 """
+import os
 import psycopg
 import pytest
 import httpx
 
 BASE_URL = "http://localhost:8006"
-DB_DSN = "postgresql://postgres:postgres@localhost:5433/sentinelai"
+DB_DSN = os.environ.get("TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5433/sentinelai")
 
 TRUNCATE_SQL = """
     TRUNCATE

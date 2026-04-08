@@ -6,9 +6,10 @@ from typing import Optional as optional
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func
+import os
 
 
-engine = create_engine("postgresql+psycopg://postgres:postgres@pgvector:5432/sentinelai", echo=True)
+engine = create_engine(os.environ["DATABASE_URL_SYNC"], echo=True)
 Session = sessionmaker(bind=engine)
 
 VALID_ROLES = {"admin", "viewer", "biller"}

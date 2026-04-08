@@ -1,6 +1,7 @@
+import os
 import psycopg
 
-DB_URL = "postgresql://postgres:postgres@pgvector:5432/sentinelai"
+DB_URL = f"postgresql://postgres:{os.environ['POSTGRES_PASSWORD']}@pgvector:5432/sentinelai"
 
 DDL = """
 CREATE EXTENSION IF NOT EXISTS vector;

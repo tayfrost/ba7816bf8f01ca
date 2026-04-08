@@ -1,6 +1,7 @@
+import os
 from sqlalchemy import create_engine, text
 
-DB_URL = "postgresql+psycopg://postgres:postgres@pgvector:5432/sentinelai"
+DB_URL = os.environ["DATABASE_URL_SYNC"]
 
 def run():
     engine = create_engine(DB_URL)

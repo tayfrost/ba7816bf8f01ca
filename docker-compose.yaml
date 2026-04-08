@@ -6,8 +6,6 @@ services:
     build:
       context: .
       dockerfile: ai_service/Dockerfile
-    ports:
-      - "8002:8001"
     depends_on:
       kg-mcp-server:
         condition: service_healthy
@@ -26,9 +24,6 @@ services:
     build:
       context: .
       dockerfile: filter/Dockerfile
-    ports:
-      - "50051:50051"
-      - "9192:8000"
     volumes:
       - filter_models:/app/models
     environment:
@@ -50,8 +45,6 @@ services:
     build:
       context: .
       dockerfile: webhooks/Dockerfile
-    ports:
-      - "9000:8000"
     env_file:
       - ./webhooks/.env
     depends_on:
@@ -75,8 +68,6 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
-    ports:
-      - "8006:8000"
     env_file:
       - ./api/.env
     depends_on:
@@ -98,8 +89,6 @@ services:
     image: pgvector/pgvector:pg16
     env_file:
       - ./.env
-    ports:
-      - "5433:5432"
     volumes:
       - pgvector_data:/var/lib/postgresql/data
     # restart: unless-stopped
@@ -110,9 +99,6 @@ services:
     build:
       context: .
       dockerfile: knowledge-graph/mcp-server/Dockerfile
-    ports:
-      - "8001:8001"
-      - "9102:9102"
     environment:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8001
@@ -130,9 +116,6 @@ services:
     image: neo4j:5.15-community
     container_name: sentinelai-neo4j
     profiles: ["dev"]
-    ports:
-      - "7474:7474"
-      - "7687:7687"
     env_file:
       - ./.env.neo4j
     environment:
@@ -154,8 +137,6 @@ services:
   #   image: prometheuscommunity/postgres-exporter:v0.15.0
   #   container_name: postgres-exporter
   #   # restart: unless-stopped
-  #   ports:
-  #     - "9187:9187"
   #   env_file:
   #     - ./.env
   #   volumes:
@@ -171,8 +152,6 @@ services:
   #   image: prom/prometheus:latest
   #   container_name: prometheus
   #   # restart: unless-stopped
-  #   ports:
-  #     - "9090:9090"
   #   volumes:
   #     - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
   #     - prometheus_data:/prometheus
@@ -189,8 +168,6 @@ services:
   #   image: grafana/grafana:latest
   #   container_name: grafana
   #   # restart: unless-stopped
-  #   ports:
-  #     - "3002:3000"
   #   volumes:
   #     - grafana_data:/var/lib/grafana
   #     - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -223,12 +200,10 @@ services:
 
   payments:
     build: ./payments
-    ports:
-      - "8004:8001"
     env_file:
       - ./payments/.env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@pgvector:5432/sentinelai
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@pgvector:5432/sentinelai
     depends_on:
       - pgvector
     # restart: unless-stopped
