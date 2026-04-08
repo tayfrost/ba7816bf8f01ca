@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.middleware.error_handler import register_error_handlers
 from api.middleware.metrics import PrometheusMiddleware, metrics_endpoint
+from api.middleware.internal_whitelist import InternalWhitelistMiddleware
 from api.routers import auth, company, employees, integrations, internal, messages, plans, slack, subscriptions, usage, users
 
 app = FastAPI(title="SentinelAI API", version="0.1.0")
 register_error_handlers(app)
 
+app.add_middleware(InternalWhitelistMiddleware)
 app.add_middleware(PrometheusMiddleware)
 app.add_middleware(
     CORSMiddleware,

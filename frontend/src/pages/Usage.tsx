@@ -78,7 +78,7 @@ export default function Usage() {
           </h2>
 
           <div className="flex flex-col gap-4">
-            <StepItem number="1" text="Connect your work accounts (Slack/Gmail/Outlook) via the Connect Accounts page." />
+            <StepItem number="1" text="Connect your work accounts (Slack/Gmail) via the Connect Accounts page." />
             <StepItem number="2" text="Open the Dashboard to view metrics and trends over time." />
             <StepItem number="3" text="Use Week/Month/Year/All Time/Custom ranges to explore patterns." />
             <StepItem number="4" text="Review alerts for potential risk signals and investigate context." />

@@ -127,8 +127,11 @@ async def list_employees(user: CurrentUser = Depends(get_current_user)):
     for inc in all_incidents:
         incidents_by_user[str(inc.user_id)].append(inc)
 
+    # Only monitored employees (viewers) are shown; admin/biller seats are excluded.
+    viewer_users = [u for u in users if u.role == "viewer"]
+
     employees: list[EmployeeItem] = []
-    for u in users:
+    for u in viewer_users:
         uid_str = str(u.user_id)
         user_incidents = incidents_by_user.get(uid_str, [])
         user_slacks = slack_by_user.get(uid_str, [])
@@ -168,7 +171,7 @@ async def list_employees(user: CurrentUser = Depends(get_current_user)):
 
         employees.append(EmployeeItem(
             id=uid_str,
-            fullName=u.display_name or uid_str,
+            fullName=u.display_name or email or f"User {uid_str[:8]}",
             role=u.role,
             team=team,
             email=email,

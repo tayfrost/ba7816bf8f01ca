@@ -18,7 +18,7 @@ const BRAND_DEEP = "var(--color-brand-deep)";
 export default function Employees() {
   const { signup, plan, integrations, reset } = useOnboarding();
 
-  const [directoryView, setDirectoryView] = useState<"cards" | "table">("cards");
+  const [directoryView, setDirectoryView] = useState<"cards" | "table">("table");
   const navigate = useNavigate();
 
   const connectedCount = useMemo(() => countConnected(integrations), [integrations]);
@@ -60,7 +60,7 @@ export default function Employees() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "50px" }}>
-          <img src="/logo-text.png" alt="SentinelAI" style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px" }} />
+          <img src="/logo-text.png" alt="SentinelAI" style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px", filter: "brightness(0) invert(1)" }} />
         </div>
 
         <nav style={{ flexGrow: 1 }}>
@@ -69,8 +69,8 @@ export default function Employees() {
           <SidebarLink to="/settings" label="Account Settings" />
         </nav>
 
-        <button onClick={reset} style={{ 
-          background: "transparent", border: "1px solid rgba(255,255,255,0.1)", 
+        <button onClick={() => { reset(); navigate("/login"); }} style={{
+          background: "transparent", border: "1px solid rgba(255,255,255,0.1)",
           color: "rgba(255,255,255,0.4)", padding: "10px", borderRadius: "8px", cursor: "pointer", fontSize: "11px", fontWeight: "bold"
         }}>
           RESET SYSTEM
@@ -218,6 +218,7 @@ export default function Employees() {
                   padding: "30px",
                   backdropFilter: "blur(20px)",
                   cursor: "pointer",
+                  overflow: "hidden",
                 }}
               >
 

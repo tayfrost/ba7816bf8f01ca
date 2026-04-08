@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "../state/onboarding";
+import { startPersonalGmail } from "../api";
 import SidebarLink from "../components/SidebarLink";
 import Button from "../components/Button";
 import Input from "../components/Input";
@@ -131,7 +132,7 @@ export default function Settings() {
           <img
             src="/logo-text.png"
             alt="SentinelAI"
-            style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px" }}
+            style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px", filter: "brightness(0) invert(1)" }}
           />
         </div>
 
@@ -142,7 +143,7 @@ export default function Settings() {
         </nav>
 
         <button
-          onClick={reset}
+          onClick={() => { reset(); navigate("/login"); }}
           style={{
             background: "transparent",
             border: "1px solid rgba(255,255,255,0.1)",
@@ -215,11 +216,7 @@ export default function Settings() {
               <div className="space-y-6">
                 <Input
                   label="Admin Full Name"
-                  defaultValue={
-                    currentUser
-                      ? `${currentUser.name} ${currentUser.surname}`.trim()
-                      : signup?.adminName || ""
-                  }
+                  defaultValue={currentUser?.display_name || signup?.adminName || ""}
                 />
 
                 <Input
@@ -338,6 +335,7 @@ export default function Settings() {
                   <Button
                     variant="ghost"
                     className="!text-white border-white/20 hover:border-white/40"
+                    onClick={() => navigate("/plan")}
                   >
                     Change Plan for Next Cycle
                   </Button>
@@ -504,9 +502,9 @@ export default function Settings() {
                 >
                   <div>
                     <div style={{ fontWeight: 700 }}>
-                      {user.name} {user.surname}
+                      {user.display_name || user.email}
                     </div>
-                    
+
                     <div style={{ fontSize: "12px", opacity: 0.6 }}>
                       {user.email}
                     </div>
@@ -564,6 +562,28 @@ export default function Settings() {
               ))}
               
             </SectionCard>
+
+            {!canManageIntegrations && currentUser?.role === "viewer" && (
+              <SectionCard title="My Gmail">
+                <p style={{ opacity: 0.6, fontSize: "13px", marginBottom: "16px" }}>
+                  Connect your own Gmail so SentinelAI can monitor your mailbox as part of company-wide consent-based analysis.
+                </p>
+                <Button
+                  variant="secondary"
+                  className="!text-white !bg-white/10 !border-white/30"
+                  onClick={async () => {
+                    try {
+                      const { url } = await startPersonalGmail();
+                      window.location.href = url;
+                    } catch {
+                      alert("Failed to start Gmail connection. Please try again.");
+                    }
+                  }}
+                >
+                  Connect Gmail
+                </Button>
+              </SectionCard>
+            )}
 
             {canManageIntegrations ? (
               <SectionCard title="Connected Integrations">

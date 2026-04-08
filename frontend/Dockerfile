@@ -3,6 +3,12 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build-time env vars (passed via docker-compose build.args)
+ARG VITE_API_BASE_URL
+ARG VITE_PAYMENTS_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_PAYMENTS_URL=$VITE_PAYMENTS_URL
+
 COPY package*.json ./
 RUN npm install
 

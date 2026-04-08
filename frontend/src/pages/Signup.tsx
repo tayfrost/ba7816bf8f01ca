@@ -64,15 +64,11 @@ export default function Signup() {
     setError(null);
     setIsSubmitting(true);
 
-    const [firstName, ...rest] = adminName.trim().split(" ");
-    const surname = rest.join(" ") || "Admin";
-
     try {
       const res = await register({
         email: adminEmail,
         password,
-        name: firstName || "Admin",
-        surname,
+        display_name: adminName.trim() || "Admin",
         company_name: companyName,
         plan_id: planId,
       });

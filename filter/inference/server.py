@@ -13,6 +13,7 @@ and consistent classification logic.
 # WARNING: Only ignore import errors if you have verified that the imports
 #          work correctly in all execution contexts.
 
+import logging
 import os
 import json
 import sys
@@ -20,6 +21,12 @@ import urllib.request
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Add parent and generated proto files to path BEFORE other imports
 filter_dir = Path(__file__).parent.parent
@@ -50,6 +57,26 @@ load_dotenv()
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:8001/analyze")
 _AI_DISPATCH_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai-dispatch")
 
+_GRPC_SECRET = os.getenv("GRPC_SECRET", "")
+
+
+class _SecretInterceptor(grpc.ServerInterceptor):
+    """Reject requests that don't carry the correct x-grpc-secret metadata header.
+    If GRPC_SECRET is not set the interceptor is a no-op (backward compatible)."""
+
+    def intercept_service(self, continuation, handler_call_details):
+        if not _GRPC_SECRET:
+            return continuation(handler_call_details)
+        metadata = dict(handler_call_details.invocation_metadata)
+        if metadata.get("x-grpc-secret") != _GRPC_SECRET:
+            logger.warning("Rejected gRPC call — bad or missing secret")
+
+            def _reject(request, context):
+                context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid gRPC secret")
+
+            return grpc.unary_unary_rpc_method_handler(_reject)
+        return continuation(handler_call_details)
+
 
 def _dispatch_to_ai(meta: dict, text: str, result: dict) -> None:
     """POST a risk-flagged message to the AI service. Runs in _AI_DISPATCH_POOL."""
@@ -73,9 +100,9 @@ def _dispatch_to_ai(meta: dict, text: str, result: dict) -> None:
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=60) as resp:
-            print(f"[AI] Dispatched to AI service — status={resp.status} user_id={meta.get('user_id')}")
+            logger.info("Dispatched to AI service — status=%s user_id=%s", resp.status, meta.get("user_id"))
     except Exception as e:
-        print(f"[AI] Failed to dispatch to AI service for user_id={meta.get('user_id')}: {e}")
+        logger.error("Failed to dispatch to AI service for user_id=%s: %s", meta.get("user_id"), e)
 
 
 class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
@@ -83,8 +110,6 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
     def __init__(self):
         """Initialise tokenizer and ONNX model."""
-        print("[SERVER] Initialising FilterServiceServicer...")
-
         self.model_name = os.environ.get("MODEL_NAME", config.MODEL_NAME)
         # Keep compatibility with both lowercase and current uppercase envs
         self.max_length = int(
@@ -95,20 +120,17 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         self.inference_backend = os.environ.get("INFERENCE_BACKEND", "pytorch").strip().lower()
         self.onnx_variant = os.environ.get("ONNX_VARIANT", "fp32")
 
-        print("[SERVER] Configuration loaded:")
-        print(f"[SERVER]   Model: {self.model_name}")
-        print(f"[SERVER]   Max length: {self.max_length}")
-        print(f"[SERVER]   Overlap: {self.overlap}")
-        print(f"[SERVER]   Threshold: {self.threshold}")
-        print(f"[SERVER]   Inference backend: {self.inference_backend}")
-        print(f"[SERVER]   ONNX variant: {self.onnx_variant}")
+        logger.info(
+            "Config — model=%s backend=%s max_length=%d overlap=%d threshold=%.2f",
+            self.model_name, self.inference_backend, self.max_length, self.overlap, self.threshold,
+        )
 
         if self.inference_backend == "pytorch":
-            print("[SERVER] Loading PyTorch model and tokenizer...")
+            logger.info("Loading PyTorch model and tokenizer...")
             self.onnx_session = load_production_model()
             self.tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
         else:
-            print("[SERVER] Loading ONNX model and tokenizer...")
+            logger.info("Loading ONNX model (%s)...", self.onnx_variant)
             self.onnx_session, self.tokenizer = load_onnx_model_and_tokenizer(
                 onnx_variant=self.onnx_variant,
             )
@@ -134,10 +156,8 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             self.cls_token_id = int(self.tokenizer.cls_token_id)
             self.sep_token_id = int(self.tokenizer.sep_token_id)
             self.pad_token_id = int(self.tokenizer.pad_token_id)
-        print(f"[SERVER] Special tokens - CLS: {self.cls_token_id}, "
-              f"SEP: {self.sep_token_id}, PAD: {self.pad_token_id}")
 
-        print("[SERVER] ✓ FilterServiceServicer initialised successfully")
+        logger.info("Ready — CLS=%d SEP=%d PAD=%d", self.cls_token_id, self.sep_token_id, self.pad_token_id)
 
     @staticmethod
     def _parse_enveloped_message(raw_message: str) -> tuple[str, str | None]:
@@ -217,10 +237,9 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
     def ClassifyMessage(self, request, context):
         """Classify a single message using sliding window approach."""
-        print("[REQUEST] Received classification request")
+        logger.debug("ClassifyMessage: %d chars", len(request.message))
         try:
             message = request.message
-            print(f"[REQUEST] Message length: {len(message)} chars")
 
             # Parse envelope for AI dispatch context.
             # _classify_single receives the original message so payload text extraction
@@ -235,20 +254,21 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
             final_result = self._classify_single(message)
 
-            print(f"[RESPONSE] Classification complete: category={final_result['category']}({final_result['category_confidence']:.3f}), "
-                  f"severity={final_result['severity']}({final_result['severity_confidence']:.3f}), is_risk={final_result['is_risk']}")
+            logger.info(
+                "Classified: category=%s(%.2f) severity=%s(%.2f) is_risk=%s",
+                final_result["category"], final_result["category_confidence"],
+                final_result["severity"], final_result["severity_confidence"],
+                final_result["is_risk"],
+            )
 
             if final_result["is_risk"] and meta:
-                print(f"[AI] Risk detected — dispatching to AI service for user_id={meta.get('user_id')}")
+                logger.info("Risk detected — dispatching to AI service for user_id=%s", meta.get("user_id"))
                 _AI_DISPATCH_POOL.submit(_dispatch_to_ai, meta, text, final_result)
 
             return self._result_to_response(final_result)
 
         except Exception as e:  # pylint: disable=broad-exception-caught
-            print(f"[ERROR] Failed to process message: {str(e)}")
-
-            import traceback # pylint: disable=import-outside-toplevel
-            traceback.print_exc()
+            logger.exception("Failed to process message: %s", e)
 
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Error processing message: {str(e)}")
@@ -267,7 +287,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         so that one bad message does not abort the entire batch.
         """
         messages = list(request.messages)
-        print(f"[BATCH] Received batch classification request: {len(messages)} messages")
+        logger.info("ClassifyMessages: %d messages", len(messages))
 
         if not messages:
             return filter_pb2.BatchClassifyResponse(results=[])
@@ -275,39 +295,28 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         results = []
         for i, message in enumerate(messages):
             try:
-                print(f"[BATCH] Processing message {i+1}/{len(messages)} ({len(message)} chars)")
                 result = self._classify_single(message)
                 results.append(self._result_to_response(result))
             except Exception as e:  # pylint: disable=broad-exception-caught
-                print(f"[BATCH] Message {i+1} failed, returning safe default: {e}")
+                logger.warning("Batch message %d/%d failed, using safe default: %s", i + 1, len(messages), e)
                 results.append(self._result_to_response(self._SAFE_DEFAULT))
 
-        print(f"[BATCH] Batch complete: {len(results)} messages classified")
+        logger.info("Batch complete: %d/%d classified", len(results), len(messages))
         return filter_pb2.BatchClassifyResponse(results=results)
 
 
 def serve():
     """Start the gRPC server."""
-    print("[SERVER] Starting gRPC server...")
-    print("[SERVER] Creating thread pool executor with 10 workers...")
-
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-
-    print("[SERVER] Initialising FilterServiceServicer...")
-    filter_pb2_grpc.add_FilterServiceServicer_to_server(
-        FilterServiceServicer(), server
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=10),
+        interceptors=[_SecretInterceptor()],
     )
 
-    print("[SERVER] Binding to port 50051...")
-    server.add_insecure_port('[::]:50051')
-
-    print("[SERVER] Starting server...")
+    filter_pb2_grpc.add_FilterServiceServicer_to_server(FilterServiceServicer(), server)
+    server.add_insecure_port("[::]:50051")
     server.start()
 
-    print("="*60)
-    print("[SERVER] ✓ Filter gRPC server is ready and listening on port 50051")
-    print("="*60)
-
+    logger.info("Filter gRPC server listening on port 50051")
     server.wait_for_termination()
 
 

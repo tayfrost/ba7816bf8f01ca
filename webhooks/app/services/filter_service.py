@@ -19,6 +19,9 @@ from filter.v1 import filter_pb2, filter_pb2_grpc
 logger = logging.getLogger(__name__)
 
 FILTER_SERVICE_HOST = os.getenv("FILTER_SERVICE_HOST", "filter:50051")
+_GRPC_SECRET = os.getenv("GRPC_SECRET", "")
+# Attach secret to every call if configured; empty tuple = no metadata.
+_GRPC_METADATA: tuple = (("x-grpc-secret", _GRPC_SECRET),) if _GRPC_SECRET else ()
 
 # Persistent channel — kept alive for the process lifetime so that
 # fire-and-forget .future() calls are not killed by a closing context manager.
@@ -49,7 +52,8 @@ def dispatch_to_filter(meta: dict, text: str) -> None:
     payload = json.dumps({"meta": meta, "text": text}, default=str)
     try:
         future = _stub.ClassifyMessage.future(
-            filter_pb2.ClassifyRequest(message=payload)
+            filter_pb2.ClassifyRequest(message=payload),
+            metadata=_GRPC_METADATA,
         )
         future.add_done_callback(lambda f: _on_dispatch_done(f, meta))
     except Exception as e:
@@ -85,7 +89,8 @@ def filter_message(text: str) -> Optional[FilterResult]:
         with grpc.insecure_channel(FILTER_SERVICE_HOST) as channel:
             stub = filter_pb2_grpc.FilterServiceStub(channel)
             response = stub.ClassifyMessage(
-                filter_pb2.ClassifyRequest(message=text)
+                filter_pb2.ClassifyRequest(message=text),
+                metadata=_GRPC_METADATA,
             )
             return _response_to_result(response)
     except grpc.RpcError as e:
@@ -105,7 +110,8 @@ def filter_messages(texts: List[str]) -> List[Optional[FilterResult]]:
         with grpc.insecure_channel(FILTER_SERVICE_HOST) as channel:
             stub = filter_pb2_grpc.FilterServiceStub(channel)
             response = stub.ClassifyMessages(
-                filter_pb2.BatchClassifyRequest(messages=texts)
+                filter_pb2.BatchClassifyRequest(messages=texts),
+                metadata=_GRPC_METADATA,
             )
             return [_response_to_result(r) for r in response.results]
     except grpc.RpcError as e:

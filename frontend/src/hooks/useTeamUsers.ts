@@ -8,7 +8,7 @@ export function useTeamUsers() {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [busyUserId, setBusyUserId] = useState<number | null>(null);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +39,7 @@ export function useTeamUsers() {
     };
   }, []);
 
-  async function changeRole(userId: number, role: "admin" | "biller" | "viewer") {
+  async function changeRole(userId: string, role: "admin" | "biller" | "viewer") {
     setBusyUserId(userId);
     setError(null);
 
@@ -57,7 +57,7 @@ export function useTeamUsers() {
     }
   }
 
-  async function removeUser(userId: number) {
+  async function removeUser(userId: string) {
     setBusyUserId(userId);
     setError(null);
 
@@ -78,7 +78,7 @@ export function useTeamUsers() {
     surname: string;
     role: "admin" | "biller" | "viewer";
   }): Promise<boolean> { 
-    setBusyUserId(-1);
+    setBusyUserId("__invite__");
     setError(null);
 
     try {

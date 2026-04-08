@@ -25,7 +25,9 @@ export default function EmployeeRiskMiniChart({ points }: Props) {
         Risk trend
       </div>
 
-      <SimpleLineChart points={points} width={260} height={100} />
+      <div style={{ width: "100%", overflow: "hidden" }}>
+        <SimpleLineChart points={points} width={260} height={100} />
+      </div>
     </div>
   );
 }

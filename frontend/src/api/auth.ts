@@ -3,8 +3,7 @@ import { apiFetch } from "./client";
 export type RegisterPayload = {
   email: string;
   password: string;
-  name: string;
-  surname: string;
+  display_name: string;
   company_name: string;
   plan_id: number;
 };
@@ -21,8 +20,7 @@ export type AuthResponse = {
 
 export type MeResponse = {
   user_id: string;
-  name: string;
-  surname: string;
+  display_name: string | null;
   email: string;
   company_id: number;
   role: string;

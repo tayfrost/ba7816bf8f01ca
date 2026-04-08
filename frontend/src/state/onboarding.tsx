@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type PlanType = "free" | "paid";
 export type PlanInterval = "month" | "year";
@@ -84,11 +84,23 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const [paymentSuccess, setPaymentSuccessState] = useState<boolean>(initial.paymentSuccess);
   const [companyId, setCompanyIdState] = useState<string | null>(initial.companyId);
   const [integrations, setIntegrations] = useState<Integration[]>(initial.integrations);
-  const [planInterval, setPlanIntervalState] = useState<PlanInterval>("month"); // ← здесь, не в loadPersisted
+  const [planInterval, setPlanIntervalState] = useState<PlanInterval>("month");
 
   useEffect(() => {
     savePersisted({ signup, plan, paymentSuccess, companyId, integrations });
   }, [signup, plan, paymentSuccess, companyId, integrations]);
+
+  // Stable reference: setIntegrations from useState never changes identity,
+  // so this callback is created once and never causes re-renders in consumers.
+  const setIntegrationConnected = useCallback((provider: Provider, connected: boolean) => {
+    setIntegrations((prev) =>
+      prev.map((i) =>
+        i.provider === provider
+          ? { ...i, connected, connectedAt: connected ? new Date().toISOString() : undefined }
+          : i
+      )
+    );
+  }, []);
 
   const value = useMemo<OnboardingState>(
     () => ({
@@ -105,15 +117,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       setPlan: (p) => setPlanState(p),
       setPaymentSuccess: (v) => setPaymentSuccessState(v),
 
-      setIntegrationConnected: (provider, connected) => {
-        setIntegrations((prev) =>
-          prev.map((i) =>
-            i.provider === provider
-              ? { ...i, connected, connectedAt: connected ? new Date().toISOString() : undefined }
-              : i
-          )
-        );
-      },
+      setIntegrationConnected,
 
       reset: () => {
         setSignupState(null);
@@ -128,7 +132,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         } catch {}
       },
     }),
-    [signup, plan, paymentSuccess, companyId, integrations, planInterval]
+    [signup, plan, paymentSuccess, companyId, integrations, planInterval, setIntegrationConnected]
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

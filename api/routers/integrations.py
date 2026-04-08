@@ -45,6 +45,15 @@ async def start_integration(
     return {"url": login_paths[provider]}
 
 
+@router.post("/gmail/personal/start")
+async def start_personal_gmail(user: CurrentUser = Depends(get_current_user)):
+    """
+    Any authenticated user (including viewers) can connect their own Gmail mailbox.
+    Uses the same OAuth flow but does not require admin/biller role.
+    """
+    return {"url": f"/gmail/oauth/login?company_id={user.company_id}"}
+
+
 @router.delete("/{provider}", status_code=status.HTTP_200_OK)
 async def disconnect_integration(
     provider: str,

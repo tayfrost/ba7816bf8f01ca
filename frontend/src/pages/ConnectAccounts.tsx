@@ -153,7 +153,7 @@ export default function ConnectAccounts() {
               Connect your work accounts
             </h1>
             <p style={{ color: "var(--dynamic-text)", opacity: 0.9 }} className="text-lg font-medium">
-              Add Slack/Gmail/Outlook so SentinelAI can monitor early burnout signals using consent-based, company-approved data sources.
+              Add Slack/Gmail so SentinelAI can monitor early burnout signals using consent-based, company-approved data sources.
             </p>
           </div>
 

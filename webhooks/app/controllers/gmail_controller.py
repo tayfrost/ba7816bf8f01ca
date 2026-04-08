@@ -10,6 +10,7 @@ business logic to services.
 
 import asyncio
 import logging
+import os
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
 
@@ -56,13 +57,14 @@ def gmail_callback(code: str = None, state: str = None):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid company_id in state")
 
+    frontend_url = os.environ.get("FRONTEND_URL", "https://sentinelai.work")
     try:
         user_email = process_gmail_oauth(code, company_id)
         logger.info(f"Gmail connected successfully: {user_email} company={company_id}")
-        return {"ok": True, "connected_user": user_email}
+        return RedirectResponse(f"{frontend_url}/connect-accounts?provider=gmail&status=success", status_code=302)
     except RuntimeError as e:
         logger.error(f"Gmail OAuth failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return RedirectResponse(f"{frontend_url}/connect-accounts?provider=gmail&status=error", status_code=302)
 
 
 @router.post("/events")

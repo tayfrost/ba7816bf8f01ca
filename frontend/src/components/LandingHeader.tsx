@@ -21,7 +21,7 @@ export default function LandingHeader({ isLoggedIn = false, theme = 'light', onT
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between gap-2">
         <div className="flex items-center gap-10">
           <div className="flex items-center cursor-pointer gap-4 shrink-0 min-w-0" onClick={() => navigate("/")}>
-            <img src="/logo-icon.png" alt="Sentinel Icon" className="w-18 h-auto" />
+            <img src="/logo-icon.png" alt="Sentinel Icon" className="w-10 h-auto object-contain" />
             
             {isLoggedIn && (
               <span style={{ 
@@ -41,7 +41,6 @@ export default function LandingHeader({ isLoggedIn = false, theme = 'light', onT
               <>
                 <a href="#features" className="hover:text-brand-deep transition-colors">Features</a>
                 <a href="#pricing" className="hover:text-brand-deep transition-colors">Pricing</a>
-                <a href="#security" className="hover:text-brand-deep transition-colors">Security</a>
               </>
             )}
           </div>

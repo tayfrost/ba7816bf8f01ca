@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import AuthCard from "../components/AuthCard";
-import { login } from "../api";
+import { login, getIntegrations, getMe } from "../api";
+import { useOnboarding } from "../state/onboarding";
+import type { Provider } from "../state/onboarding";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { setIntegrationConnected, setSignup } = useOnboarding();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +25,27 @@ export default function Login() {
     try {
       const res = await login({ email, password });
       localStorage.setItem("sentinel_access_token", res.access_token);
+
+      // Sync onboarding state from server to prevent stale localStorage
+      // causing wrong redirects for returning users on a fresh browser.
+      try {
+        const [me, apiIntegrations] = await Promise.all([getMe(), getIntegrations()]);
+
+        // Populate signup so RequireOnboarding doesn't redirect to /signup
+        setSignup({
+          companyName: "",   // will be overwritten by useCompany on next page
+          adminName: me.display_name || me.email,
+          adminEmail: me.email,
+        });
+
+        // Sync actual integration connected state
+        apiIntegrations.forEach((i) => {
+          setIntegrationConnected(i.provider as Provider, i.connected);
+        });
+      } catch {
+        // Non-fatal: stale state is better than blocking the login
+      }
+
       navigate("/dashboard");
     } catch (err) {
       setError("Login failed. Please check your credentials.");

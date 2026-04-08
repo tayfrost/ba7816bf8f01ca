@@ -28,7 +28,7 @@ SLACK_CLIENT_ID     = os.getenv("SLACK_CLIENT_ID")
 SLACK_CLIENT_SECRET = os.getenv("SLACK_CLIENT_SECRET")
 SLACK_REDIRECT_URI  = os.getenv("SLACK_REDIRECT_URI")
 
-SLACK_SCOPES = "app_mentions:read,channels:history,channels:read,chat:write,groups:history,users:read"
+SLACK_SCOPES = "app_mentions:read,channels:history,channels:read,chat:write,groups:history,users:read,users:read.email"
  
 GMAIL_REDIRECT_URI  = f"{BASE_URL}/gmail/oauth/callback" if BASE_URL else None
  

@@ -118,7 +118,7 @@ export default function EmployeeProfile() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "50px" }}>
-          <img src="/logo-text.png" alt="SentinelAI" style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px" }} />
+          <img src="/logo-text.png" alt="SentinelAI" style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px", filter: "brightness(0) invert(1)" }} />
         </div>
 
         <nav style={{ flexGrow: 1 }}>
@@ -128,7 +128,7 @@ export default function EmployeeProfile() {
         </nav>
 
         <button
-          onClick={reset}
+          onClick={() => { reset(); navigate("/login"); }}
           style={{
             background: "transparent",
             border: "1px solid rgba(255,255,255,0.1)",
