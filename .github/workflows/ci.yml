@@ -1,0 +1,254 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+jobs:
+  frontend:
+    name: Frontend lint + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  filter-tests:
+    name: Filter tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r filter/requirements.txt pytest
+
+      - name: Run tests
+        run: pytest -q filter/tests
+
+  payments-smoke:
+    name: Payments smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r payments/requirements.txt pytest
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sentinelai
+        run: pytest -q payments/tests
+
+  database-table-tests:
+    name: Database table tests
+    runs-on: ubuntu-latest
+    services:
+      pgvector:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sentinelai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest sqlalchemy psycopg[binary]
+
+      - name: Map pgvector hostname used by scripts
+        run: echo "127.0.0.1 pgvector" | sudo tee -a /etc/hosts
+
+      - name: Create schema
+        env:
+          POSTGRES_PASSWORD: postgres
+        run: python database/database/tables.py
+
+      - name: Run table tests
+        env:
+          DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/sentinelai
+        run: pytest -q database/tests/table_test
+
+  # Advisory suite: runs all other identified test folders that may need branch-specific updates.
+  ai-service-tests:
+    name: AI service tests (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ai_service/requirements.txt pytest
+
+      - name: Run tests
+        run: pytest -q ai_service/tests
+
+  knowledge-graph-tests:
+    name: Knowledge graph tests (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r knowledge-graph/requirements.txt pytest
+
+      - name: Run tests
+        run: pytest -q knowledge-graph/tests
+
+  webhooks-tests:
+    name: Webhooks unit tests (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r webhooks/requirements.txt pytest
+
+      - name: Run unit tests
+        env:
+          INTERNAL_API_URL: http://127.0.0.1:8000
+        run: pytest -q webhooks/app/tests --ignore=webhooks/app/tests/test_filter_integration.py
+
+  api-tests:
+    name: API tests (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    services:
+      pgvector:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sentinelai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r api/requirements.txt pytest psycopg[binary]
+
+      - name: Map pgvector hostname used by schema script
+        run: echo "127.0.0.1 pgvector" | sudo tee -a /etc/hosts
+
+      - name: Create schema
+        env:
+          POSTGRES_PASSWORD: postgres
+        run: python database/database/tables.py
+
+      - name: Start API server
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sentinelai
+        run: |
+          nohup python -m uvicorn api.main:app --host 127.0.0.1 --port 8006 >/tmp/api.log 2>&1 &
+
+      - name: Wait for health
+        run: |
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:8006/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API failed to start"
+          tail -n 200 /tmp/api.log || true
+          exit 1
+
+      - name: Run tests
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelai
+        run: pytest -q api/tests
