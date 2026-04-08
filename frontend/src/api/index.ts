@@ -40,7 +40,7 @@ export const getUsage = USE_MOCKS ? mockGetUsage : realGetUsage;
 export const getIntegrations = USE_MOCKS ? mockGetIntegrations : realGetIntegrations;
 export const startIntegration = USE_MOCKS ? mockStartIntegration : realStartIntegration;
 export const disconnectIntegration = USE_MOCKS ? mockDisconnectIntegration : realDisconnectIntegration;
-export { startPersonalGmail } from "./integrations";
+export { startPersonalGmail, startMemberGmail } from "./integrations";
 
 export { submitSignup } from "./signup";
 export type { SignupPayload } from "./signup";

@@ -54,6 +54,16 @@ async def start_personal_gmail(user: CurrentUser = Depends(get_current_user)):
     return {"url": f"/gmail/oauth/login?company_id={user.company_id}"}
 
 
+@router.post("/gmail/member/start")
+async def start_member_gmail(user: CurrentUser = Depends(get_current_user)):
+    """
+    Team member self-registration flow. Any authenticated user can connect their
+    Gmail mailbox. The OAuth callback redirects back to /register-gmail instead
+    of /connect-accounts so the experience is scoped to this simpler page.
+    """
+    return {"url": f"/gmail/oauth/login?company_id={user.company_id}&return_page=register-gmail"}
+
+
 @router.delete("/{provider}", status_code=status.HTTP_200_OK)
 async def disconnect_integration(
     provider: str,

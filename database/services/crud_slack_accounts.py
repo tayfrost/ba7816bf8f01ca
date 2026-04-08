@@ -237,6 +237,31 @@ def update_slack_account_email(
             session.close()
 
 
+def get_slack_account_by_email(
+    company_id: int,
+    email: str,
+    *,
+    session: optional[SASession] = None,
+) -> optional[model.SlackAccount]:
+    """Find the first Slack account with a matching email in a company. Returns None if not found."""
+    email = (email.strip() if isinstance(email, str) else None)
+    if not email:
+        return None
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        stmt = select(model.SlackAccount).where(
+            model.SlackAccount.company_id == int(company_id),
+            model.SlackAccount.email == email,
+        )
+        return session.execute(stmt).scalar_one_or_none()
+    finally:
+        if own_session:
+            session.close()
+
+
 def hard_delete_slack_account(
     team_id: str,
     slack_user_id: str,

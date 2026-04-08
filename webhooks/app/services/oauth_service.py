@@ -5,6 +5,7 @@ Handles OAuth flow business logic including processing OAuth responses and stori
 import os
 import json
 import logging
+import uuid as _uuid
 from datetime import datetime, timezone
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse, quote
 
@@ -112,9 +113,10 @@ def get_gmail_auth_url(company_id: int) -> str:
     return auth_url
 """
 
-def get_gmail_auth_url(company_id: int) -> str:
+def get_gmail_auth_url(company_id: int, return_page: str = "connect-accounts") -> str:
     """
-    Returns the Google consent URL with company_id encoded in state.
+    Returns the Google consent URL with company_id and return_page encoded in state.
+    State format: "{company_id}:{return_page}" — callback decodes both.
     Called by the gmail_controller login route.
     """
     flow = _build_flow()
@@ -122,7 +124,7 @@ def get_gmail_auth_url(company_id: int) -> str:
         access_type="offline",
         prompt="consent",
         include_granted_scopes="true",
-        state=str(company_id),
+        state=f"{company_id}:{return_page}",
     )
     parsed = urlparse(auth_url)
     params = parse_qs(parsed.query, keep_blank_values=True)
@@ -164,15 +166,35 @@ def process_gmail_oauth(code: str, company_id: int) -> str:
         )
         logger.info(f"Gmail token refreshed for {user_email}")
     else:
-        # First connect — create a viewer seat then the mailbox
-        user = db.create_viewer_seat(company_id, display_name=user_email)
-        mailbox = db.create_google_mailbox(
-            company_id,
-            user.user_id,
-            user_email,
-            creds.to_json(),
-        )
-        logger.info(f"Gmail mailbox created for {user_email} user_id={user.user_id}")
+        # First connect — try to link with an existing Slack account by email
+        # so we don't create a duplicate User row for someone already on Slack.
+        slack_acct = db.get_slack_account_by_email(company_id, user_email)
+        if slack_acct:
+            existing_user_id = (
+                _uuid.UUID(slack_acct.user_id)
+                if isinstance(slack_acct.user_id, str)
+                else slack_acct.user_id
+            )
+            mailbox = db.create_google_mailbox(
+                company_id,
+                existing_user_id,
+                user_email,
+                creds.to_json(),
+            )
+            logger.info(
+                f"Gmail mailbox linked to existing Slack user "
+                f"{user_email} user_id={existing_user_id}"
+            )
+        else:
+            # No Slack account found — create a fresh viewer seat
+            user = db.create_viewer_seat(company_id, display_name=user_email)
+            mailbox = db.create_google_mailbox(
+                company_id,
+                user.user_id,
+                user_email,
+                creds.to_json(),
+            )
+            logger.info(f"Gmail mailbox created for {user_email} user_id={user.user_id}")
  
     # 4. Start Gmail Pub/Sub watch
     resp = service.users().watch(

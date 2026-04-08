@@ -79,6 +79,17 @@ async def get_workspace_by_team_id(team_id: str):
     return ws
 
 
+@router.get("/slack/accounts/by-email", response_model=SlackAccountRead)
+async def get_slack_account_by_email_internal(email: str, company_id: int):
+    """Find a Slack account by email address within a company."""
+    acct = await asyncio.to_thread(
+        crud_slack_accounts.get_slack_account_by_email, company_id, email
+    )
+    if not acct:
+        raise HTTPException(status_code=404, detail="Slack account not found")
+    return acct
+
+
 @router.get("/slack/user/{team_id}/{slack_user_id}", response_model=SlackAccountRead)
 async def get_slack_user(team_id: str, slack_user_id: str):
     acct = await asyncio.to_thread(crud_slack_accounts.get_slack_account, team_id, slack_user_id)

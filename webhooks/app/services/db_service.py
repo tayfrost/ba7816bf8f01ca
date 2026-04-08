@@ -193,6 +193,15 @@ def get_slack_account(team_id: str, slack_user_id: str, **_) -> Optional[SimpleN
     return _ns(_get(f"/internal/slack/user/{team_id}/{slack_user_id}"))
 
 
+def get_slack_account_by_email(
+    company_id: int,
+    email: str,
+    **_,
+) -> Optional[SimpleNamespace]:
+    """Find a Slack account by email address within a company. Returns None if not found."""
+    return _ns(_get("/internal/slack/accounts/by-email", email=email, company_id=company_id))
+
+
 def update_slack_account_email(
     team_id: str,
     slack_user_id: str,
