@@ -5,16 +5,13 @@ services:
     image: ghcr.io/shopify/toxiproxy:2.9.0
     container_name: toxiproxy
     ports:
-      - "8474:8474"   # Toxiproxy API
-      - "18000:18000" # Proxy → api
-      - "18004:18004" # Proxy → payments
-      - "19000:19000" # Proxy → webhooks
+      - "127.0.0.1:8474:8474"   # Secured: Toxiproxy API
     networks:
       - sentinelai_default
     restart: unless-stopped
 
   toxiproxy-setup:
-    image: ghcr.io/shopify/toxiproxy:2.9.0
+    image: curlimages/curl:latest
     container_name: toxiproxy-setup
     depends_on:
       - toxiproxy
@@ -24,12 +21,11 @@ services:
     command:
       - |
         sleep 3
-        toxiproxy-cli -h toxiproxy:8474 create api_proxy --listen 0.0.0.0:18000 --upstream api:8000
-        toxiproxy-cli -h toxiproxy:8474 create payments_proxy --listen 0.0.0.0:18004 --upstream payments:8001
-        toxiproxy-cli -h toxiproxy:8474 create webhooks_proxy --listen 0.0.0.0:19000 --upstream webhooks:8000
+        curl -s -X POST -H "Content-Type: application/json" -d '{"name": "api_proxy", "listen": "0.0.0.0:18000", "upstream": "sentinelai-api-1:8000"}' http://toxiproxy:8474/proxies
+        curl -s -X POST -H "Content-Type: application/json" -d '{"name": "payments_proxy", "listen": "0.0.0.0:18004", "upstream": "sentinelai-payments-1:8001"}' http://toxiproxy:8474/proxies
+        curl -s -X POST -H "Content-Type: application/json" -d '{"name": "webhooks_proxy", "listen": "0.0.0.0:19000", "upstream": "sentinelai-webhooks-1:8000"}' http://toxiproxy:8474/proxies
         echo "Toxiproxy proxies created"
     restart: on-failure
-
   k6:
     image: grafana/k6:latest
     container_name: k6
@@ -43,10 +39,10 @@ services:
     image: locustio/locust:latest
     container_name: locust
     ports:
-      - "8089:8089"
+      - "127.0.0.1:8089:8089"   # Secured: Access via SSH Tunnel
     volumes:
       - ./locust:/mnt/locust
-    command: -f /mnt/locust/locustfile.py --host http://api:8000
+    command: -f /mnt/locust/locustfile.py --host http://sentinelai-api-1:8000
     networks:
       - sentinelai_default
     profiles: ["load"]
@@ -54,4 +50,4 @@ services:
 networks:
   sentinelai_default:
     external: true
-    name: sentinelai_default
+    name: sentinelai_sentinelai
