@@ -6,9 +6,10 @@ interface LandingHeaderProps {
   isLoggedIn?: boolean;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
+  onLogin?: () => void;
 }
 
-export default function LandingHeader({ isLoggedIn = false, theme = 'light', onToggleTheme }: LandingHeaderProps) {
+export default function LandingHeader({ isLoggedIn = false, theme = 'light', onToggleTheme, onLogin }: LandingHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { signup } = useOnboarding();
@@ -71,7 +72,7 @@ export default function LandingHeader({ isLoggedIn = false, theme = 'light', onT
             </>
           ) : (
             <>
-              <button className="text-brand-deep font-bold px-4 hover:opacity-70 transition-opacity" onClick={() => navigate("/login")}>
+              <button className="text-brand-deep font-bold px-4 hover:opacity-70 transition-opacity" onClick={onLogin ?? (() => navigate("/login"))}>
                 Login
               </button>
               <div className="w-32">

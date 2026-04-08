@@ -210,13 +210,36 @@ class StripeService:
         company_id: int,
         limit: int = 20,
     ) -> list[dict]:
-        """Return the last N Stripe invoices for a company."""
+        """Return the last N Stripe invoices for a company.
+
+        Free-plan companies have no Stripe customer and therefore no invoices —
+        we detect this via a join to stripe_subscriptions + subscription_plans and
+        return [] silently rather than raising an error.
+        """
         result = await db.execute(
-            select(Company).where(Company.company_id == company_id)
+            select(Company, SubscriptionPlan)
+            .outerjoin(
+                StripeSubscription,
+                (StripeSubscription.company_id == Company.company_id)
+                & (StripeSubscription.status == "active"),
+            )
+            .outerjoin(
+                SubscriptionPlan,
+                SubscriptionPlan.plan_id == StripeSubscription.plan_id,
+            )
+            .where(Company.company_id == company_id)
+            .limit(1)
         )
-        company = result.scalar_one_or_none()
-        if not company or not company.stripe_customer_id:
-            raise ValueError("Company has no Stripe customer — no invoices yet")
+        row = result.first()
+        if not row:
+            raise ValueError("Company not found")
+
+        company, plan = row
+
+        if not company.stripe_customer_id:
+            # Free plan (price_pennies == 0) or no active subscription yet —
+            # no Stripe customer is expected, so invoices are simply empty.
+            return []
 
         invoices = stripe.Invoice.list(
             customer=company.stripe_customer_id,

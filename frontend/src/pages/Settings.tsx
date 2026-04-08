@@ -27,7 +27,7 @@ export default function Settings() {
   const navigate = useNavigate();
 
   const [invoices, setInvoices] = useState<any[]>([]);
-  const planPrice = plan === "paid" ? "$29" : "$0";
+  const planPrice = plan === "paid" ? "£49" : "£0";
 
   const {
     users,
@@ -73,9 +73,14 @@ export default function Settings() {
           },
         });
         console.log("[settings] invoices response:", res.status);
+        if (!res.ok) {
+          console.log("[settings] invoices unavailable — free plan or no subscription yet");
+          setInvoices([]);
+          return;
+        }
         const data = await res.json();
         console.log("[settings] invoices count:", Array.isArray(data) ? data.length : "non-array");
-        setInvoices(data);
+        setInvoices(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("[settings] invoices fetch failed:", err);
       }

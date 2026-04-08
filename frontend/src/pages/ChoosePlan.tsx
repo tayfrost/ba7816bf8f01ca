@@ -14,9 +14,15 @@ export default function ChoosePlan() {
     navigate(`/signup?plan=${plan}`);
   }
 
+  function handleLoginAsFree() {
+    setPlan("free");
+    setPlanInterval("month");
+    navigate("/login");
+  }
+
   return (
     <div className="h-screen w-full flex flex-col bg-transparent font-sans overflow-y-auto scroll-smooth">
-      <LandingHeader />
+      <LandingHeader onLogin={handleLoginAsFree} />
 
       <div className="flex flex-col items-center mt-24 mb-12 shrink-0">
         <img 
