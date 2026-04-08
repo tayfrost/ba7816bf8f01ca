@@ -5,6 +5,7 @@ type Props = {
 };
 
 export default function PaymentMethodsList({ cards }: Props) {
+  console.log("[PaymentMethodsList] render. num cards:", cards.length);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "20px" }}>
       {cards.map((card) => (

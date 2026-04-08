@@ -11,11 +11,17 @@ const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL ?? "https://sentinelai.wo
 console.log("[payment] PAYMENTS_URL:", PAYMENTS_URL);
 
 export default function Payment() {
+  console.log("[payment component] render init");
   const { plan, planInterval } = useOnboarding();
   const { company } = useCompany();
   const [planId, setPlanId] = useState<number | null>(null);
 
   const companyId = company?.company_id; 
+
+  useEffect(() => {
+    console.log("[payment component] mounted. companyId:", companyId);
+    return () => console.log("[payment component] unmounted");
+  }, [companyId]);
 
   useEffect(() => {
     async function loadPlanId() {
@@ -38,10 +44,10 @@ export default function Payment() {
   }, [plan]);
 
   const handleCheckout = async () => {
-    console.log("[checkout] start — companyId:", company?.company_id, "planId:", planId, "interval:", planInterval);
+    console.log("[checkout] handleCheckout start — companyId:", company?.company_id, "planId:", planId, "interval:", planInterval);
 
     if (!company?.company_id || !planId) {
-      console.warn("[checkout] aborted — missing companyId or planId");
+      console.warn("[checkout] aborted — missing companyId:", company?.company_id, "or planId:", planId);
       alert("Missing company or plan");
       return;
     }

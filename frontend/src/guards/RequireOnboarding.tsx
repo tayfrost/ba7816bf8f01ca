@@ -11,7 +11,10 @@ export default function RequireOnboarding({ children }: { children: React.ReactN
   if (!plan) return <Navigate to="/plan" replace />;
 
   // Only paid plans must complete payment
-  if (plan === "paid" && !paymentSuccess) return <Navigate to="/payment" replace />;
+  if (plan === "paid" && !paymentSuccess) {
+    console.log("[RequireOnboarding] Redirecting to /payment -> plan=paid, paymentSuccess=false");
+    return <Navigate to="/payment" replace />;
+  }
 
   const anyConnected = hasAnyIntegrationConnected(integrations);
 

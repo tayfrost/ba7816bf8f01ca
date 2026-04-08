@@ -5,6 +5,12 @@
     <link rel="icon" type="image/png" href="/logo-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SentinelAI</title>
+    <script>
+      fetch('/logo-icon.png').then(res => {
+        if (!res.ok) console.error('[Favicon Check] Failed to load /logo-icon.png. Status:', res.status);
+        else console.log('[Favicon Check] /logo-icon.png loaded successfully. Status:', res.status);
+      }).catch(err => console.error('[Favicon Check] Error fetching /logo-icon.png:', err));
+    </script>
   </head>
   <body>
     <div id="root"></div>
