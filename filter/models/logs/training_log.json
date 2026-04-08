@@ -1,5 +1,5 @@
 {
-  "experiment_id": "bert_dual_head_20260407_024142",
+  "experiment_id": "bert_dual_head_20260408_004029",
   "config": {
     "model_name": "bert-base-uncased",
     "num_category_classes": 7,
@@ -17,29 +17,29 @@
   "epochs": [
     {
       "epoch": 1,
-      "train_loss": 2.134657985142299,
-      "val_loss": 1.4904292063279585,
-      "val_category_acc": 0.6885714285714286,
-      "val_severity_acc": 0.7442857142857143
+      "train_loss": 2.0972481744629996,
+      "val_loss": 1.5078155804764142,
+      "val_category_acc": 0.68,
+      "val_severity_acc": 0.7371428571428571
     },
     {
       "epoch": 2,
-      "train_loss": 1.4182025800432478,
-      "val_loss": 1.2353421585126356,
-      "val_category_acc": 0.7671428571428571,
-      "val_severity_acc": 0.7742857142857142
+      "train_loss": 1.4201618984767368,
+      "val_loss": 1.2907137247649105,
+      "val_category_acc": 0.76,
+      "val_severity_acc": 0.7571428571428571
     },
     {
       "epoch": 3,
-      "train_loss": 1.2220472984654562,
-      "val_loss": 1.1895343458110637,
-      "val_category_acc": 0.7685714285714286,
-      "val_severity_acc": 0.7857142857142857
+      "train_loss": 1.2259370547533035,
+      "val_loss": 1.2300140180371024,
+      "val_category_acc": 0.7742857142857142,
+      "val_severity_acc": 0.7785714285714286
     }
   ],
   "final_test_metrics": {
-    "loss": 1.2204008048230952,
-    "category_accuracy": 0.7514285714285714,
-    "severity_accuracy": 0.79
+    "loss": 1.2084991037845612,
+    "category_accuracy": 0.7585714285714286,
+    "severity_accuracy": 0.7857142857142857
   }
 }
