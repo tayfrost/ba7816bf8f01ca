@@ -11,8 +11,8 @@ import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import RequireAuth from "./guards/RequireAuth";
-import RequirePaidPlan from "./guards/RequirePaidPlan";
 import RegisterGmail from "./pages/RegisterGmail";
+import Privacy from "./pages/Privacy";
 import { useThemeToggle } from "./hooks/useThemeToggle";
 
 export default function App() {
@@ -94,6 +94,7 @@ export default function App() {
       />
 
       <Route path="/register-gmail" element={<RegisterGmail />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       <Route path="*" element={<Navigate to="/plan" replace />} />
     </Routes>
