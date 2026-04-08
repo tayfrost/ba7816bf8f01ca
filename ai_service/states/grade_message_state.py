@@ -25,7 +25,14 @@ async def grade_message(state: AgentState) -> AgentState:
         logger.error(f"[NODE: grade_message] Failed to load prompt: {e}")
         raise
     
+    filter_category = state.get('filter_category') or 'unknown'
+    filter_severity = state.get('filter_severity') or 'unknown'
+
     human_prompt = f"""Score this message on mental health dimensions (0-100): "{state['raw_message']}"
+
+Upstream filter signal (low-recall classifier — do not let it cap your scores, see system prompt):
+- filter_category: {filter_category}
+- filter_severity: {filter_severity}
 
 Respond with ONLY a JSON object, which has to obtain all of these fields with integer values between 0 and 100, missing any field or providing non-integer values will be considered an error:
 {{

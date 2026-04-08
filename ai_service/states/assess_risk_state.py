@@ -25,7 +25,14 @@ async def assess_risk(state: AgentState) -> AgentState:
         logger.error(f"[NODE: assess_risk] Failed to load prompt: {e}")
         raise
     
+    filter_category = state.get('filter_category') or 'unknown'
+    filter_severity = state.get('filter_severity') or 'unknown'
+
     human_prompt = f"""Analyze this message for mental health risk: "{state['raw_message']}"
+
+Upstream filter signal (treat as weak — see system prompt for how to weight this):
+- filter_category: {filter_category}
+- filter_severity: {filter_severity}
 
 Respond with ONLY a JSON object:
 {{"is_risk": true/false, "reasoning": "brief explanation"}}"""
