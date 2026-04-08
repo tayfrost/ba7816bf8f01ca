@@ -77,9 +77,9 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
         </g>
 
         <g fill="rgba(255,255,255,0.4)" fontSize="10" textAnchor="end">
-          <text x="32" y={padValue + 4}>{max}</text>
-          <text x="32" y={height / 2 + 4}>{mid.toFixed(0)}</text>
-          <text x="32" y={height - padValue + 4}>{min}</text>
+          <text x="32" y={padValue + 4}>{max < 1 ? max.toFixed(2) : Math.round(max)}</text>
+          <text x="32" y={height / 2 + 4}>{mid < 1 ? mid.toFixed(2) : Math.round(mid)}</text>
+          <text x="32" y={height - padValue + 4}>{min < 1 ? min.toFixed(2) : Math.round(min)}</text>
         </g>
 
         <polyline points={fillPath} fill="url(#areaGradient)" stroke="none" />
@@ -103,9 +103,9 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
         borderTop: "1px solid rgba(255,255,255,0.1)",
         paddingTop: "12px"
       }}>
-        <div style={{ color: "white" }}>MIN: <span style={{ color: "#ffb347", fontWeight: "bold" }}>{min}</span></div>
-        <div style={{ color: "white" }}>LATEST: <span style={{ color: "#ffb347", fontWeight: "bold" }}>{latest}</span></div>
-        <div style={{ color: "white" }}>MAX: <span style={{ color: "#ef6330", fontWeight: "bold" }}>{max}</span></div>
+        <div style={{ color: "white" }}>MIN: <span style={{ color: "#ffb347", fontWeight: "bold" }}>{min < 1 ? min.toFixed(3) : Math.round(min)}</span></div>
+        <div style={{ color: "white" }}>LATEST: <span style={{ color: "#ffb347", fontWeight: "bold" }}>{latest < 1 ? latest.toFixed(3) : Math.round(latest)}</span></div>
+        <div style={{ color: "white" }}>MAX: <span style={{ color: "#ef6330", fontWeight: "bold" }}>{max < 1 ? max.toFixed(3) : Math.round(max)}</span></div>
       </div>
     </div>
   );

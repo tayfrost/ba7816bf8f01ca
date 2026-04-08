@@ -119,7 +119,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {metricSeries.length === 0 ? (
+        {!metricSeries.some(s => s.points.length > 0) ? (
           <EmptyMetricsState />
         ) : viewMode === "focused" ?(
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>

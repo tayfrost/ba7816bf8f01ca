@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 INTERNAL_API_URL = os.getenv("INTERNAL_API_URL", "http://api:8000")
 
-_SEVERITY_MAP = {"low": 1, "medium": 2, "high": 3}
+_SEVERITY_MAP = {"none": 0, "early": 1, "middle": 2, "late": 3}
 
 
 def _build_scores_payload(state: AgentState) -> dict:
