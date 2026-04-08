@@ -118,6 +118,11 @@ export default function ChoosePlan() {
             <p className="text-brand-deep/40 text-sm font-medium tracking-wide">
               PROPRIETARY SENTINEL-AI ARCHITECTURE • 2026
             </p>
+            <p className="mt-3 text-brand-deep/30 text-xs">
+              <a href="/privacy" className="underline hover:text-brand-deep/60 transition-colors">
+                Privacy Policy
+              </a>
+            </p>
           </div>
         </div>
       </div>

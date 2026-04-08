@@ -2,7 +2,12 @@ import { enumerateDays } from "./timeRange";
 
 export type LinePoint = { date: string; value: number };
 
-export type MetricKey = "riskScore" | "messagesFlagged" | "overtimeIndex";
+export type MetricKey =
+  | "depression"
+  | "burnout"
+  | "stress"
+  | "harassment"
+  | "suicidal_ideation";
 
 export type MetricSeries = {
   key: MetricKey;
@@ -10,42 +15,33 @@ export type MetricSeries = {
   points: LinePoint[];
 };
 
-function clamp(n: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, n));
-}
+const CATEGORY_LABELS: Record<MetricKey, string> = {
+  depression: "Depression",
+  burnout: "Burnout",
+  stress: "Stress",
+  harassment: "Harassment",
+  suicidal_ideation: "Suicidal ideation",
+};
 
 function seededRandom(seed: number) {
-  // deterministic-ish generator
-  let x = Math.sin(seed) * 10000;
+  const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
 }
 
 export function makeSeries(range: { start: string; end: string }, key: MetricKey): MetricSeries {
   const days = enumerateDays(range.start, range.end);
   const points = days.map((d, i) => {
-    const baseSeed = Number(d.replaceAll("-", ""));
+    const baseSeed = Number(d.replaceAll("-", "")) + key.length;
     const r = seededRandom(baseSeed + i);
-    let value = 0;
-
-    if (key === "riskScore") value = clamp(Math.round(30 + r * 60), 0, 100);
-    if (key === "messagesFlagged") value = clamp(Math.round(r * 20), 0, 30);
-    if (key === "overtimeIndex") value = clamp(Math.round(10 + r * 40), 0, 100);
-
+    const value = Math.round(r * 1000) / 1000; // 0–1 score range
     return { date: d, value };
   });
 
-  const label =
-    key === "riskScore" ? "Risk score" :
-    key === "messagesFlagged" ? "Flagged messages" :
-    "Overtime index";
-
-  return { key, label, points };
+  return { key, label: CATEGORY_LABELS[key], points };
 }
 
 export function makeAllSeries(range: { start: string; end: string }): MetricSeries[] {
-  return [
-    makeSeries(range, "riskScore"),
-    makeSeries(range, "messagesFlagged"),
-    makeSeries(range, "overtimeIndex"),
-  ];
+  return (Object.keys(CATEGORY_LABELS) as MetricKey[]).map((key) =>
+    makeSeries(range, key)
+  );
 }

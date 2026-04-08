@@ -1,9 +1,10 @@
 from database.database import models as model
 from database.services.utility_functions import Session
-from sqlalchemy import select
+from sqlalchemy import select, func, cast, Date
 from sqlalchemy.orm import Session as SASession
 from typing import Optional as optional
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime, date
 import uuid
 
 
@@ -189,6 +190,85 @@ def update_incident_scores(
     except Exception:
         session.rollback()
         raise
+    finally:
+        if own_session:
+            session.close()
+
+
+def list_daily_score_averages(
+    company_id: int,
+    start_dt: datetime,
+    end_dt: datetime,
+    *,
+    session: optional[SASession] = None,
+) -> list[dict]:
+    """
+    Return daily average scores per employee, then averaged across employees.
+
+    Two-level aggregation:
+      1. Inner: per (day, user_id) — average each score column so every
+         employee contributes equally regardless of message volume.
+      2. Outer: per day — average those per-employee averages across all
+         employees active that day.
+
+    Returns a list of dicts with keys:
+        day (date), depression, burnout, stress, harassment, suicidal_ideation
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+    try:
+        MI = model.MessageIncident
+        IS = model.IncidentScores
+        day_col = cast(MI.sent_at, Date).label("day")
+
+        # Inner subquery: per-employee daily averages
+        per_user = (
+            select(
+                day_col,
+                MI.user_id,
+                func.avg(IS.depression_score).label("depression"),
+                func.avg(IS.burnout_score).label("burnout"),
+                func.avg(IS.stress_score).label("stress"),
+                func.avg(IS.harassment_score).label("harassment"),
+                func.avg(IS.suicidal_ideation_score).label("suicidal_ideation"),
+            )
+            .join(IS, IS.message_id == MI.message_id)
+            .where(
+                MI.company_id == int(company_id),
+                MI.sent_at >= start_dt,
+                MI.sent_at <= end_dt,
+            )
+            .group_by(day_col, MI.user_id)
+            .subquery()
+        )
+
+        # Outer: average per-employee values across all employees per day
+        stmt = (
+            select(
+                per_user.c.day,
+                func.avg(per_user.c.depression).label("depression"),
+                func.avg(per_user.c.burnout).label("burnout"),
+                func.avg(per_user.c.stress).label("stress"),
+                func.avg(per_user.c.harassment).label("harassment"),
+                func.avg(per_user.c.suicidal_ideation).label("suicidal_ideation"),
+            )
+            .group_by(per_user.c.day)
+            .order_by(per_user.c.day)
+        )
+
+        rows = session.execute(stmt).all()
+        return [
+            {
+                "day": row.day,
+                "depression": float(row.depression or 0),
+                "burnout": float(row.burnout or 0),
+                "stress": float(row.stress or 0),
+                "harassment": float(row.harassment or 0),
+                "suicidal_ideation": float(row.suicidal_ideation or 0),
+            }
+            for row in rows
+        ]
     finally:
         if own_session:
             session.close()
