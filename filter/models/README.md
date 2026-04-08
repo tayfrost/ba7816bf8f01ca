@@ -90,6 +90,14 @@ Training:
 | **Severity Accuracy** | 79.00% |
 | **Test Loss** | 1.2204 |
 
+#### Run 3 (timestamp input removed from model text)
+
+| Metric | Score |
+| :----- | :---- |
+| **Category Accuracy** | 75.86% |
+| **Severity Accuracy** | 78.57% |
+| **Test Loss** | 1.2085 |
+
 **Performance Context:**
 
 - Category: 5.3x better than random (7-class baseline: 14.3%)
