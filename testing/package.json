@@ -1,0 +1,20 @@
+{
+  "name": "sentinelai-testing",
+  "version": "1.0.0",
+  "description": "Resilience and load testing for SentinelAI",
+  "scripts": {
+    "test:playwright": "playwright test",
+    "test:playwright:ui": "playwright test --ui",
+    "test:k6": "docker run --rm --network sentinelai_default -v $(pwd)/k6:/scripts grafana/k6 run /scripts/load_test.js",
+    "test:locust": "docker compose -f docker-compose.resilience.yml --profile load up locust",
+    "test:chaos": "bash chaos/run_scenarios.sh all",
+    "test:chaos:latency": "bash chaos/run_scenarios.sh latency",
+    "test:chaos:down": "bash chaos/run_scenarios.sh down",
+    "infra:up": "docker compose -f docker-compose.resilience.yml up -d",
+    "infra:down": "docker compose -f docker-compose.resilience.yml down"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.43.0",
+    "typescript": "^5.4.0"
+  }
+}
