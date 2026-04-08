@@ -12,33 +12,23 @@ INTERNAL_API_URL = os.getenv("INTERNAL_API_URL", "http://api:8000")
 
 _SEVERITY_MAP = {"none": 0, "early": 1, "middle": 2, "late": 3}
 
+_SCORE_COLUMNS = (
+    "neutral_score", "humor_sarcasm_score", "stress_score",
+    "burnout_score", "depression_score", "harassment_score", "suicidal_ideation_score",
+)
+
 
 def _build_scores_payload(state: AgentState) -> dict:
-    """Map LLM grades and filter output to incident_scores columns."""
-    hr_report = state.get("hr_report") or {}
-    grades = hr_report.get("scores") or {}
+    """Pass LLM scores (0-100 ints) through to incident_scores columns as 0.0-1.0 floats."""
+    grades = (state.get("hr_report") or {}).get("scores") or {}
 
     def _norm(key: str) -> float:
-        """Normalise a 0-100 LLM grade to 0.0-1.0."""
-        return min(1.0, max(0.0, float(grades.get(key, 0)) / 100.0))
+        return round(min(1.0, max(0.0, float(grades.get(key, 0)) / 100.0)), 4)
 
-    stress      = _norm("stress_level")
-    suicidal    = _norm("suicide_risk")
-    burnout     = _norm("burnout_score")
-    depression  = _norm("depression_indicators")
-    harassment  = _norm("harassment_score")
-    # isolation_tendency boosts depression slightly (related dimension)
-    isolation   = _norm("isolation_tendency")
-    depression  = round(min(1.0, (depression + isolation * 0.5) / 1.5), 4)
-    neutral     = round(max(0.0, 1.0 - max(stress, suicidal, burnout, depression, harassment)), 4)
-
-    # Derive category from the highest AI grade, not the filter's label
     risk_scores = {
-        "stress":            stress,
-        "suicidal_ideation": suicidal,
-        "burnout":           burnout,
-        "depression":        depression,
-        "harassment":        harassment,
+        col: _norm(col)
+        for col in _SCORE_COLUMNS
+        if col != "neutral_score" and col != "humor_sarcasm_score"
     }
     predicted_category = max(risk_scores, key=risk_scores.__getitem__)
     if risk_scores[predicted_category] < 0.2:
@@ -47,15 +37,10 @@ def _build_scores_payload(state: AgentState) -> dict:
     severity_str = str(state.get("filter_severity", "")).lower()
 
     return {
-        "neutral_score":           neutral,
-        "humor_sarcasm_score":     0.0,
-        "stress_score":            round(stress, 4),
-        "burnout_score":           round(burnout, 4),
-        "depression_score":        depression,
-        "harassment_score":        round(harassment, 4),
-        "suicidal_ideation_score": round(suicidal, 4),
-        "predicted_category":      predicted_category,
-        "predicted_severity":      _SEVERITY_MAP.get(severity_str),
+        col: _norm(col) for col in _SCORE_COLUMNS
+    } | {
+        "predicted_category": predicted_category,
+        "predicted_severity": _SEVERITY_MAP.get(severity_str),
     }
 
 

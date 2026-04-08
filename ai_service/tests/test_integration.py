@@ -187,7 +187,7 @@ class TestDeployedService:
                     log(f"  • {rec}")
             
             assert "score" in data
-            assert data['score']['stress_level'] >= 0
+            assert data['score']['stress_score'] >= 0
             log("\n✓ PASSED")
         else:
             log(f"✗ FAILED - Unexpected status code: {response.status_code}")
@@ -267,7 +267,7 @@ class TestDeployedService:
             log("\n[AI AGENT ANALYSIS]")
             
             if data.get('score'):
-                risk_level = "CONFIRMED" if data['score'].get('anxiety_markers', 0) > 50 else "MINIMAL"
+                risk_level = "CONFIRMED" if data['score'].get('suicidal_ideation_score', 0) > 50 else "MINIMAL"
                 log(f"Risk Assessment: {risk_level}")
                 
                 log("\nMental Health Scores:")
@@ -336,7 +336,7 @@ class TestDeployedService:
             
             if response.status_code == 200:
                 data = response.json()
-                log(f"  ✓ Success - Risk detected: {data.get('score', {}).get('stress_level', 0) > 0}")
+                log(f"  ✓ Success - Risk detected: {data.get('score', {}).get('stress_score', 0) > 0}")
             else:
                 log(f"  ✗ Failed")
                 all_passed = False

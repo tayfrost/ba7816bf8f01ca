@@ -213,8 +213,9 @@ async def _analyze_single(request: AnalyzeRequest, mcp_client: Client) -> AgentO
     if not result.get("is_confirmed_risk"):
         return AgentOutput(
             score=MentalHealthScore(
-                stress_level=0, suicide_risk=0, burnout_score=0,
-                depression_indicators=0, anxiety_markers=0, isolation_tendency=0,
+                neutral_score=100, humor_sarcasm_score=0, stress_score=0,
+                burnout_score=0, depression_score=0, harassment_score=0,
+                suicidal_ideation_score=0,
             ),
             response="No significant mental health risk detected.",
         )
@@ -258,8 +259,9 @@ async def analyze_messages_batch(
                 logger.error(f"[BATCH] Message {i} failed: {result}")
                 outputs.append(AgentOutput(
                     score=MentalHealthScore(
-                        stress_level=0, suicide_risk=0, burnout_score=0,
-                        depression_indicators=0, anxiety_markers=0, isolation_tendency=0,
+                        neutral_score=100, humor_sarcasm_score=0, stress_score=0,
+                        burnout_score=0, depression_score=0, harassment_score=0,
+                        suicidal_ideation_score=0,
                     ),
                     response=f"Analysis failed for this message: {str(result)}",
                 ))

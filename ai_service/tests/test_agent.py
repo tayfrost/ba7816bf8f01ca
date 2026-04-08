@@ -59,23 +59,24 @@ class TestEndpoints:
             "is_confirmed_risk": True,
             "hr_report": {
                 "scores": {
-                    "stress_level": 75,
-                    "suicide_risk": 20,
+                    "neutral_score": 5,
+                    "humor_sarcasm_score": 0,
+                    "stress_score": 75,
                     "burnout_score": 80,
-                    "depression_indicators": 45,
-                    "anxiety_markers": 60,
-                    "isolation_tendency": 35,
+                    "depression_score": 45,
+                    "harassment_score": 20,
+                    "suicidal_ideation_score": 20,
                 },
                 "response": "High stress detected. Recommend immediate support.",
                 "recommendations": ["EAP referral", "Manager check-in"],
             },
         }
-        
+
         response = client.post("/analyze", json={"message": "I'm completely burned out"})
         assert response.status_code == 200
         data = response.json()
         assert "score" in data
-        assert data["score"]["stress_level"] == 75
+        assert data["score"]["stress_score"] == 75
         assert data["score"]["burnout_score"] == 80
         assert "High stress detected" in data["response"]
 
@@ -122,15 +123,15 @@ class TestWorkflowNodes:
         """Test grade_message node."""
         mock_llm_instance = MagicMock()
         mock_response = MagicMock()
-        mock_response.content = '{"stress_level": 65, "suicide_risk": 15, "burnout_score": 70, "depression_indicators": 40, "anxiety_markers": 50, "isolation_tendency": 25}'
+        mock_response.content = '{"neutral_score": 10, "humor_sarcasm_score": 0, "stress_score": 65, "burnout_score": 70, "depression_score": 40, "harassment_score": 20, "suicidal_ideation_score": 15}'
         mock_llm_instance.ainvoke = AsyncMock(return_value=mock_response)
         mock_chat_openai.return_value = mock_llm_instance
-        
+
         state = AgentState(raw_message="Feeling stressed", is_confirmed_risk=True)
         result = await grade_message(state)
-        
+
         assert result['hr_report'] is not None
-        assert result['hr_report']['scores']['stress_level'] == 65
+        assert result['hr_report']['scores']['stress_score'] == 65
         assert result['hr_report']['scores']['burnout_score'] == 70
     
     @pytest.mark.asyncio
@@ -150,7 +151,7 @@ class TestWorkflowNodes:
         state = AgentState(
             raw_message="Overwhelmed with work",
             is_confirmed_risk=True,
-            hr_report={"scores": {"stress_level": 60}},
+            hr_report={"scores": {"stress_score": 60}},
             mcp_client=MagicMock(),
         )
         result = await generate_recommendations(state)

@@ -16,16 +16,19 @@ client = TestClient(app)
 
 
 def _zero_score():
-    return dict(stress_level=0, suicide_risk=0, burnout_score=0,
-                depression_indicators=0, anxiety_markers=0, isolation_tendency=0)
+    return dict(neutral_score=100, humor_sarcasm_score=0, stress_score=0,
+                burnout_score=0, depression_score=0, harassment_score=0,
+                suicidal_ideation_score=0)
 
 
 def _risk_result(stress=75, burnout=80):
     return {
         "is_confirmed_risk": True,
         "hr_report": {
-            "scores": dict(stress_level=stress, suicide_risk=20, burnout_score=burnout,
-                           depression_indicators=45, anxiety_markers=60, isolation_tendency=35),
+            "scores": dict(neutral_score=5, humor_sarcasm_score=0,
+                           stress_score=stress, burnout_score=burnout,
+                           depression_score=45, harassment_score=20,
+                           suicidal_ideation_score=20),
             "response": "High stress detected. Recommend immediate support.",
             "recommendations": ["EAP referral", "Manager check-in"],
         },
@@ -55,7 +58,7 @@ class TestAnalyzeBatchEndpoint:
         mock_ainvoke.return_value = _risk_result()
         resp = client.post("/analyze/batch", json={"messages": ["burned out"]})
         assert resp.status_code == 200
-        assert resp.json()["results"][0]["score"]["stress_level"] == 75
+        assert resp.json()["results"][0]["score"]["stress_score"] == 75
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
     @patch("agent.agent.ainvoke", new_callable=AsyncMock)
@@ -66,7 +69,7 @@ class TestAnalyzeBatchEndpoint:
         })
         data = resp.json()
         assert data["results"][0]["response"] == "No significant mental health risk detected."
-        assert data["results"][1]["score"]["stress_level"] == 90
+        assert data["results"][1]["score"]["stress_score"] == 90
         assert data["results"][2]["response"] == "No significant mental health risk detected."
 
     def test_empty_list_rejected(self):
@@ -111,7 +114,7 @@ class TestBatchPartialFailure:
         assert data["total"] == 3
         assert len(data["results"]) == 3
         failed = data["results"][1]
-        assert failed["score"]["stress_level"] == 0
+        assert failed["score"]["stress_score"] == 0
         assert "failed" in failed["response"].lower() or "error" in failed["response"].lower()
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
@@ -122,7 +125,7 @@ class TestBatchPartialFailure:
         assert resp.status_code == 200
         data = resp.json()
         for r in data["results"]:
-            assert r["score"]["stress_level"] == 0
+            assert r["score"]["stress_score"] == 0
 
 
 class TestProcessedCount:
@@ -152,8 +155,8 @@ class TestBatchOrderPreservation:
             "messages": ["low", "high", "none"]
         })
         data = resp.json()
-        assert data["results"][0]["score"]["stress_level"] == 10
-        assert data["results"][1]["score"]["stress_level"] == 90
+        assert data["results"][0]["score"]["stress_score"] == 10
+        assert data["results"][1]["score"]["stress_score"] == 90
         assert data["results"][2]["response"] == "No significant mental health risk detected."
 
 

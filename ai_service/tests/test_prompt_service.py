@@ -57,24 +57,32 @@ def test_list_available_prompts():
 
 
 def test_prompt_content_requirements():
-    """Test that system prompt contains required sections."""
+    """Test that the grade_message system prompt contains all scoring dimensions."""
+    service = PromptService()
+    prompt = service.load_prompt(subfolder="grade_message")
+
+    # These must match the DB incident_scores columns and MentalHealthScore fields
+    required_dimensions = [
+        "neutral_score",
+        "humor_sarcasm_score",
+        "stress_score",
+        "burnout_score",
+        "depression_score",
+        "harassment_score",
+        "suicidal_ideation_score",
+    ]
+
+    for dimension in required_dimensions:
+        assert dimension in prompt, f"Missing dimension in grade_message prompt: {dimension}"
+
+    assert "risk" in prompt.lower()
+
+
+def test_root_system_prompt_content():
+    """Test that the root system prompt contains risk assessment guidance."""
     service = PromptService()
     prompt = service.load_prompt()
-    
-    # Check for scoring dimensions
-    required_dimensions = [
-        "stress_level",
-        "suicide_risk",
-        "burnout_score",
-        "depression_indicators",
-        "anxiety_markers",
-        "isolation_tendency"
-    ]
-    
-    for dimension in required_dimensions:
-        assert dimension in prompt, f"Missing dimension: {dimension}"
-    
-    # Check for key responsibilities
+
     assert "Risk Confirmation" in prompt or "risk" in prompt.lower()
     assert "HR" in prompt or "recommendations" in prompt.lower()
 

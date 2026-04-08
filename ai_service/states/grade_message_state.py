@@ -34,25 +34,37 @@ Upstream filter signal (low-recall classifier — do not let it cap your scores,
 - filter_category: {filter_category}
 - filter_severity: {filter_severity}
 
-Respond with ONLY a JSON object, which has to obtain all of these fields with integer values between 0 and 100, missing any field or providing non-integer values will be considered an error:
+Respond with ONLY a JSON object containing all of these fields with integer values between 0 and 100.
+Missing any field or providing non-integer values will be treated as an error.
 {{
-  "stress_level": 0-100,
-  "suicide_risk": 0-100,
+  "neutral_score": 0-100,
+  "humor_sarcasm_score": 0-100,
+  "stress_score": 0-100,
   "burnout_score": 0-100,
-  "depression_indicators": 0-100,
+  "depression_score": 0-100,
   "harassment_score": 0-100,
-  "isolation_tendency": 0-100
-}}"""
-    
+  "suicidal_ideation_score": 0-100
+}}
+
+Field guidance:
+- neutral_score: how neutral / low-risk the message is overall (high = safe, low = concerning)
+- humor_sarcasm_score: degree of humor or sarcasm present (does NOT reduce other scores)
+- stress_score: occupational or situational stress indicators
+- burnout_score: emotional exhaustion, detachment, reduced efficacy
+- depression_score: low mood, hopelessness, anhedonia
+- harassment_score: hostility, threats, bullying directed at or by the author
+- suicidal_ideation_score: any self-harm or suicidal content"""
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=human_prompt)
     ]
-    
+
     logger.info("[NODE: grade_message] Calling LLM for scoring")
     default_scores = {
-        "stress_level": 0, "suicide_risk": 0, "burnout_score": 0,
-        "depression_indicators": 0, "harassment_score": 0, "isolation_tendency": 0,
+        "neutral_score": 100, "humor_sarcasm_score": 0, "stress_score": 0,
+        "burnout_score": 0, "depression_score": 0, "harassment_score": 0,
+        "suicidal_ideation_score": 0,
     }
     try:
         response = await llm.ainvoke(messages)
@@ -61,9 +73,11 @@ Respond with ONLY a JSON object, which has to obtain all of these fields with in
             content = next((b["text"] for b in content if isinstance(b, dict) and "text" in b), "")
         logger.info(f"[NODE: grade_message] LLM response (first 100 chars): {content[:100]}")
         scores = safe_json_loads(content)
-        # Ensure all expected keys exist
+        # Ensure all expected keys exist with safe defaults
         for k, v in default_scores.items():
             scores.setdefault(k, v)
+        # Clamp all values to 0-100 int
+        scores = {k: max(0, min(100, int(scores[k]))) for k in default_scores}
     except Exception as e:
         logger.warning(f"[NODE: grade_message] Grading failed, using zero scores: {e}")
         scores = default_scores

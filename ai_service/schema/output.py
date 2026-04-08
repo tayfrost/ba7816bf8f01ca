@@ -5,14 +5,15 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class MentalHealthScore(BaseModel):
-    """Individual mental health dimension score."""
-    
-    stress_level: int = Field(..., ge=0, le=100, description="Stress level score (0-100)")
-    suicide_risk: int = Field(..., ge=0, le=100, description="Suicide risk score (0-100)")
-    burnout_score: int = Field(..., ge=0, le=100, description="Burnout score (0-100)")
-    depression_indicators: int = Field(..., ge=0, le=100, description="Depression indicators score (0-100)")
-    anxiety_markers: int = Field(..., ge=0, le=100, description="Anxiety markers score (0-100)")
-    isolation_tendency: int = Field(..., ge=0, le=100, description="Isolation tendency score (0-100)")
+    """Mental health dimension scores — field names match incident_scores DB columns."""
+
+    neutral_score: int = Field(..., ge=0, le=100, description="Neutral / no-risk score (0-100)")
+    humor_sarcasm_score: int = Field(..., ge=0, le=100, description="Humor or sarcasm present (0-100)")
+    stress_score: int = Field(..., ge=0, le=100, description="Stress level (0-100)")
+    burnout_score: int = Field(..., ge=0, le=100, description="Burnout indicators (0-100)")
+    depression_score: int = Field(..., ge=0, le=100, description="Depression indicators (0-100)")
+    harassment_score: int = Field(..., ge=0, le=100, description="Harassment / hostility (0-100)")
+    suicidal_ideation_score: int = Field(..., ge=0, le=100, description="Suicidal ideation risk (0-100)")
 
 
 class AgentOutput(BaseModel):
@@ -25,12 +26,13 @@ class AgentOutput(BaseModel):
         json_schema_extra = {
             "example": {
                 "score": {
-                    "stress_level": 65,
-                    "suicide_risk": 10,
+                    "neutral_score": 10,
+                    "humor_sarcasm_score": 5,
+                    "stress_score": 65,
                     "burnout_score": 70,
-                    "depression_indicators": 45,
-                    "anxiety_markers": 55,
-                    "isolation_tendency": 30
+                    "depression_score": 45,
+                    "harassment_score": 20,
+                    "suicidal_ideation_score": 10
                 },
                 "response": "Based on the analysis, moderate stress and burnout indicators detected..."
             }
