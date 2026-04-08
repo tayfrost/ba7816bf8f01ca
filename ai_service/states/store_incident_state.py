@@ -76,6 +76,14 @@ async def store_incident(state: AgentState) -> AgentState:
                 json=payload,
                 timeout=10.0,
             )
+            if not response.is_success:
+                logger.error(
+                    f"[NODE: store_incident] API rejected incident — "
+                    f"status={response.status_code} body={response.text!r} "
+                    f"company_id={state['company_id']} user_id={payload['user_id']} "
+                    f"source={payload['source']}"
+                )
+                return {**state, "store_succeeded": False, "store_error": response.text}
             response.raise_for_status()
 
         message_id = response.json().get("message_id")
@@ -83,6 +91,7 @@ async def store_incident(state: AgentState) -> AgentState:
 
     except Exception as e:
         logger.error(f"[NODE: store_incident] Failed to store incident: {e}", exc_info=True)
+        return {**state, "store_succeeded": False, "store_error": str(e)}
 
     if message_id:
         try:
@@ -96,6 +105,6 @@ async def store_incident(state: AgentState) -> AgentState:
                 scores_resp.raise_for_status()
             logger.info(f"[NODE: store_incident] Stored scores for {message_id}")
         except Exception as e:
-            logger.error(f"[NODE: store_incident] Failed to store scores: {e}", exc_info=True)
+            logger.error(f"[NODE: store_incident] Failed to store scores for {message_id}: {e}", exc_info=True)
 
-    return state
+    return {**state, "store_succeeded": True, "store_error": None}

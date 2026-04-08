@@ -45,6 +45,7 @@ def _build_feed_items(
         text = content.get("text", "")
 
         items.append(IncidentFeedItem(
+            message_id=str(inc.message_id),
             incident_id=idx,
             company_id=inc.company_id,
             team_id=team_id,

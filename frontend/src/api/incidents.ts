@@ -1,7 +1,8 @@
 import { apiFetch } from "./client";
 
 export type Incident = {
-  incident_id: number;
+  message_id: string;        // real DB UUID
+  incident_id: number;       // display row number only
   company_id: number;
   team_id: string;
   slack_user_id: string;
@@ -10,6 +11,7 @@ export type Incident = {
   channel_id: string;
   raw_message_text: { text?: string } | null;
   class_reason: string;
+  recommendation?: string;
 };
 
 export type IncidentStats = {

@@ -31,7 +31,8 @@ class MessageIncidentRead(BaseModel):
 
 class IncidentFeedItem(BaseModel):
     """Frontend-facing incident shape for the dashboard incident feed."""
-    incident_id: int
+    message_id: str          # real DB UUID — use this for lookups
+    incident_id: int         # synthetic row number for display ordering only
     company_id: int
     team_id: str
     slack_user_id: str
