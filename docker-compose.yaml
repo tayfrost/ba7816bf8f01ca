@@ -190,7 +190,7 @@ services:
         VITE_PAYMENTS_URL: https://sentinelai.work
     container_name: sentinel-frontend
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       webhooks:
         condition: service_healthy
