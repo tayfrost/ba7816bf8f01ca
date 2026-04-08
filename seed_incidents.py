@@ -37,7 +37,7 @@ def build_dsn() -> str:
     if url := os.getenv("DATABASE_URL"):
         return url
     password = os.environ.get("POSTGRES_PASSWORD", "postgres")
-    host     = os.environ.get("POSTGRES_HOST", "localhost")
+    host     = os.environ.get("POSTGRES_HOST", "pgvector")
     port     = os.environ.get("POSTGRES_PORT", "5432")
     db       = os.environ.get("POSTGRES_DB", "sentinelai")
     user     = os.environ.get("POSTGRES_USER", "postgres")

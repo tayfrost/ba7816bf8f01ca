@@ -26,8 +26,23 @@ def _build_scores_payload(state: AgentState) -> dict:
     suicidal    = _norm("suicide_risk")
     burnout     = _norm("burnout_score")
     depression  = _norm("depression_indicators")
-    harassment  = _norm("anxiety_markers")
+    harassment  = _norm("harassment_score")
+    # isolation_tendency boosts depression slightly (related dimension)
+    isolation   = _norm("isolation_tendency")
+    depression  = round(min(1.0, (depression + isolation * 0.5) / 1.5), 4)
     neutral     = round(max(0.0, 1.0 - max(stress, suicidal, burnout, depression, harassment)), 4)
+
+    # Derive category from the highest AI grade, not the filter's label
+    risk_scores = {
+        "stress":            stress,
+        "suicidal_ideation": suicidal,
+        "burnout":           burnout,
+        "depression":        depression,
+        "harassment":        harassment,
+    }
+    predicted_category = max(risk_scores, key=risk_scores.__getitem__)
+    if risk_scores[predicted_category] < 0.2:
+        predicted_category = "neutral"
 
     severity_str = str(state.get("filter_severity", "")).lower()
 
@@ -36,10 +51,10 @@ def _build_scores_payload(state: AgentState) -> dict:
         "humor_sarcasm_score":     0.0,
         "stress_score":            round(stress, 4),
         "burnout_score":           round(burnout, 4),
-        "depression_score":        round(depression, 4),
+        "depression_score":        depression,
         "harassment_score":        round(harassment, 4),
         "suicidal_ideation_score": round(suicidal, 4),
-        "predicted_category":      state.get("filter_category"),
+        "predicted_category":      predicted_category,
         "predicted_severity":      _SEVERITY_MAP.get(severity_str),
     }
 

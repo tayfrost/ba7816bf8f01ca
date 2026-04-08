@@ -33,7 +33,7 @@ Respond with ONLY a JSON object, which has to obtain all of these fields with in
   "suicide_risk": 0-100,
   "burnout_score": 0-100,
   "depression_indicators": 0-100,
-  "anxiety_markers": 0-100,
+  "harassment_score": 0-100,
   "isolation_tendency": 0-100
 }}"""
     
