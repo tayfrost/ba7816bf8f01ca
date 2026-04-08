@@ -1,15 +1,15 @@
 # SentinelAI Knowledge Graph MCP Server
 
-MCP server that exposes the SentinelAI evidence-based mental health knowledge graph as tools for AI agents via **SSE (Server-Sent Events)** transport.
+MCP server that exposes the SentinelAI evidence-based mental health knowledge graph as tools for AI agents via **streamable-http** transport.
 
 **92 DOI-verified papers | 368 advice items | 24 topics | 37 techniques**
 
 ## Architecture
 
 ```
-┌──────────────┐     SSE (HTTP)      ┌──────────────────┐
+┌──────────────┐  streamable-http    ┌──────────────────┐
 │   AI Agent   │ ──────────────────▶ │  KG MCP Server   │
-│  (Dima's     │ ◀────────────────── │  :8001/sse       │
+│  (Dima's     │ ◀────────────────── │  :8001/mcp       │
 │   system)    │   tool responses    │                  │
 └──────────────┘                     └───────┬──────────┘
                                              │
@@ -38,15 +38,14 @@ Once running, the MCP server is available at:
 
 | Endpoint | URL | Description |
 |----------|-----|-------------|
-| SSE connection | `http://localhost:8001/sse` | AI agent connects here |
-| Message endpoint | `http://localhost:8001/messages/` | MCP message transport |
+| MCP endpoint | `http://localhost:8001/mcp` | AI agent connects here |
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_HOST` | `0.0.0.0` | Host to bind the SSE server |
-| `MCP_PORT` | `8001` | Port for the SSE server |
+| `MCP_HOST` | `0.0.0.0` | Host to bind the MCP server |
+| `MCP_PORT` | `8001` | Port for the MCP server |
 | `KG_DATA_PATH` | `./data/papers.json` | Local path to dataset (fallback) |
 | `HF_DATASET_REPO` | *(empty)* | HuggingFace dataset repo ID (e.g. `SentinelAI/kg-data`). If set, downloads dataset from HF on startup |
 | `HF_DATASET_FILE` | `papers.json` | Filename within the HF dataset repo |
@@ -55,7 +54,7 @@ Once running, the MCP server is available at:
 
 | Service | Port | Protocol | Purpose |
 |---------|------|----------|---------|
-| KG MCP Server | 8001 | HTTP/SSE | AI agent MCP tool calls |
+| KG MCP Server | 8001 | HTTP | AI agent MCP tool calls |
 | Neo4j Browser | 7474 | HTTP | Graph visualization (dev only) |
 | Neo4j Bolt | 7687 | Bolt | Graph database protocol (dev only) |
 
@@ -69,16 +68,14 @@ pip install -r requirements.txt
 python server.py
 ```
 
-The server starts on `http://0.0.0.0:8001` with SSE transport.
+The server starts on `http://0.0.0.0:8001/mcp` with streamable-http transport.
 
 ## Connecting an AI Agent to this MCP Server
 
-### SSE Connection (recommended for Docker deployments)
-
-Point your MCP client at the SSE endpoint:
+Point your MCP client at:
 
 ```
-http://localhost:8001/sse
+http://localhost:8001/mcp
 ```
 
 Example MCP client config:
@@ -86,8 +83,8 @@ Example MCP client config:
 ```json
 {
   "sentinelai-kg": {
-    "transport": "sse",
-    "url": "http://localhost:8001/sse"
+    "transport": "streamable-http",
+    "url": "http://localhost:8001/mcp"
   }
 }
 ```
@@ -95,7 +92,7 @@ Example MCP client config:
 ### From another Docker container on the same network
 
 ```
-http://kg-mcp-server:8001/sse
+http://kg-mcp-server:8001/mcp
 ```
 
 The service name `kg-mcp-server` resolves within the Docker Compose network.

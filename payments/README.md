@@ -79,7 +79,7 @@ This adds Stripe columns to existing tables and creates `subscriptions`, `paymen
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-API docs available at: http://localhost:8001/docs
+API docs available at: <http://localhost:8001/docs>
 
 ---
 
@@ -90,19 +90,21 @@ docker build -t sentinelai-payments .
 docker run --env-file .env -p 8001:8001 sentinelai-payments
 ```
 
-Or use the project-level `docker-compose.yaml` (uncomment the `payments` service block).
+Or use the project-level `docker-compose.yaml` where the `payments` service is already defined.
 
 ---
 
 ## API Overview
 
 ### Subscription Plans
+
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/v1/plans` | List all plans |
 | GET | `/api/v1/plans/{plan_id}` | Get a plan |
 
 ### Checkout & Subscriptions
+
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/api/v1/checkout` | Create Stripe Checkout session |
@@ -110,6 +112,7 @@ Or use the project-level `docker-compose.yaml` (uncomment the `payments` service
 | POST | `/api/v1/subscriptions/{company_id}/cancel` | Cancel subscription |
 
 ### Invoices
+
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/v1/invoices/{company_id}` | Invoice history (with PDF links) |
@@ -117,12 +120,14 @@ Or use the project-level `docker-compose.yaml` (uncomment the `payments` service
 | POST | `/api/v1/invoices/{company_id}/{invoice_id}/send` | Resend open invoice by email |
 
 ### Payments & Refunds
+
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/v1/payments/{company_id}` | Payment history |
 | POST | `/api/v1/payments/{payment_id}/refund` | Full or partial refund |
 
 ### Other
+
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/api/v1/portal/{company_id}` | Stripe Customer Portal session |

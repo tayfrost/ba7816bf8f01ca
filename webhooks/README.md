@@ -6,7 +6,7 @@ Sits between Slack / Gmail and the SentinelAI database. Receives real-time messa
 
 ## Structure
 
-```
+```text
 webhooks/
 ├── app/
 │   ├── controllers/   # HTTP routing — Slack and Gmail endpoints
@@ -38,7 +38,7 @@ GMAIL_PUBSUB_TOPIC=projects/<project>/topics/<topic>
 BASE_URL=https://sentinelai.work
 GMAIL_WEBHOOK_ENDPOINT=https://sentinelai.work/gmail/events
 
-DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/sentinelai
+DATABASE_URL=postgresql+psycopg://postgres:postgres@pgvector:5432/sentinelai
 FILTER_SERVICE_HOST=filter:50051
 ```
 

@@ -25,7 +25,7 @@ knowledge-graph/
 ├── data/
 │   └── papers.json              # Core dataset (92 papers, 368 advice items)
 ├── mcp-server/
-│   ├── server.py                # MCP server (SSE transport, port 8001)
+│   ├── server.py                # MCP server (streamable-http transport, port 8001)
 │   ├── Dockerfile               # Docker build for the MCP server
 │   ├── requirements.txt         # Python dependencies
 │   └── README.md                # MCP server deployment & connection docs
@@ -54,8 +54,8 @@ The MCP server is defined in the **root `docker-compose.yaml`** — no local com
 # From repo root
 docker compose up -d kg-mcp-server
 
-# MCP SSE endpoint available at:
-# http://localhost:8001/sse
+# MCP endpoint available at:
+# http://localhost:8001/mcp
 ```
 
 See [mcp-server/README.md](mcp-server/README.md) for full deployment docs, environment variables, and agent connection instructions.
@@ -72,13 +72,13 @@ result = agent.get_advice("I'm feeling burned out and can't sleep")
 print(agent.format_response(result))
 ```
 
-### MCP Server (SSE)
+### MCP Server (streamable-http)
 
 ```bash
 cd knowledge-graph/mcp-server
 pip install -r requirements.txt
 python server.py
-# → SSE server at http://0.0.0.0:8001/sse
+# → server at http://0.0.0.0:8001/mcp
 ```
 
 ### With Neo4j (optional, dev profile)
@@ -91,7 +91,7 @@ python src/build_graph.py --neo4j
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| MCP Server | 8001 | AI agent tool calls (SSE) |
+| MCP Server | 8001 | AI agent tool calls (streamable-http) |
 | Neo4j Browser | 7474 | Graph visualization (dev only, `--profile dev`) |
 | Neo4j Bolt | 7687 | Database protocol (dev only) |
 

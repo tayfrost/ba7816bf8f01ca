@@ -65,3 +65,6 @@ filter/generated/
 # Datasets
 datasets/*.csv
 datasets/*.json
+
+# Environment sandboxes
+.sandbox/

@@ -11,9 +11,6 @@ node_modules
 .env
 .env.*
 
-# Other services (not needed for kg-mcp-server build)
-# Note: Only exclude services that are not being built
-
 # Data volumes
 pgvector_data/
 neo4j_data/
