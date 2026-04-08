@@ -47,11 +47,9 @@ def test_dataset_item_format(sample_data, tokenizer):
     assert item["category_label"] == CATEGORY_MAP[sample_data[0]["category"]]
     assert item["severity_label"] == SEVERITY_MAP[sample_data[0]["stage"]]
 
-    # Check for temporal context [YYYY-MM-DD HH:MM] prefix
-    # BERT tokenizer adds spaces around brackets and punctuation
+    # Timestamp context is intentionally not prepended in dataset loader.
     decoded_text = tokenizer.decode(item["input_ids"], skip_special_tokens=True)
-    import re
-    assert re.search(r"\[\s*\d{4}\s*-\s*\d{2}\s*-\s*\d{2}\s*\d{2}\s*:\s*\d{2}\s*\]", decoded_text)
+    assert "stressed out with work" in decoded_text
 
 
 @pytest.mark.parametrize(
