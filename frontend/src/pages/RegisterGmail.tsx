@@ -2,28 +2,28 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
 import LandingHeader from "../components/LandingHeader";
-import { startMemberGmail } from "../api";
 
 /**
- * Self-service Gmail registration page for individual team members.
+ * Public self-service Gmail registration page for individual team members.
  *
- * Unlike /connect-accounts (which is for admins wiring up the whole workspace),
- * this page lets a single employee add their own Gmail so SentinelAI can monitor
- * their mailbox as part of the company's consent-based analysis.
+ * No SentinelAI account required. The admin shares the link:
+ *   https://sentinelai.work/register-gmail?company_id=<id>
  *
- * Access: requires a valid JWT token (RequireAuth) + paid plan (RequirePaidPlan).
- * Share the link https://sentinelai.work/register-gmail in your team Slack channel.
+ * The employee clicks it, connects their Gmail via OAuth, and their mailbox
+ * is added to the company's monitoring — nothing else needed.
  */
 export default function RegisterGmail() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const companyId = searchParams.get("company_id");
 
   const [busy, setBusy] = useState(false);
   const [connected, setConnected] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Handle OAuth redirect back from Google via the gmail_controller callback
+  // Handle redirect back from Google OAuth via gmail_controller callback
   useEffect(() => {
     const provider = searchParams.get("provider");
     const oauthStatus = searchParams.get("status");
@@ -31,33 +31,61 @@ export default function RegisterGmail() {
     if (provider === "gmail" && oauthStatus === "success") {
       setConnected(true);
       setNotice("Gmail connected successfully. SentinelAI will now monitor your mailbox.");
-      setSearchParams({}, { replace: true });
+      // Keep company_id in URL, strip only the OAuth params
+      setSearchParams(companyId ? { company_id: companyId } : {}, { replace: true });
     }
 
     if (provider === "gmail" && oauthStatus === "error") {
-      setError("Gmail connection failed. Please try again or contact your admin.");
-      setSearchParams({}, { replace: true });
+      setError(
+        "Gmail connection failed. The link may have expired or your company's seat limit has been reached. Contact your admin."
+      );
+      setSearchParams(companyId ? { company_id: companyId } : {}, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function handleConnect() {
+  function handleConnect() {
+    if (!companyId) {
+      setError("Invalid link — company ID is missing. Ask your admin to reshare the link.");
+      return;
+    }
     setBusy(true);
-    setError(null);
-    setNotice(null);
+    // Redirect directly to the Gmail OAuth login — no API call needed.
+    // The backend encodes company_id + return_page into the OAuth state.
+    window.location.href = `/gmail/oauth/login?company_id=${companyId}&return_page=register-gmail`;
+  }
 
-    try {
-      const { url } = await startMemberGmail();
-      window.location.href = url;
-    } catch (err) {
-      console.error("[register-gmail] start failed:", err);
-      setError("Failed to start Gmail connection. Please try again.");
-      setBusy(false);
-    }
+  // Missing company_id — the link is broken
+  if (!companyId && !connected) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
+          color: "white",
+          fontFamily: "'Outfit', 'Inter', sans-serif",
+          textAlign: "center",
+          padding: "2rem",
+        }}
+      >
+        <div>
+          <p style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔗</p>
+          <h2 style={{ fontSize: "1.75rem", fontWeight: 900, marginBottom: "0.75rem" }}>
+            Invalid Link
+          </h2>
+          <p style={{ opacity: 0.65, maxWidth: "340px", lineHeight: 1.6 }}>
+            This link is missing a company ID. Ask your admin to reshare the correct link from their Settings page.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
-      <LandingHeader isLoggedIn={true} />
+      <LandingHeader isLoggedIn={false} />
 
       <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-6">
         <div
@@ -76,20 +104,20 @@ export default function RegisterGmail() {
               style={{ color: "var(--dynamic-text)", opacity: 0.8 }}
               className="text-base font-medium leading-relaxed"
             >
-              Connect your work Gmail so SentinelAI can monitor early wellbeing
-              signals as part of your company's consent-based analysis. Your
-              admin shared this link — you only need to do this once.
+              Your company has invited you to connect your work Gmail to SentinelAI.
+              This allows early wellbeing signals to be detected as part of a
+              consent-based, company-approved analysis. You only need to do this once.
             </p>
           </div>
 
           {/* Status banners */}
           {notice && (
-            <div className="mb-6 px-5 py-3 rounded-2xl bg-green-100/20 border border-green-400/30 text-sm font-semibold text-green-400">
+            <div className="mb-6 px-5 py-4 rounded-2xl bg-green-100/20 border border-green-400/30 text-sm font-semibold text-green-400">
               {notice}
             </div>
           )}
           {error && (
-            <div className="mb-6 px-5 py-3 rounded-2xl bg-red-100/20 border border-red-400/30 text-sm font-semibold text-red-400">
+            <div className="mb-6 px-5 py-4 rounded-2xl bg-red-100/20 border border-red-400/30 text-sm font-semibold text-red-400">
               {error}
             </div>
           )}
@@ -129,9 +157,8 @@ export default function RegisterGmail() {
                   style={{ color: "var(--dynamic-text)" }}
                   className="text-[15px] opacity-80 font-medium leading-relaxed max-w-sm"
                 >
-                  Connect your mailbox metadata (consent-based) for behavioural
-                  wellbeing signals. Only metadata is analysed — message content
-                  stays private.
+                  Connect your mailbox for consent-based behavioural wellbeing signals.
+                  Only metadata is analysed — message content stays private.
                 </p>
               </div>
             </div>
@@ -143,7 +170,7 @@ export default function RegisterGmail() {
                   className="min-w-[120px] px-6 py-2.5 text-xs font-bold"
                   disabled
                 >
-                  Connected
+                  Connected ✓
                 </Button>
               ) : (
                 <Button
@@ -176,13 +203,15 @@ export default function RegisterGmail() {
               </p>
             </div>
 
-            <Button
-              onClick={() => navigate("/dashboard")}
-              variant="secondary"
-              className="whitespace-nowrap px-6 py-2.5 text-xs font-bold opacity-70 hover:opacity-100 transition-all"
-            >
-              {connected ? "Go to Dashboard" : "Skip for now"}
-            </Button>
+            {connected && (
+              <Button
+                onClick={() => navigate("/")}
+                variant="secondary"
+                className="whitespace-nowrap px-6 py-2.5 text-xs font-bold"
+              >
+                Done
+              </Button>
+            )}
           </div>
         </div>
       </main>

@@ -93,16 +93,7 @@ export default function App() {
         }
       />
 
-      <Route
-        path="/register-gmail"
-        element={
-          <RequireAuth>
-            <RequirePaidPlan>
-              <RegisterGmail />
-            </RequirePaidPlan>
-          </RequireAuth>
-        }
-      />
+      <Route path="/register-gmail" element={<RegisterGmail />} />
 
       <Route path="*" element={<Navigate to="/plan" replace />} />
     </Routes>

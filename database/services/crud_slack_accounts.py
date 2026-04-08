@@ -252,11 +252,15 @@ def get_slack_account_by_email(
     if own_session:
         session = Session()
     try:
-        stmt = select(model.SlackAccount).where(
-            model.SlackAccount.company_id == int(company_id),
-            model.SlackAccount.email == email,
+        stmt = (
+            select(model.SlackAccount)
+            .where(
+                model.SlackAccount.company_id == int(company_id),
+                model.SlackAccount.email == email,
+            )
+            .limit(1)
         )
-        return session.execute(stmt).scalar_one_or_none()
+        return session.execute(stmt).scalars().first()
     finally:
         if own_session:
             session.close()

@@ -504,6 +504,58 @@ export default function Settings() {
               </SectionCard>
             )}
 
+            {canManageIntegrations && companyId && (
+              <SectionCard title="Team Gmail Registration">
+                <p style={{ opacity: 0.6, fontSize: "13px", marginBottom: "16px", lineHeight: 1.6 }}>
+                  Share this link with your team in Slack. Each member clicks it and connects
+                  their own Gmail — no SentinelAI account needed.
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: "14px",
+                    padding: "12px 16px",
+                  }}
+                >
+                  <code
+                    style={{
+                      flex: 1,
+                      fontSize: "12px",
+                      fontFamily: "monospace",
+                      opacity: 0.85,
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {`${window.location.origin}/register-gmail?company_id=${companyId}`}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/register-gmail?company_id=${companyId}`
+                      );
+                    }}
+                    style={{
+                      background: "rgba(227,141,38,0.18)",
+                      color: BRAND_ORANGE,
+                      border: "1px solid rgba(227,141,38,0.35)",
+                      borderRadius: "8px",
+                      padding: "6px 12px",
+                      fontSize: "11px",
+                      fontWeight: 900,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    COPY
+                  </button>
+                </div>
+              </SectionCard>
+            )}
+
             {canManageIntegrations ? (
               <SectionCard title="Connected Integrations">
                 <IntegrationsPanel />
