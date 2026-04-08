@@ -19,8 +19,12 @@ function getAccessToken(): string | null {
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAccessToken();
+  const method = options.method ?? "GET";
+  const url = `${BASE_URL}${path}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  console.log(`[api] ${method} ${url}`);
+
+  const res = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -29,8 +33,11 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     },
   });
 
+  console.log(`[api] ${method} ${url} → ${res.status}`);
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    console.error(`[api] ${method} ${url} failed: ${res.status}`, text);
     throw new ApiError(res.status, text || `API error ${res.status}`);
   }
 

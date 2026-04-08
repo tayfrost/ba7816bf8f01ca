@@ -25,7 +25,8 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting Payments Service...")
+    logger.info("Starting Payments Service — frontend=%s payments=%s debug=%s",
+                settings.FRONTEND_URL, settings.PAYMENTS_SERVICE_URL, settings.DEBUG)
     await init_db()
     async with AsyncSessionLocal() as session:
         await seed_plans(session)

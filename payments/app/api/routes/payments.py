@@ -3,11 +3,14 @@ Payment API routes.
 Uses shared tables: companies, subscription_plan
 """
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+log = logging.getLogger("payments.routes")
 
 from app.core.database import get_db
 from app.models.models import Company, Payment, StripeSubscription, SubscriptionPlan
@@ -56,6 +59,7 @@ async def create_checkout_session(
     data: CheckoutSessionCreate,
     db: AsyncSession = Depends(get_db),
 ):
+    log.info("checkout: company=%s plan=%s interval=%s", data.company_id, data.plan_id, data.interval)
     try:
         result = await StripeService.create_checkout_session(
             db=db,
@@ -63,8 +67,10 @@ async def create_checkout_session(
             plan_id=data.plan_id,
             interval=data.interval,
         )
+        log.info("checkout: session created url=%s", result.get("checkout_url", "?")[:60])
         return result
     except ValueError as e:
+        log.warning("checkout: rejected — %s", e)
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -140,9 +146,13 @@ async def list_invoices(
     Returns the company's invoice history directly from Stripe,
     including PDF download links and hosted payment page URLs.
     """
+    log.info("invoices: company=%s limit=%s", company_id, limit)
     try:
-        return await StripeService.list_invoices(db, company_id, limit)
+        invoices = await StripeService.list_invoices(db, company_id, limit)
+        log.info("invoices: returned %s records", len(invoices))
+        return invoices
     except ValueError as e:
+        log.warning("invoices: rejected — %s", e)
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -223,8 +233,11 @@ async def refund_payment(
     summary="Create Stripe Customer Portal session",
 )
 async def create_portal_session(company_id: int, db: AsyncSession = Depends(get_db)):
+    log.info("portal: company=%s", company_id)
     try:
         url = await StripeService.create_customer_portal_session(db, company_id)
+        log.info("portal: session created url=%s", url[:60] if url else "None")
         return {"portal_url": url}
     except ValueError as e:
+        log.warning("portal: rejected — %s", e)
         raise HTTPException(status_code=400, detail=str(e))

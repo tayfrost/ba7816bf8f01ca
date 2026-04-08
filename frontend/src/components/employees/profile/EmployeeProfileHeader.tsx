@@ -47,8 +47,8 @@ export default function EmployeeProfileHeader({ employee }: Props) {
         <EmployeeSources sources={employee.source} />
       </div>
 
-      <div style={{ marginTop: "28px" }}>
-        <SimpleLineChart points={employee.trend} width={700} height={260} />
+      <div style={{ marginTop: "28px", width: "100%", overflow: "hidden" }}>
+        <SimpleLineChart points={employee.trend} width={520} height={220} />
       </div>
     </div>
   );

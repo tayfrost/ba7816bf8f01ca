@@ -43,15 +43,20 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
   if (!points || points.length === 0) return null;
 
   return (
-    <div style={{ 
-      width: "fit-content", 
-      background: "#2e1a41af", 
-      padding: "20px", 
+    <div style={{
+      width: "100%",
+      background: "#2e1a41af",
+      padding: "20px",
       borderRadius: "16px",
       border: "1px solid rgba(255, 255, 255, 0.1)",
-      backdropFilter: "blur(8px)" 
+      backdropFilter: "blur(8px)",
+      boxSizing: "border-box",
     }}>
-      <svg width={width} height={height} style={{ display: "block", overflow: "visible" }}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        width="100%"
+        style={{ display: "block", overflow: "visible" }}
+      >
         <defs>
           <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="100%">
             <stop offset="0%" stopColor="#ef6330" stopOpacity="0.7" />

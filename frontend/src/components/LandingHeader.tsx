@@ -21,7 +21,13 @@ export default function LandingHeader({ isLoggedIn = false, theme = 'light', onT
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between gap-2">
         <div className="flex items-center gap-10">
           <div className="flex items-center cursor-pointer gap-4 shrink-0 min-w-0" onClick={() => navigate("/")}>
-            <img src="/logo-icon.png" alt="Sentinel Icon" className="w-10 h-auto object-contain" />
+            <img
+              src="/logo-icon.png"
+              alt="Sentinel Icon"
+              className="w-10 h-auto object-contain"
+              onLoad={() => console.log("[logo] logo-icon.png loaded ok")}
+              onError={(e) => console.error("[logo] logo-icon.png FAILED to load", (e.target as HTMLImageElement).src)}
+            />
             
             {isLoggedIn && (
               <span style={{ 

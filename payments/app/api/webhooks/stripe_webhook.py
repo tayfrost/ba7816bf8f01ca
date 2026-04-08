@@ -21,15 +21,17 @@ async def stripe_webhook(
     db: AsyncSession = Depends(get_db),
 ):
     payload = await request.body()
+    logger.info("webhook: received sig=%s", stripe_signature[:20] if stripe_signature else "MISSING")
 
     try:
         result = await StripeService.handle_webhook_event(
             db=db, payload=payload, sig_header=stripe_signature
         )
+        logger.info("webhook: processed ok — %s", result)
         return result
     except ValueError as e:
-        logger.error(f"Webhook verification failed: {e}")
+        logger.error("webhook: signature/validation failed — %s", e)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Webhook processing error: {e}")
+        logger.error("webhook: processing error — %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Webhook processing failed")

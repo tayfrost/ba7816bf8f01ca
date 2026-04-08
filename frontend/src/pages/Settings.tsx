@@ -19,7 +19,8 @@ import { useTeamUsers } from "../hooks/useTeamUsers";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
 const BRAND_ORANGE = "var(--color-top)";
-const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL;
+const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL ?? "https://sentinelai.work";
+console.log("[settings] PAYMENTS_URL:", PAYMENTS_URL);
 
 export default function Settings() {
   const { signup, plan, reset } = useOnboarding();
@@ -63,37 +64,49 @@ export default function Settings() {
 
   useEffect(() => {
     const fetchInvoices = async () => {
-      if (!companyId) return;
+      if (!companyId) { console.log("[settings] invoices skipped — no companyId"); return; }
+      console.log("[settings] fetching invoices for company:", companyId);
       try {
         const res = await fetch(`${PAYMENTS_URL}/api/v1/invoices/${companyId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("sentinel_access_token")}`,
           },
         });
+        console.log("[settings] invoices response:", res.status);
         const data = await res.json();
+        console.log("[settings] invoices count:", Array.isArray(data) ? data.length : "non-array");
         setInvoices(data);
       } catch (err) {
-        console.error("Failed to load invoices", err);
+        console.error("[settings] invoices fetch failed:", err);
       }
     };
     fetchInvoices();
   }, [companyId]);
 
   const handlePortal = async () => {
-    if (!companyId) return alert("No company ID found");
+    if (!companyId) { console.warn("[portal] no companyId"); return alert("No company ID found"); }
+    const endpoint = `${PAYMENTS_URL}/api/v1/portal/${companyId}`;
+    console.log("[portal] POST", endpoint);
     try {
-      const res = await fetch(`${PAYMENTS_URL}/api/v1/portal/${companyId}`, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("sentinel_access_token")}`,
         },
       });
+      console.log("[portal] response status:", res.status);
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
+      console.log("[portal] response data:", data);
+      if (data.portal_url) {
+        console.log("[portal] redirecting to:", data.portal_url);
+        window.location.href = data.portal_url;
+      } else {
+        console.error("[portal] no portal_url in response", data);
+        alert("No portal URL returned. Check console for details.");
       }
     } catch (err) {
-      console.error("Portal failed", err);
+      console.error("[portal] fetch failed:", err);
+      alert("Network error opening billing portal. Check console.");
     }
   };
 
@@ -344,6 +357,87 @@ export default function Settings() {
                 </>
               )}
             </SectionCard>
+
+            <SectionCard title="Team Members">
+              {usersStatus === "loading" && (
+                <p style={{ opacity: 0.6 }}>Loading team members...</p>
+              )}
+              {usersError && (
+                <p style={{ color: BRAND_ORANGE }}>{usersError}</p>
+              )}
+              {canManageTeam && (
+                <div className="flex flex-col gap-3 mb-5 pb-5 border-b border-white/5">
+                  <input
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="email"
+                    style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 12px", fontSize: "12px" }}
+                  />
+                  <input
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    placeholder="name"
+                    style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 12px", fontSize: "12px" }}
+                  />
+                  <input
+                    value={inviteSurname}
+                    onChange={(e) => setInviteSurname(e.target.value)}
+                    placeholder="surname"
+                    style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 12px", fontSize: "12px" }}
+                  />
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as "admin" | "biller" | "viewer")}
+                    style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 12px", fontSize: "12px", fontWeight: 800 }}
+                  >
+                    <option value="viewer">VIEWER</option>
+                    <option value="admin">ADMIN</option>
+                    <option value="biller">BILLER</option>
+                  </select>
+                  <button
+                    onClick={async () => {
+                      if (!inviteEmail || !inviteName || !inviteSurname) return;
+                      const ok = await invite({ email: inviteEmail, name: inviteName, surname: inviteSurname, role: inviteRole });
+                      if (ok) { setInviteEmail(""); setInviteName(""); setInviteSurname(""); setInviteRole("viewer"); }
+                    }}
+                    style={{ background: "rgba(227,141,38,0.18)", color: BRAND_ORANGE, border: "1px solid rgba(227,141,38,0.35)", borderRadius: "10px", padding: "10px 14px", fontSize: "11px", fontWeight: 900, cursor: "pointer" }}
+                  >
+                    INVITE
+                  </button>
+                </div>
+              )}
+              {users.map((user) => (
+                <div key={user.user_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", gap: "10px", flexWrap: "wrap" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700 }}>{user.display_name || user.email}</div>
+                    <div style={{ fontSize: "12px", opacity: 0.6 }}>{user.email}</div>
+                  </div>
+                  {canManageTeam ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                      <select
+                        value={user.role}
+                        onChange={(e) => changeRole(user.user_id, e.target.value as "admin" | "biller" | "viewer")}
+                        disabled={busyUserId === user.user_id}
+                        style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "8px 10px", fontSize: "12px", fontWeight: 800 }}
+                      >
+                        <option value="viewer">VIEWER</option>
+                        <option value="admin">ADMIN</option>
+                        <option value="biller">BILLER</option>
+                      </select>
+                      <button
+                        onClick={() => removeUser(user.user_id)}
+                        disabled={busyUserId === user.user_id}
+                        style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,80,80,0.25)", borderRadius: "10px", padding: "8px 12px", fontSize: "11px", fontWeight: 900, cursor: "pointer" }}
+                      >
+                        {busyUserId === user.user_id ? "..." : "REMOVE"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: "12px", fontWeight: 800, opacity: 0.8 }}>{user.role.toUpperCase()}</div>
+                  )}
+                </div>
+              ))}
+            </SectionCard>
           </div>
 
           {/* RIGHT COLUMN */}
@@ -381,186 +475,6 @@ export default function Settings() {
             
             <SectionCard title="Notifications">
               <NotificationsPreferences />
-            </SectionCard>
-
-            <SectionCard title="Team Members">
-              
-              {usersStatus === "loading" && (
-                <p style={{ opacity: 0.6 }}>Loading team members...</p>
-              )}
-            
-              {usersError && (
-                <p style={{ color: BRAND_ORANGE }}>{usersError}</p>
-              )}
-
-              {canManageTeam && (
-              <div className="flex flex-col md:grid md:grid-cols-[1.3fr_1fr_1fr_0.8fr_auto] gap-3 mb-5 pb-5 border-b border-white/5">
-                <input
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="email"
-                  style={{
-                    background: "rgba(255,255,255,0.08)",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    borderRadius: "10px",
-                    padding: "10px 12px",
-                    fontSize: "12px",
-                  }}
-                />
-
-                <input
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  placeholder="name"
-                  style={{
-                    background: "rgba(255,255,255,0.08)",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    borderRadius: "10px",
-                    padding: "10px 12px",
-                    fontSize: "12px",
-                  }}
-                />
-
-                <input
-                  value={inviteSurname}
-                  onChange={(e) => setInviteSurname(e.target.value)}
-                  placeholder="surname"
-                  style={{
-                    background: "rgba(255,255,255,0.08)",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    borderRadius: "10px",
-                    padding: "10px 12px",
-                    fontSize: "12px",
-                  }}
-                />
-
-                <select
-                  value={inviteRole}
-                  onChange={(e) =>
-                    setInviteRole(e.target.value as "admin" | "biller" | "viewer")
-                  }
-                  style={{
-                    background: "rgba(255,255,255,0.08)",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    borderRadius: "10px",
-                    padding: "10px 12px",
-                    fontSize: "12px",
-                    fontWeight: 800,
-                  }}
-                >
-                  <option value="viewer">VIEWER</option>
-                  <option value="admin">ADMIN</option>
-                  <option value="biller">BILLER</option>
-                </select>
-
-                <button
-                  onClick={async () => {
-                    if (!inviteEmail || !inviteName || !inviteSurname) return;
-
-                    const ok = await invite({
-                      email: inviteEmail,
-                      name: inviteName,
-                      surname: inviteSurname,
-                      role: inviteRole,
-                    });
-
-                    if (ok) {
-                    setInviteEmail("");
-                    setInviteName("");
-                    setInviteSurname("");
-                    setInviteRole("viewer");
-                  }}}
-                  style={{
-                    background: "rgba(227,141,38,0.18)",
-                    color: BRAND_ORANGE,
-                    border: "1px solid rgba(227,141,38,0.35)",
-                    borderRadius: "10px",
-                    padding: "10px 14px",
-                    fontSize: "11px",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                  }}
-                >
-                  INVITE
-                </button>
-              </div>
-              )}
-              
-              {users.map((user) => (
-                <div
-                  key={user.user_id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    padding: "10px 0",
-                    borderBottom: "1px solid rgba(255,255,255,0.05)",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 700 }}>
-                      {user.display_name || user.email}
-                    </div>
-
-                    <div style={{ fontSize: "12px", opacity: 0.6 }}>
-                      {user.email}
-                    </div>
-                  </div>
-                  
-                  {canManageTeam ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <select
-                        value={user.role}
-                        onChange={(e) =>
-                          changeRole(
-                            user.user_id,
-                            e.target.value as "admin" | "biller" | "viewer"
-                          )
-                        }
-                        disabled={busyUserId === user.user_id}
-                        style={{
-                          background: "rgba(255,255,255,0.08)",
-                          color: "white",
-                          border: "1px solid rgba(255,255,255,0.15)",
-                          borderRadius: "10px",
-                          padding: "8px 10px",
-                          fontSize: "12px",
-                          fontWeight: 800,
-                        }}
-                      >
-                        <option value="viewer">VIEWER</option>
-                        <option value="admin">ADMIN</option>
-                        <option value="biller">BILLER</option>
-                      </select>
-
-                      <button
-                        onClick={() => removeUser(user.user_id)}
-                        disabled={busyUserId === user.user_id}
-                        style={{
-                          background: "rgba(255,80,80,0.15)",
-                          color: "#ff8a8a",
-                          border: "1px solid rgba(255,80,80,0.25)",
-                          borderRadius: "10px",
-                          padding: "8px 12px",
-                          fontSize: "11px",
-                          fontWeight: 900,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {busyUserId === user.user_id ? "..." : "REMOVE"}
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: "12px", fontWeight: 800, opacity: 0.8}}>
-                      {user.role.toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              ))}
-              
             </SectionCard>
 
             {!canManageIntegrations && currentUser?.role === "viewer" && (

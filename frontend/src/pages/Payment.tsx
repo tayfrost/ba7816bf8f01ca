@@ -7,7 +7,8 @@ import { useCompany } from "../hooks/useCompany";
 import { getPlans } from "../api/plans";
 import { useEffect, useState } from "react";
 
-const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL;
+const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL ?? "https://sentinelai.work";
+console.log("[payment] PAYMENTS_URL:", PAYMENTS_URL);
 
 export default function Payment() {
   const { plan, planInterval } = useOnboarding();
@@ -18,44 +19,70 @@ export default function Payment() {
 
   useEffect(() => {
     async function loadPlanId() {
-      const plans = await getPlans();
-      const match = plans.find(p =>
-        plan === "free"
-          ? p.plan_name.toLowerCase() === "free"
-          : p.plan_name.toLowerCase() !== "free"
-      );
-      if (match) setPlanId(match.plan_id);
+      console.log("[payment] loading plans, selected plan:", plan);
+      try {
+        const plans = await getPlans();
+        console.log("[payment] plans fetched:", plans.map(p => ({ id: p.plan_id, name: p.plan_name })));
+        const match = plans.find(p =>
+          plan === "free"
+            ? p.plan_name.toLowerCase() === "free"
+            : p.plan_name.toLowerCase() !== "free"
+        );
+        console.log("[payment] matched plan:", match ?? "NONE");
+        if (match) setPlanId(match.plan_id);
+      } catch (err) {
+        console.error("[payment] failed to load plans:", err);
+      }
     }
     loadPlanId();
   }, [plan]);
 
   const handleCheckout = async () => {
+    console.log("[checkout] start — companyId:", company?.company_id, "planId:", planId, "interval:", planInterval);
+
     if (!company?.company_id || !planId) {
+      console.warn("[checkout] aborted — missing companyId or planId");
       alert("Missing company or plan");
       return;
     }
 
+    const endpoint = `${PAYMENTS_URL}/api/v1/checkout`;
+    console.log("[checkout] POST", endpoint);
+
     try {
-      const res = await fetch(`${PAYMENTS_URL}/api/v1/checkout`, {
+      const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_id: company.company_id,
           plan_id: planId,
-          interval: planInterval, 
+          interval: planInterval,
         }),
       });
 
+      console.log("[checkout] response status:", res.status);
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.error("[checkout] non-ok response:", res.status, errText);
+        alert(`Payment error ${res.status}: ${errText}`);
+        return;
+      }
+
       const data = await res.json();
+      console.log("[checkout] response data:", data);
 
       if (data.checkout_url) {
+        console.log("[checkout] redirecting to Stripe:", data.checkout_url);
         window.location.href = data.checkout_url;
-      } 
+      } else {
+        console.error("[checkout] no checkout_url in response", data);
+        alert("No checkout URL returned. Check console for details.");
+      }
 
     } catch (err) {
-      console.error("Checkout failed", err);
+      console.error("[checkout] fetch failed:", err);
+      alert("Network error during checkout. Check console.");
     }
   };
 
