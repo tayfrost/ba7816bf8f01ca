@@ -36,11 +36,16 @@ Respond with ONLY a JSON object:
     ]
     
     logger.info("[NODE: redactor] Calling LLM for redaction")
-    response = await llm.ainvoke(messages)
-    logger.info(f"[NODE: redactor] LLM response (first 100 chars): {str(response.content)[:100]}")
-    result = safe_json_loads(response.content)
-    logger.info(f"[NODE: redactor] Redaction complete")
-    
-    state['raw_message'] = result['redacted_message']
+    try:
+        response = await llm.ainvoke(messages)
+        content = response.content if response.content is not None else ""
+        if isinstance(content, list):
+            content = next((b["text"] for b in content if isinstance(b, dict) and "text" in b), "")
+        logger.info(f"[NODE: redactor] LLM response (first 100 chars): {content[:100]}")
+        result = safe_json_loads(content)
+        state['raw_message'] = result.get('redacted_message') or state['raw_message']
+        logger.info(f"[NODE: redactor] Redaction complete")
+    except Exception as e:
+        logger.warning(f"[NODE: redactor] Redaction failed, using original message: {e}")
     logger.info("[NODE: redactor] → Transition to assess_risk")
     return state

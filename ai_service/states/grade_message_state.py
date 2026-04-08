@@ -43,15 +43,28 @@ Respond with ONLY a JSON object, which has to obtain all of these fields with in
     ]
     
     logger.info("[NODE: grade_message] Calling LLM for scoring")
-    response = await llm.ainvoke(messages)
-    logger.info(f"[NODE: grade_message] LLM response (first 100 chars): {str(response.content)[:100]}")
-    scores = safe_json_loads(response.content)
-    
-    # Store scores in state for recommendations node
+    default_scores = {
+        "stress_level": 0, "suicide_risk": 0, "burnout_score": 0,
+        "depression_indicators": 0, "harassment_score": 0, "isolation_tendency": 0,
+    }
+    try:
+        response = await llm.ainvoke(messages)
+        content = response.content if response.content is not None else ""
+        if isinstance(content, list):
+            content = next((b["text"] for b in content if isinstance(b, dict) and "text" in b), "")
+        logger.info(f"[NODE: grade_message] LLM response (first 100 chars): {content[:100]}")
+        scores = safe_json_loads(content)
+        # Ensure all expected keys exist
+        for k, v in default_scores.items():
+            scores.setdefault(k, v)
+    except Exception as e:
+        logger.warning(f"[NODE: grade_message] Grading failed, using zero scores: {e}")
+        scores = default_scores
+
     if state.get('hr_report') is None:
         state['hr_report'] = {}
     state['hr_report']['scores'] = scores
-    
+
     logger.info(f"[NODE: grade_message] Scores: {scores}")
     logger.info("[NODE: grade_message] → Transition to generate_recommendations")
     return state

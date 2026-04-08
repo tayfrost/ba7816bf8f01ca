@@ -36,14 +36,20 @@ Respond with ONLY a JSON object:
     ]
     
     logger.info("[NODE: assess_risk] Calling LLM for risk assessment")
-    response = await llm.ainvoke(messages)
-    logger.info(f"[NODE: assess_risk] LLM response (first 100 chars): {str(response.content)[:100]}")
-    result = safe_json_loads(response.content)
-    
-    state['is_confirmed_risk'] = result['is_risk']
-    logger.info(f"[NODE: assess_risk] Risk detected: {result['is_risk']}")
-    logger.info(f"[NODE: assess_risk] Reasoning: {result.get('reasoning', 'N/A')}")
-    
-    next_node = "grade_message" if result['is_risk'] else "END"
+    try:
+        response = await llm.ainvoke(messages)
+        content = response.content if response.content is not None else ""
+        if isinstance(content, list):
+            content = next((b["text"] for b in content if isinstance(b, dict) and "text" in b), "")
+        logger.info(f"[NODE: assess_risk] LLM response (first 100 chars): {content[:100]}")
+        result = safe_json_loads(content)
+        is_risk = bool(result.get('is_risk', False))
+    except Exception as e:
+        logger.warning(f"[NODE: assess_risk] Assessment failed, defaulting to no risk: {e}")
+        is_risk = False
+
+    state['is_confirmed_risk'] = is_risk
+    logger.info(f"[NODE: assess_risk] Risk detected: {is_risk}")
+    next_node = "grade_message" if is_risk else "END"
     logger.info(f"[NODE: assess_risk] → Transition to {next_node}")
     return state

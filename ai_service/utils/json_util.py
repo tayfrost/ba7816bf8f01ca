@@ -5,12 +5,15 @@ from json_repair import repair_json
 
 logger = logging.getLogger(__name__)
 
-def safe_json_loads(text: str) -> dict:
+def safe_json_loads(text) -> dict:
     """
-    Two-layer repair: 
+    Two-layer repair:
     1. Regex extracts the first JSON block.
     2. json-repair fixes syntax errors (quotes, commas, etc).
+    Handles None, list, and non-string inputs gracefully.
     """
+    if not isinstance(text, str):
+        text = "" if text is None else str(text)
     try:
         # Layer 1: Regex Extraction
         # Finds everything between the first '{' and the last '}'
