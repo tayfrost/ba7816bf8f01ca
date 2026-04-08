@@ -16,10 +16,11 @@ def safe_json_loads(text: str) -> dict:
         # Finds everything between the first '{' and the last '}'
         match = re.search(r'\{.*\}', text, re.DOTALL)
         if not match:
-            logger.error("No JSON braces found in LLM response.")
-            return {"is_risk": False, "reasoning": "Failed to find JSON structure."}
-        
-        json_content = match.group(0)
+            # Model sometimes omits outer braces — wrap and retry
+            logger.warning("No JSON braces found; attempting to wrap as object.")
+            json_content = "{" + text.strip().rstrip(",") + "}"
+        else:
+            json_content = match.group(0)
 
         # Layer 2: json-repair + Parsing
         # repair_json returns a valid JSON string

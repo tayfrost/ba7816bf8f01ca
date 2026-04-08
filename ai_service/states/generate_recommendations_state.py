@@ -133,9 +133,9 @@ Respond with JSON:
         if "hr_report" not in state or state["hr_report"] is None:
             state["hr_report"] = {}
 
-        # Store in state
-        state["hr_report"]["recommendations"] = result["recommendations"]
-        state["hr_report"]["response"] = result["response"]
+        # Store in state — use .get() in case the LLM omits a key
+        state["hr_report"]["recommendations"] = result.get("recommendations", [])
+        state["hr_report"]["response"] = result.get("response", result.get("reasoning", ""))
 
         logger.info("[NODE: generate_recommendations] → Transition to END")
         return state
