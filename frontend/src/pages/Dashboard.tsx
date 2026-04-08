@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+//import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
 import { computeRange } from "../state/timeRange";
@@ -25,7 +25,7 @@ const BRAND_ORANGE = "var(--color-top)";
 
 export default function Dashboard() {
   const { signup, plan, integrations } = useOnboarding();
-  const navigate = useNavigate();
+ // const navigate = useNavigate();
 
   const [preset, setPreset] = useState<RangePreset>("week");
   const [customStart, setCustomStart] = useState("2026-01-01");
