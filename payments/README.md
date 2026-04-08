@@ -151,6 +151,20 @@ Or use the project-level `docker-compose.yaml` where the `payments` service is a
 
 ---
 
+## Monitoring
+
+The service exposes Prometheus metrics at `GET /metrics` (port 8001). Prometheus scrapes `payments:8001/metrics` automatically.
+
+| Metric | Type | Description |
+|---|---|---|
+| `http_requests_total` | Counter | All HTTP requests by method/endpoint/status |
+| `http_request_duration_seconds` | Histogram | Request latency (p50/p95/p99) |
+| `http_requests_in_progress` | Gauge | Concurrent requests in flight |
+| `http_request_size_bytes` | Histogram | Request payload sizes |
+| `http_response_size_bytes` | Histogram | Response payload sizes |
+
+---
+
 ## How money flows in
 
 1. User completes Stripe Checkout → `checkout.session.completed` → subscription created locally

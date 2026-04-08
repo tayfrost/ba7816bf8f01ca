@@ -84,6 +84,43 @@ Current jobs are split into:
 - Filter tests: `pytest -q filter/tests`
 - Resilience/load suite: `testing/`
 
+## Monitoring (Grafana + Prometheus)
+
+The full monitoring stack runs as part of `docker compose up` alongside the services.
+
+**Dashboard URL:** `https://sentinelai.work/grafana/`
+
+Anonymous users land in read-only **Viewer** mode — no login required. Admins log in with the credentials in `.env.grafana`.
+
+### What is scraped
+
+| Service | Endpoint | Key metrics |
+|---|---|---|
+| `api` | `api:8000/metrics` | HTTP latency, throughput, in-flight |
+| `webhooks` | `webhooks:8000/metrics` | HTTP + Slack event processing |
+| `payments` | `payments:8001/metrics` | HTTP latency, throughput |
+| `ai_service` | `ai_service:8001/metrics` | HTTP + LangGraph pipeline latency/errors |
+| `filter` | `filter:9091/metrics` | gRPC call latency, batch sizes, error rate |
+| `postgres-exporter` | `postgres-exporter:9187` | DB size, active connections, incident counts |
+
+### Useful PromQL queries
+
+```promql
+# Throughput per service (req/sec over last 5 min)
+rate(http_requests_total[5m])
+
+# p95 latency per endpoint
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+
+# gRPC error rate for filter
+rate(grpc_requests_total{outcome="error"}[5m])
+
+# LangGraph agent p95 processing time
+histogram_quantile(0.95, rate(ai_pipeline_duration_seconds_bucket[5m]))
+```
+
+---
+
 ## Documentation Index
 
 - [API guide](api/README.md)

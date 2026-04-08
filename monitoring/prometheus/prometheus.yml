@@ -20,6 +20,21 @@ scrape_configs:
     static_configs:
       - targets: ['webhooks:8000']
 
+  - job_name: 'payments'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['payments:8001']
+
+  - job_name: 'ai_service'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['ai_service:8001']
+
+  - job_name: 'filter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['filter:9091']
+
   - job_name: 'kg-mcp-server'
     metrics_path: /metrics
     static_configs:

@@ -33,3 +33,17 @@ docker-compose up ai_service
 ```bash
 pytest tests/
 ```
+
+## Monitoring
+
+The service exposes Prometheus metrics at `GET /metrics` (port 8001).
+
+| Metric | Type | Description |
+|---|---|---|
+| `http_requests_total` | Counter | All HTTP requests by method/endpoint/status |
+| `http_request_duration_seconds` | Histogram | HTTP request latency (p50/p95/p99) |
+| `http_requests_in_progress` | Gauge | Concurrent requests in flight |
+| `ai_pipeline_calls_total` | Counter | LangGraph agent invocations, labelled `mode` (single/batch) + `outcome` |
+| `ai_pipeline_duration_seconds` | Histogram | End-to-end agent processing time including all LLM calls |
+
+The `ai_pipeline_*` metrics are particularly useful for tracking LLM latency and error rates independently of the HTTP layer.

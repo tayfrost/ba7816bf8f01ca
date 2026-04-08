@@ -92,13 +92,26 @@ category_logits, severity_logits = session.run(
 - **Default Backend**: `pytorch`
 - **Optional Backends**: `onnx` with variants `fp32`, `fp16`, `dynamic_int8`
 
+## Monitoring
+
+The filter service exposes a Prometheus metrics endpoint on **port 9091** (HTTP), separate from the gRPC port 50051. Prometheus scrapes `filter:9091/metrics` automatically.
+
+| Metric | Type | Description |
+|---|---|---|
+| `grpc_requests_total` | Counter | Total RPC calls, labelled `method` + `outcome` (success/error) |
+| `grpc_request_duration_seconds` | Histogram | Per-method call latency (p50/p95/p99 via `histogram_quantile`) |
+| `grpc_batch_size` | Histogram | Distribution of batch sizes for `ClassifyMessages` calls |
+
+The HTTP server starts in a background daemon thread alongside the gRPC server. Override the port via the `PROMETHEUS_PORT` environment variable (default `9091`).
+
 ## Dependencies
 
 - `grpcio` / `grpcio-tools` - gRPC runtime and code generation
 - `torch` / `transformers` / `peft` - Default PyTorch inference path
 - `onnxruntime` - Optional ONNX inference backend
 - `protobuf` - Protocol Buffers
+- `prometheus-client` - Metrics HTTP server
 
 ## Status
 
-✅ **Operational** - PyTorch-first inference server with optional ONNX backend.
+✅ **Operational** - PyTorch-first inference server with optional ONNX backend and Prometheus metrics.

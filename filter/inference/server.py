@@ -17,6 +17,7 @@ import logging
 import os
 import json
 import sys
+import time
 import urllib.request
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
@@ -35,6 +36,7 @@ sys.path.insert(0, str(filter_dir))
 
 import grpc
 from dotenv import load_dotenv
+from prometheus_client import Counter, Histogram, start_http_server as prometheus_start_http_server
 from transformers import AutoTokenizer
 
 from filter.v1 import filter_pb2  # type: ignore[reportMissingImports]
@@ -53,6 +55,29 @@ from services.classification_utils import (
 )
 
 load_dotenv()
+
+# --- prometheus metrics ---
+# Exposed via a lightweight HTTP server on port 9091 (scraped by prometheus).
+# gRPC has no HTTP layer, so start_http_server runs in a background daemon thread.
+
+grpc_requests_total = Counter(
+    "grpc_requests_total",
+    "Total gRPC calls handled by the filter service",
+    ["method", "outcome"],  # outcome: success | error
+)
+
+grpc_request_duration_seconds = Histogram(
+    "grpc_request_duration_seconds",
+    "gRPC call duration in seconds",
+    ["method"],
+    buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
+)
+
+grpc_batch_size = Histogram(
+    "grpc_batch_size",
+    "Number of messages per ClassifyMessages batch call",
+    buckets=[1, 2, 5, 10, 25, 50, 100],
+)
 
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:8001/analyze")
 _AI_DISPATCH_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai-dispatch")
@@ -240,6 +265,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
     def ClassifyMessage(self, request, context):
         """Classify a single message using sliding window approach."""
         logger.debug("ClassifyMessage: %d chars", len(request.message))
+        _start = time.perf_counter()
         try:
             message = request.message
 
@@ -276,11 +302,14 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
                 )
                 _AI_DISPATCH_POOL.submit(_dispatch_to_ai, meta, text, final_result)
 
+            grpc_requests_total.labels(method="ClassifyMessage", outcome="success").inc()
+            grpc_request_duration_seconds.labels(method="ClassifyMessage").observe(time.perf_counter() - _start)
             return self._result_to_response(final_result)
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.exception("Failed to process message: %s", e)
-
+            grpc_requests_total.labels(method="ClassifyMessage", outcome="error").inc()
+            grpc_request_duration_seconds.labels(method="ClassifyMessage").observe(time.perf_counter() - _start)
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Error processing message: {str(e)}")
             return filter_pb2.ClassifyResponse()
@@ -299,10 +328,12 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         """
         messages = list(request.messages)
         logger.info("ClassifyMessages: %d messages", len(messages))
+        grpc_batch_size.observe(len(messages))
 
         if not messages:
             return filter_pb2.BatchClassifyResponse(results=[])
 
+        _start = time.perf_counter()
         results = []
         for i, message in enumerate(messages):
             try:
@@ -312,12 +343,22 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
                 logger.warning("Batch message %d/%d failed, using safe default: %s", i + 1, len(messages), e)
                 results.append(self._result_to_response(self._SAFE_DEFAULT))
 
+        grpc_requests_total.labels(method="ClassifyMessages", outcome="success").inc()
+        grpc_request_duration_seconds.labels(method="ClassifyMessages").observe(time.perf_counter() - _start)
         logger.info("Batch complete: %d/%d classified", len(results), len(messages))
         return filter_pb2.BatchClassifyResponse(results=results)
 
 
+_METRICS_PORT = int(os.getenv("PROMETHEUS_PORT", "9091"))
+
+
 def serve():
-    """Start the gRPC server."""
+    """Start the gRPC server and a sidecar HTTP server for Prometheus metrics."""
+    # Start prometheus HTTP metrics endpoint in a background daemon thread.
+    # Prometheus scrapes this at filter:9091/metrics.
+    prometheus_start_http_server(_METRICS_PORT)
+    logger.info("Prometheus metrics server listening on port %d", _METRICS_PORT)
+
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=10),
         interceptors=[_SecretInterceptor()],

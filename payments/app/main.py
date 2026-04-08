@@ -12,6 +12,7 @@ from app.api.routes.payments import router as payments_router
 from app.api.webhooks.stripe_webhook import router as webhook_router
 from app.core.config import get_settings
 from app.core.database import AsyncSessionLocal, init_db
+from app.middleware.metrics import PrometheusMiddleware, metrics_endpoint
 from app.services.seed_service import seed_plans
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+app.add_middleware(PrometheusMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -51,6 +53,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 
 app.include_router(payments_router, prefix="/api/v1", tags=["Payments"])
 app.include_router(webhook_router, prefix="/api/v1/webhooks", tags=["Webhooks"])

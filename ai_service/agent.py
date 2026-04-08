@@ -3,6 +3,8 @@
 import os
 import asyncio
 import logging
+import re
+import time
 from typing import Literal, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends
@@ -10,6 +12,10 @@ from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from fastmcp import Client
+from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,7 +28,93 @@ from schema.request import AnalyzeRequest, BatchAnalyzeRequest
 
 load_dotenv()
 
+# --- prometheus metrics ---
+
+_SERVICE = "ai_service"
+_ID_RE = re.compile(r"/([0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
+
+_http_requests_total = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "endpoint", "status_code", "service"],
+)
+_http_request_duration_seconds = Histogram(
+    "http_request_duration_seconds",
+    "Request duration in seconds",
+    ["method", "endpoint", "service"],
+    buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0],
+)
+_http_requests_in_progress = Gauge(
+    "http_requests_in_progress",
+    "Requests currently being processed",
+    ["method", "service"],
+)
+_http_request_size_bytes = Histogram(
+    "http_request_size_bytes", "Request body size", ["method", "endpoint", "service"],
+)
+_http_response_size_bytes = Histogram(
+    "http_response_size_bytes", "Response body size", ["method", "endpoint", "service"],
+)
+
+# ai_service-specific: track LLM pipeline calls
+ai_pipeline_calls_total = Counter(
+    "ai_pipeline_calls_total",
+    "Total LangGraph agent invocations",
+    ["mode", "outcome"],  # mode: single|batch, outcome: success|error
+)
+ai_pipeline_duration_seconds = Histogram(
+    "ai_pipeline_duration_seconds",
+    "End-to-end LangGraph agent processing time",
+    ["mode"],
+    buckets=[0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0],
+)
+
+
+class _PrometheusMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path == "/metrics":
+            return await call_next(request)
+        method = request.method
+        path = _ID_RE.sub("/{id}", request.url.path)
+        _http_requests_in_progress.labels(method=method, service=_SERVICE).inc()
+        body = await request.body()
+        _http_request_size_bytes.labels(method=method, endpoint=path, service=_SERVICE).observe(len(body))
+        status_code = 500
+        resp_size = 0
+        start = time.perf_counter()
+        try:
+            resp = await call_next(request)
+            status_code = resp.status_code
+            resp_body = b""
+            async for chunk in resp.body_iterator:
+                resp_body += chunk if isinstance(chunk, bytes) else chunk.encode()
+            resp_size = len(resp_body)
+            return Response(
+                content=resp_body,
+                status_code=resp.status_code,
+                headers=dict(resp.headers),
+                media_type=resp.media_type,
+            )
+        except Exception:
+            status_code = 500
+            raise
+        finally:
+            duration = time.perf_counter() - start
+            _http_requests_total.labels(
+                method=method, endpoint=path, status_code=str(status_code), service=_SERVICE,
+            ).inc()
+            _http_request_duration_seconds.labels(method=method, endpoint=path, service=_SERVICE).observe(duration)
+            _http_response_size_bytes.labels(method=method, endpoint=path, service=_SERVICE).observe(resp_size)
+            _http_requests_in_progress.labels(method=method, service=_SERVICE).dec()
+
+
+async def _metrics_endpoint(request: Request):
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 app = FastAPI(title="SentinelAI Mental Health Assessment")
+app.add_middleware(_PrometheusMiddleware)
+app.add_route("/metrics", _metrics_endpoint, methods=["GET"])
 
 # Initialize services
 prompt_service = PromptService()
@@ -105,10 +197,18 @@ async def _analyze_single(request: AnalyzeRequest, mcp_client: Client) -> AgentO
         "filter_category": request.filter_category,
         "filter_severity": request.filter_severity,
     }
-    result = await agent.ainvoke(
-        initial_state,
-        config={"configurable": {"mcp_client": mcp_client}},
-    )
+    _start = time.perf_counter()
+    try:
+        result = await agent.ainvoke(
+            initial_state,
+            config={"configurable": {"mcp_client": mcp_client}},
+        )
+        ai_pipeline_calls_total.labels(mode="single", outcome="success").inc()
+    except Exception:
+        ai_pipeline_calls_total.labels(mode="single", outcome="error").inc()
+        raise
+    finally:
+        ai_pipeline_duration_seconds.labels(mode="single").observe(time.perf_counter() - _start)
 
     if not result.get("is_confirmed_risk"):
         return AgentOutput(
