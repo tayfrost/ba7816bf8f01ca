@@ -117,6 +117,8 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
         )
         self.overlap = int(os.environ.get("OVERLAP", os.environ.get("overlap", 32)))
         self.threshold = float(os.environ.get("THRESHOLD", os.environ.get("threshold", 0.5)))
+        self.soft_conf_threshold = float(os.environ.get("SOFT_CONF_THRESHOLD", 0.8))
+        self.risk_escalation_floor = float(os.environ.get("RISK_ESCALATION_FLOOR", 0.2))
         self.inference_backend = os.environ.get("INFERENCE_BACKEND", "pytorch").strip().lower()
         self.onnx_variant = os.environ.get("ONNX_VARIANT", "fp32")
 
@@ -261,8 +263,17 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
                 final_result["is_risk"],
             )
 
-            if final_result["is_risk"] and meta:
-                logger.info("Risk detected — dispatching to AI service for user_id=%s", meta.get("user_id"))
+            cat = final_result["category"]
+            conf = final_result["category_confidence"]
+            soft_hit = cat in {"neutral", "humor_sarcasm"} and conf < self.soft_conf_threshold
+            risk_hit = cat in config.RISK_CATEGORIES and conf >= self.risk_escalation_floor
+            should_dispatch = final_result["is_risk"] or soft_hit or risk_hit
+
+            if should_dispatch and meta:
+                logger.info(
+                    "Dispatching to AI — reason: is_risk=%s soft_hit=%s risk_hit=%s user_id=%s",
+                    final_result["is_risk"], soft_hit, risk_hit, meta.get("user_id"),
+                )
                 _AI_DISPATCH_POOL.submit(_dispatch_to_ai, meta, text, final_result)
 
             return self._result_to_response(final_result)
