@@ -4,7 +4,6 @@ import { enumerateDays } from "../state/timeRange";
 import { getUsage } from "../api";
 import type { Series, SeriesPoint } from "../api";
 import { makeAllSeries } from "../state/metricsMock";
-import { dashboardDebug, dashboardDebugError } from "../utils/dashboardDebug";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -102,7 +101,7 @@ export function useDashboardData(range: DateRange) {
         const res = await getUsage({ start: range.start, end: range.end });
         if (cancelled) return;
 
-        dashboardDebug("useDashboardData", "raw-usage-response", res);
+        console.log("[dashboard] raw /usage response:", res);
 
         const fetched = res?.series ?? [];
         // Fill prefix gaps with 0, leaving suffix as-is (backend applies 3-day rolling avg)
@@ -111,21 +110,21 @@ export function useDashboardData(range: DateRange) {
           ? /* smoothSeries( */ fillRangeGaps(fetched, range.start, range.end) /* ) */
           : PLACEHOLDER_SERIES;
         const normalized = normalizeGraphSeries(transformed, 10);
-        dashboardDebug("useDashboardData", "raw-incident-score-series", transformed);
-        dashboardDebug("useDashboardData", "normalized-incident-score-series", normalized);
+        console.log("[dashboard] raw incident score series:", transformed);
+        console.log("[dashboard] normalized incident score series:", normalized);
         setSeries(normalized);
         setStatus("success");
       } catch (e) {
         if (cancelled) return;
 
         console.error(e);
-        dashboardDebugError("useDashboardData", "usage-payload-failed", e, { range, isMockEnv: IS_MOCK });
+        console.error("[dashboard] failed to load /usage payload:", { range, isMockEnv: IS_MOCK, error: e });
 
         if (IS_MOCK) {
           const mocked = /* smoothSeries( */ makeAllSeries(range) /* ) */;
           const normalizedMocked = normalizeGraphSeries(mocked, 10);
-          dashboardDebug("useDashboardData", "raw-incident-score-series", mocked);
-          dashboardDebug("useDashboardData", "normalized-incident-score-series", normalizedMocked);
+          console.log("[dashboard] mock raw incident score series:", mocked);
+          console.log("[dashboard] mock normalized incident score series:", normalizedMocked);
           setSeries(normalizedMocked);
           setStatus("success");
           return;
