@@ -234,7 +234,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
         run: python database/database/tables.py
 
-      - name: Diagnostics: Python and pip info before setuptools
+      - name: Diagnostics Python and pip info before setuptools
         run: |
           which python
           python --version
@@ -249,7 +249,7 @@ jobs:
           python -c "import pkg_resources; print('pkg_resources location:', pkg_resources.__file__)"
           python -m pip list
 
-      - name: Diagnostics: Python and pip info after setuptools
+      - name: Diagnostics Python and pip info after setuptools
         run: |
           which python
           python --version
