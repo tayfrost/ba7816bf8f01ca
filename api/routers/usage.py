@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timedelta
+import logging
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
@@ -8,6 +9,7 @@ from api.dependencies import CurrentUser, get_current_user
 from database.services import crud_incident_scores
 
 router = APIRouter(tags=["usage"])
+logger = logging.getLogger(__name__)
 
 SCORE_CATEGORIES = [
     ("depression", "Depression"),
@@ -52,12 +54,26 @@ async def get_usage(
     user: CurrentUser = Depends(get_current_user),
 ):
     start_dt = datetime.fromisoformat(start)
-    end_dt = datetime.fromisoformat(end)
+    # Treat `end` as inclusive calendar day by querying up to next midnight.
+    end_dt = datetime.fromisoformat(end) + timedelta(days=1)
+
+    logger.info(
+        "[usage] request company_id=%s start=%s end=%s effective_end_exclusive=%s",
+        user.company_id,
+        start,
+        end,
+        end_dt.isoformat(),
+    )
 
     rows = await asyncio.to_thread(
         crud_incident_scores.list_daily_score_averages,
         user.company_id, start_dt, end_dt,
     )
+
+    logger.info("[usage] rows_returned=%d", len(rows))
+    if rows:
+        logger.info("[usage] first_row=%s", rows[0])
+        logger.info("[usage] last_row=%s", rows[-1])
 
     # Build a point list per category
     category_points: dict[str, list[SeriesPoint]] = {key: [] for key, _ in SCORE_CATEGORIES}
@@ -74,5 +90,10 @@ async def get_usage(
         )
         for key, label in SCORE_CATEGORIES
     ]
+
+    logger.info(
+        "[usage] series_points=%s",
+        {s.key: len(s.points) for s in series_list},
+    )
 
     return UsageResponse(range={"start": start, "end": end}, series=series_list)
