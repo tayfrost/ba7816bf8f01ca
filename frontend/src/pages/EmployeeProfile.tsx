@@ -13,6 +13,7 @@ import IncidentModal from "../components/dashboard/IncidentModal";
 import { computeRange } from "../state/timeRange";
 import type { RangePreset } from "../state/timeRange";
 import type { Incident } from "../api";
+import { dashboardDebug, summarizeSeries } from "../utils/dashboardDebug";
 
 const BRAND_ORANGE = "var(--color-top)";
 
@@ -32,6 +33,30 @@ export default function EmployeeProfile() {
   const { incidents, series: incidentSeries } = useEmployeeIncidents(employeeId ?? "", range);
   const [activeSeriesIndex, setActiveSeriesIndex] = useState(0);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+
+  useEffect(() => {
+    dashboardDebug("EmployeeProfile", "render-state", {
+      employeeId,
+      status,
+      hasEmployee: Boolean(employee),
+      preset,
+      range,
+      incidentsCount: incidents.length,
+      incidentSeriesSummary: summarizeSeries(incidentSeries, 10),
+      activeSeriesIndex,
+      selectedIncidentId: selectedIncident?.incident_id ?? null,
+    });
+  }, [
+    employeeId,
+    status,
+    employee,
+    preset,
+    range,
+    incidents,
+    incidentSeries,
+    activeSeriesIndex,
+    selectedIncident,
+  ]);
 
   // Redirect on load error
   useEffect(() => {
@@ -116,7 +141,15 @@ export default function EmployeeProfile() {
 
         <EmployeeIncidentTimeline
           incidents={incidents}
-          onIncidentClick={(inc) => setSelectedIncident(inc)}
+          onIncidentClick={(inc) => {
+            dashboardDebug("EmployeeProfile", "incident-selected", {
+              incident_id: inc.incident_id,
+              message_id: inc.message_id,
+              class_reason: inc.class_reason,
+              created_at: inc.created_at,
+            });
+            setSelectedIncident(inc);
+          }}
         />
 
         <div className="h-24 lg:hidden" />

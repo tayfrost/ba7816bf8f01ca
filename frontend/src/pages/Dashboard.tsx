@@ -19,6 +19,7 @@ import IncidentStatsPanel from "../components/dashboard/IncidentStatsPanel";
 import RecentIncidentsFeed from "../components/dashboard/RecentIncidentsFeed";
 import IncidentModal from "../components/dashboard/IncidentModal";
 import type { Incident } from "../api";
+import { dashboardDebug, summarizeSeries } from "../utils/dashboardDebug";
 
 
 
@@ -53,6 +54,28 @@ export default function Dashboard() {
     incidents,
     stats: incidentStats,
   } = useIncidents();
+
+  useEffect(() => {
+    dashboardDebug("Dashboard", "render-state", {
+      range,
+      metricStatus: status,
+      metricError: error,
+      metricSeriesSummary: summarizeSeries(metricSeries, 10),
+      incidentsStatus,
+      incidentsCount: incidents.length,
+      incidentStats,
+      selectedIncidentId: selectedIncident?.incident_id ?? null,
+    });
+  }, [
+    range,
+    status,
+    error,
+    metricSeries,
+    incidentsStatus,
+    incidents,
+    incidentStats,
+    selectedIncident,
+  ]);
 
   // Redirect to error page on any data failure
   useEffect(() => {
@@ -179,7 +202,15 @@ export default function Dashboard() {
           {/* Updated to handle click */}
           <RecentIncidentsFeed 
             incidents={incidents} 
-            onIncidentClick={(incident) => setSelectedIncident(incident)} 
+            onIncidentClick={(incident) => {
+              dashboardDebug("Dashboard", "incident-selected", {
+                incident_id: incident.incident_id,
+                message_id: incident.message_id,
+                class_reason: incident.class_reason,
+                created_at: incident.created_at,
+              });
+              setSelectedIncident(incident);
+            }} 
           />
         </div>
         

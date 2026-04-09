@@ -1,4 +1,6 @@
 import type { Incident } from "../../api";
+import { useEffect } from "react";
+import { dashboardDebug } from "../../utils/dashboardDebug";
 
 type Props = {
   incidents: Incident[];
@@ -6,6 +8,19 @@ type Props = {
 };
 
 export default function RecentIncidentsFeed({ incidents, onIncidentClick }: Props) {
+  useEffect(() => {
+    dashboardDebug("RecentIncidentsFeed", "render", {
+      incidentsCount: incidents.length,
+      firstFive: incidents.slice(0, 5).map((incident) => ({
+        incident_id: incident.incident_id,
+        reason: incident.class_reason,
+        created_at: incident.created_at,
+        channel_id: incident.channel_id,
+        slack_user_id: incident.slack_user_id,
+      })),
+    });
+  }, [incidents]);
+
   return (
     <div
       style={{
@@ -28,7 +43,15 @@ export default function RecentIncidentsFeed({ incidents, onIncidentClick }: Prop
         {incidents.map((incident) => (
           <div
             key={incident.incident_id}
-            onClick={() => onIncidentClick(incident)} // Handle Click for IncidentModal
+            onClick={() => {
+              dashboardDebug("RecentIncidentsFeed", "incident-click", {
+                incident_id: incident.incident_id,
+                message_id: incident.message_id,
+                reason: incident.class_reason,
+                created_at: incident.created_at,
+              });
+              onIncidentClick(incident);
+            }} // Handle Click for IncidentModal
             style={{
               padding: "16px",
               borderRadius: "18px",

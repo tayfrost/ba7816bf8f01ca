@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { dashboardDebug } from "../utils/dashboardDebug";
 
 type Point = { date: string; value: number };
 
@@ -30,11 +31,14 @@ export default function SimpleLineChart({ points, width = 520, height = 150, max
     return points;
   }, [points]);
 
-  const { polyline, fillPath, min, max, latest, mid, padValue } = (() => {
+  const { polyline, fillPath, min, max, latest, mid, padValue, inputMax, inputMin, clippedAboveScaleCount } = (() => {
     const pts = workingPoints;
 
     const rawValues = pts.map((p) => p.value);
     const allZero = rawValues.every((v) => v === 0);
+    const inputMax = rawValues.length ? Math.max(...rawValues) : 0;
+    const inputMin = rawValues.length ? Math.min(...rawValues) : 0;
+    const clippedAboveScaleCount = rawValues.filter((v) => v > maxValue).length;
 
     // Clamp every value to [0, maxValue] (guard against out-of-range scores)
     const values = allZero
@@ -66,8 +70,47 @@ export default function SimpleLineChart({ points, width = 520, height = 150, max
     const linePoints = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
     const fillPath = `${linePoints} ${coords[coords.length - 1].x},${height} ${coords[0].x},${height} Z`;
 
-    return { polyline: linePoints, fillPath, min, max, latest, mid, padValue: innerPad };
+    return {
+      polyline: linePoints,
+      fillPath,
+      min,
+      max,
+      latest,
+      mid,
+      padValue: innerPad,
+      inputMax,
+      inputMin,
+      clippedAboveScaleCount,
+    };
   })();
+
+  useEffect(() => {
+    dashboardDebug("SimpleLineChart", "render", {
+      width,
+      height,
+      maxValue,
+      inputPoints: points.length,
+      workingPoints: workingPoints.length,
+      inputMin,
+      inputMax,
+      clippedAboveScaleCount,
+      latest,
+      min,
+      max,
+    });
+  }, [
+    width,
+    height,
+    maxValue,
+    points.length,
+    workingPoints.length,
+    inputMin,
+    inputMax,
+    clippedAboveScaleCount,
+    latest,
+    min,
+    max,
+  ]);
 
   return (
     <div style={{
