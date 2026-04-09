@@ -13,6 +13,8 @@ import EmployeeProfile from "./pages/EmployeeProfile";
 import RequireAuth from "./guards/RequireAuth";
 import RegisterGmail from "./pages/RegisterGmail";
 import Privacy from "./pages/Privacy";
+import ErrorPage from "./pages/ErrorPage";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { useThemeToggle } from "./hooks/useThemeToggle";
 
 export default function App() {
@@ -20,6 +22,7 @@ export default function App() {
   useThemeToggle();
 
   return (
+    <ErrorBoundary>
     <Routes>
       <Route path="/" element={<Navigate to="/plan" replace />} />
       <Route path="/login" element={<Login />} />
@@ -95,8 +98,10 @@ export default function App() {
 
       <Route path="/register-gmail" element={<RegisterGmail />} />
       <Route path="/privacy" element={<Privacy />} />
+      <Route path="/error" element={<ErrorPage />} />
 
-      <Route path="*" element={<Navigate to="/plan" replace />} />
+      <Route path="*" element={<ErrorPage code={404} message="The page you're looking for doesn't exist." />} />
     </Routes>
+    </ErrorBoundary>
   );
 }

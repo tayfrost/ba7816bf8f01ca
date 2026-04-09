@@ -39,11 +39,10 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     const text = await res.text().catch(() => "");
     console.error(`[api] ${method} ${url} failed: ${res.status}`, text);
 
-    if (res.status === 401) {
-      // Token expired or invalid — clear it and bounce to login immediately
+    // Auth or payment gate — both resolve by going through login
+    if (res.status === 401 || res.status === 402 || res.status === 403) {
       try { localStorage.removeItem("sentinel_access_token"); } catch {}
       window.location.replace("/login");
-      // Return a promise that never resolves so no further code runs
       return new Promise<never>(() => {});
     }
 
