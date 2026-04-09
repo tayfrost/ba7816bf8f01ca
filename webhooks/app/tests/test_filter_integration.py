@@ -1,13 +1,13 @@
 """
 Integration tests for Filter Service gRPC stub.
 
-`sentinelai.filter.v1` is the generated proto package namespace used by
-the webhooks service for FilterService gRPC calls.
+NOTE: The generated proto code must be available as 'filter.v1' (from filter/generated/filter/v1),
+and 'filter/generated' must be on PYTHONPATH for these imports to work.
 """
 
 import pytest
 import grpc
-from sentinelai.filter.v1 import filter_pb2, filter_pb2_grpc
+from filter.v1 import filter_pb2, filter_pb2_grpc
 from app.services.filter_service import filter_message, FILTER_SERVICE_HOST
 
 
@@ -50,7 +50,7 @@ class TestFilterIntegration:
                 message="I'm so overwhelmed with all these deadlines, I can't keep up anymore."
             )
             response = stub.ClassifyMessage(request)
-            
+
             assert isinstance(response.is_risk, bool)
             assert response.category in [
                 "neutral", "humor_sarcasm", "stress", "burnout", 
@@ -60,7 +60,7 @@ class TestFilterIntegration:
             assert response.all_responses != ""
         finally:
             channel.close()
-    
+
     def test_classify_harassment_message(self):
         """Test that harassment message gets flagged."""
         stub, channel = _get_filter_stub_or_skip()

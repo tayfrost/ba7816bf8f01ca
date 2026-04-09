@@ -51,6 +51,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r filter/requirements.txt pytest grpcio-tools setuptools
 
+      - name: Ensure setuptools for proto compilation
+        run: python -m pip install --upgrade setuptools
+
       - name: Compile Protos
         run: |
           # Find and run the compile script
@@ -230,6 +233,9 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
         run: python database/database/tables.py
+
+      - name: Ensure setuptools for proto compilation
+        run: python -m pip install --upgrade setuptools
 
       - name: Compile Protos
         run: |
