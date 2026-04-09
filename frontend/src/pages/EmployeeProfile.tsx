@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ErrorPage from "./ErrorPage";
 import SidebarLink from "../components/SidebarLink";
 import { useEmployeesData } from "../hooks/useEmployeesData";
 import { useEmployeeIncidents } from "../hooks/useEmployeeIncidents";
@@ -26,73 +27,20 @@ export default function EmployeeProfile() {
   const [activeSeriesIndex, setActiveSeriesIndex] = useState(0);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
 
-  if (status === "loading") {
-    return (
-      <div
-        className="px-6 text-center"
-        style={{
-          minHeight: "100vh",
-          background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
-          color: "white",
-          display: "grid",
-          placeItems: "center",
-          fontFamily: "'Outfit', 'Inter', sans-serif",
-        }}
-      >
-        Loading employee profile...
-      </div>
-    );
-  }
+  // Redirect on load error
+  useEffect(() => {
+    if (status === "error") navigate("/error", { replace: true });
+  }, [status, navigate]);
 
-  if (error) {
-    return (
-      <div
-        className="px-6 text-center"
-        style={{
-          minHeight: "100vh",
-          background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
-          color: "white",
-          display: "grid",
-          placeItems: "center",
-          fontFamily: "'Outfit', 'Inter', sans-serif",
-        }}
-      >
-        Failed to load employee profile.
-      </div>
-    );
-  }
+  if (status === "loading") return null;
+  if (status === "error") return null; // useEffect handles redirect
 
   if (!employee) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
-          color: "white",
-          display: "grid",
-          placeItems: "center",
-          fontFamily: "'Outfit', 'Inter', sans-serif",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <h1>Employee not found</h1>
-          <button
-            onClick={() => navigate("/employees")}
-            style={{
-              marginTop: "20px",
-              padding: "12px 18px",
-              borderRadius: "12px",
-              border: "none",
-              background: BRAND_ORANGE,
-              color: "#1a011d",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            Back to Employees
-          </button>
-        </div>
-      </div>
+      <ErrorPage
+        code={404}
+        message="This employee profile does not exist or could not be found."
+      />
     );
   }
 

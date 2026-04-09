@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-//import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
 import { computeRange } from "../state/timeRange";
@@ -24,7 +24,7 @@ const BRAND_ORANGE = "var(--color-top)";
 
 export default function Dashboard() {
   const { signup, plan, integrations } = useOnboarding();
- // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [preset, setPreset] = useState<RangePreset>("week");
   const [customStart, setCustomStart] = useState("2026-01-01");
@@ -50,10 +50,14 @@ export default function Dashboard() {
 
   const {
     status: incidentsStatus,
-    error: incidentsError,
     incidents,
     stats: incidentStats,
   } = useIncidents();
+
+  // Redirect to error page on any data failure
+  useEffect(() => {
+    if (incidentsStatus === "error") navigate("/error", { replace: true });
+  }, [incidentsStatus, navigate]);
 
   return (
     <div style={{
@@ -112,11 +116,6 @@ export default function Dashboard() {
 
         <StatusBanner status={status} error={error} isMock={isMock} />
 
-        {incidentsStatus === "error" && incidentsError && (
-          <div style={{ marginBottom: 18, opacity: 0.9, color: BRAND_ORANGE, fontWeight: 800 }}>
-            {incidentsError}
-          </div>
-        )}
 
         {viewMode === "focused" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>

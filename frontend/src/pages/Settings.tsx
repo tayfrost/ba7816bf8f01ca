@@ -36,7 +36,6 @@ export default function Settings() {
   const {
     status: currentUserStatus,
     user: currentUser,
-    error: currentUserError,
   } = useCurrentUser();
 
   const isAdmin = currentUser?.role === "admin";
@@ -198,21 +197,9 @@ export default function Settings() {
           </div>
         )}
         
-        {error && (
-          <div style={{ marginBottom: "20px", color: BRAND_ORANGE, fontWeight: 800 }}>
-            {error}
-          </div>
-        )}
-
         {currentUserStatus === "loading" && (
           <div style={{ marginBottom: "20px", opacity: 0.7, fontWeight: 700 }}>
             Loading current user...
-          </div>
-        )}
-        
-        {currentUserError && (
-          <div style={{ marginBottom: "20px", color: BRAND_ORANGE, fontWeight: 800 }}>
-            {currentUserError}
           </div>
         )}
 

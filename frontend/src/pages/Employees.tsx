@@ -48,6 +48,11 @@ export default function Employees() {
   // Reset to page 1 when filters change
   useEffect(() => { setPage(1); }, [searchTerm, riskFilter, sourceFilter, sortBy]);
 
+  // Redirect on data load failure
+  useEffect(() => {
+    if (status === "error") navigate("/error", { replace: true });
+  }, [status, navigate]);
+
   const totalPages = Math.max(1, Math.ceil(employees.length / PAGE_SIZE));
   const pagedEmployees = employees.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -128,12 +133,6 @@ export default function Employees() {
         {status === "loading" && (
           <div style={{ marginBottom: 20, opacity: 0.75, fontWeight: 700 }}>
             Loading employees...
-          </div>
-        )}
-        
-        {status === "error" && error && (
-          <div style={{ marginBottom: 20, color: BRAND_ORANGE, fontWeight: 800 }}>
-            {error}
           </div>
         )}
 
