@@ -234,35 +234,19 @@ jobs:
           POSTGRES_PASSWORD: postgres
         run: python database/database/tables.py
 
-      - name: Diagnostics Python and pip info before setuptools
+      - name: Setup isolated proto compile environment
         run: |
-          which python
+          python -m venv .proto-venv
+          source .proto-venv/bin/activate
           python --version
-          which pip
-          pip --version
-          python -m pip list
-
-      - name: Ensure setuptools for proto compilation (force reinstall)
-        run: |
-          python -m pip install --force-reinstall setuptools
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir --force-reinstall setuptools grpcio-tools
           python -m pip show setuptools
-          python -c "import pkg_resources; print('pkg_resources location:', pkg_resources.__file__)"
-          python -m pip list
-
-      - name: Diagnostics Python and pip info after setuptools
-        run: |
-          which python
-          python --version
-          which pip
-          pip --version
-          python -m pip list
-
-      - name: Compile Protos
-        run: |
-          echo "About to run compile_protos.py"
+          python -c "import pkg_resources; print('pkg_resources OK:', pkg_resources.__file__)"
+          python -m grpc_tools.protoc --version
           SCRIPT=$(find . -name compile_protos.py | head -n 1)
           echo "SCRIPT=$SCRIPT"
-          python $SCRIPT || (echo "FAILED: python $SCRIPT" && exit 1)
+          python $SCRIPT
 
       - name: Start API server
         working-directory: ${{ github.workspace }}
