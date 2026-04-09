@@ -1,6 +1,7 @@
 import asyncio
+import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -18,6 +19,7 @@ from database.services import (
 )
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
+logger = logging.getLogger(__name__)
 
 
 def _build_feed_items(
@@ -84,7 +86,19 @@ async def list_incidents(
     end: str | None = Query(None, description="ISO date filter end (YYYY-MM-DD)"),
 ):
     start_dt = datetime.fromisoformat(start) if start else None
-    end_dt = datetime.fromisoformat(end) if end else None
+    end_dt = (datetime.fromisoformat(end) + timedelta(days=1)) if end else None
+
+    logger.info(
+        "[incidents] list request company_id=%s employee_user_id=%s skip=%s limit=%s start=%s end=%s start_dt=%s end_dt_exclusive=%s",
+        user.company_id,
+        employee_user_id,
+        skip,
+        limit,
+        start,
+        end,
+        start_dt.isoformat() if start_dt else None,
+        end_dt.isoformat() if end_dt else None,
+    )
 
     if employee_user_id is not None:
         incidents_task = asyncio.to_thread(
@@ -109,6 +123,29 @@ async def list_incidents(
             user.company_id,
         ),
     )
+
+    logger.info(
+        "[incidents] list result company_id=%s employee_user_id=%s rows_returned=%s",
+        user.company_id,
+        employee_user_id,
+        len(incidents),
+    )
+
+    if incidents:
+        logger.info(
+            "[incidents] first_row message_id=%s sent_at=%s created_at=%s category=%s",
+            incidents[0].message_id,
+            incidents[0].sent_at.isoformat(),
+            incidents[0].created_at.isoformat(),
+            (incidents[0].content_raw or {}).get("filter_category") or "unknown",
+        )
+        logger.info(
+            "[incidents] last_row message_id=%s sent_at=%s created_at=%s category=%s",
+            incidents[-1].message_id,
+            incidents[-1].sent_at.isoformat(),
+            incidents[-1].created_at.isoformat(),
+            (incidents[-1].content_raw or {}).get("filter_category") or "unknown",
+        )
 
     slack_by_user = {str(a.user_id): a for a in slack_accounts}
     mailbox_by_user = {str(m.user_id): m for m in mailboxes}

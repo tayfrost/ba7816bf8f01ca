@@ -81,6 +81,28 @@ function buildCategorySeries(incidents: Incident[], start: string, end: string):
   return result;
 }
 
+function normalizeGraphValue(value: number, targetMax: number = 10): number {
+  let normalized = value;
+  let guard = 0;
+
+  while (Math.abs(normalized) > targetMax && guard < 8) {
+    normalized /= 10;
+    guard += 1;
+  }
+
+  return Math.round(normalized * 10000) / 10000;
+}
+
+function normalizeGraphSeries(series: Series[], targetMax: number = 10): Series[] {
+  return series.map((s) => ({
+    ...s,
+    points: s.points.map((point) => ({
+      ...point,
+      value: normalizeGraphValue(point.value, targetMax),
+    })),
+  }));
+}
+
 export function useEmployeeIncidents(userId: string, range?: DateRange) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +140,7 @@ export function useEmployeeIncidents(userId: string, range?: DateRange) {
       try {
         const data = await getEmployeeIncidents(userId, 500, start, end);
         if (cancelled) return;
+        console.log("[employee-profile] raw /incidents response:", data);
         dashboardDebug("useEmployeeIncidents", "fetch-success", {
           userId,
           incidentCount: data.length,
@@ -130,12 +153,15 @@ export function useEmployeeIncidents(userId: string, range?: DateRange) {
           lastIncidentDate: data[data.length - 1]?.created_at ?? null,
         });
         setIncidents(data);
-        const nextSeries = buildCategorySeries(data, start, end);
-        setSeries(nextSeries);
+        const rawSeries = buildCategorySeries(data, start, end);
+        const normalizedSeries = normalizeGraphSeries(rawSeries, 10);
+        console.log("[employee-profile] raw category series:", rawSeries);
+        console.log("[employee-profile] normalized category series:", normalizedSeries);
+        setSeries(normalizedSeries);
         setStatus("success");
         dashboardDebug("useEmployeeIncidents", "state-success", {
           userId,
-          seriesSummary: summarizeSeries(nextSeries, 10),
+          seriesSummary: summarizeSeries(normalizedSeries, 10),
         });
       } catch (err) {
         if (cancelled) return;
