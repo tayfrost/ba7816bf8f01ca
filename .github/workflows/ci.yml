@@ -74,6 +74,7 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sentinelai
+          PYTHONPATH: payments
         run: pytest -q payments/tests
 
   database-table-tests:
@@ -118,6 +119,7 @@ jobs:
       - name: Run table tests
         env:
           DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/sentinelai
+          PYTHONPATH: database
         run: pytest -q database/tests/table_test
 
   # Advisory suite: runs all other identified test folders that may need branch-specific updates.
@@ -141,6 +143,8 @@ jobs:
           python -m pip install -r ai_service/requirements.txt pytest
 
       - name: Run tests
+        env:
+          PYTHONPATH: ai_service
         run: pytest -q ai_service/tests
 
   knowledge-graph-tests:
@@ -187,6 +191,7 @@ jobs:
       - name: Run unit tests
         env:
           INTERNAL_API_URL: http://127.0.0.1:8000
+          PYTHONPATH: webhooks
         run: pytest -q webhooks/app/tests --ignore=webhooks/app/tests/test_filter_integration.py
 
   api-tests:
@@ -233,6 +238,7 @@ jobs:
       - name: Start API server
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sentinelai
+          DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/sentinelai
         run: |
           nohup python -m uvicorn api.main:app --host 127.0.0.1 --port 8006 >/tmp/api.log 2>&1 &
 

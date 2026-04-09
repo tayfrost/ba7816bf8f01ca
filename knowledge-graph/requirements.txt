@@ -5,3 +5,4 @@ pydantic>=2.0.0
 pytest>=7.4.0
 mcp[cli]>=1.0.0
 huggingface-hub>=0.20.0
+fastmcp
