@@ -1,7 +1,7 @@
 import Button from "../../Button";
 
 type Props = {
-  provider: "slack" | "gmail" | "outlook";
+  provider: "slack" | "gmail";
   connected: boolean;
   connectedAt?: string;
   onConnect: () => void;
@@ -10,8 +10,7 @@ type Props = {
 
 function providerName(p: Props["provider"]) {
   if (p === "slack") return "Slack";
-  if (p === "gmail") return "Gmail";
-  return "Outlook";
+  return "Gmail";
 }
 
 export default function IntegrationCard({

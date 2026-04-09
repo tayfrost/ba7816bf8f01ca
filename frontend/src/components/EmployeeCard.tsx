@@ -16,7 +16,7 @@ type Props = {
   flaggedCount: number;
   overtimeHours: number;
   lastActive: string;
-  sources: ("slack" | "gmail" | "outlook")[];
+  sources: ("slack" | "gmail")[];
   trend: Point[];
 };
 

@@ -76,7 +76,7 @@ export default function LandingHeader({ isLoggedIn = false, theme = 'light', onT
                 Login
               </button>
               <div className="w-32">
-                <Button variant="primary" onClick={() => navigate("/plan")}>Join Now</Button>
+                <Button variant="primary" onClick={() => { window.location.href = "https://sentinelai.work/signup?plan=free"; }}>Join Now</Button>
               </div>
             </>
           )}

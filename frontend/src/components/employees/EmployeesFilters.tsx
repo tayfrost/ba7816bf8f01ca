@@ -61,7 +61,6 @@ export default function EmployeesFilters({
         <option value="all">All sources</option>
         <option value="slack">Slack</option>
         <option value="gmail">Gmail</option>
-        <option value="outlook">Outlook</option>
       </select>
 
       {/* Sort */}

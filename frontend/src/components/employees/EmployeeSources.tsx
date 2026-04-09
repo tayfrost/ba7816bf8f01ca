@@ -1,11 +1,10 @@
 type Props = {
-  sources: ("slack" | "gmail" | "outlook")[];
+  sources: ("slack" | "gmail")[];
 };
 
-const SOURCE_COLORS = {
+const SOURCE_COLORS: Record<string, string> = {
   slack: "#7c3aed",
   gmail: "#ea4335",
-  outlook: "#2563eb",
 };
 
 export default function EmployeeSources({ sources }: Props) {

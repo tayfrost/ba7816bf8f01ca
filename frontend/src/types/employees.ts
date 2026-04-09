@@ -1,4 +1,4 @@
-export type EmployeeSource = "slack" | "gmail" | "outlook";
+export type EmployeeSource = "slack" | "gmail";
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
 export type EmployeeStatus = "active" | "watchlist" | "critical";

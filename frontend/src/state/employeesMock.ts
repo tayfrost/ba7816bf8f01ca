@@ -1,6 +1,6 @@
 import { enumerateDays } from "./timeRange";
 
-export type EmployeeSource = "slack" | "gmail" | "outlook";
+export type EmployeeSource = "slack" | "gmail";
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
 export type Employee = {
@@ -72,7 +72,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     role: "Product Manager",
     team: "Product",
     email: "marcus.chen@sentinel.test",
-    source: ["gmail", "outlook"],
+    source: ["gmail"],
     riskScore: 15,
     flaggedCount: 2,
     overtimeHours: 4,
@@ -100,7 +100,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     role: "DevOps Engineer",
     team: "Infrastructure",
     email: "david.kim@sentinel.test",
-    source: ["slack", "gmail", "outlook"],
+    source: ["slack", "gmail"],
     riskScore: 91,
     flaggedCount: 28,
     overtimeHours: 22,
@@ -128,7 +128,7 @@ export const MOCK_EMPLOYEES: Employee[] = [
     role: "Customer Success Lead",
     team: "Operations",
     email: "tom.becker@sentinel.test",
-    source: ["outlook"],
+    source: ["slack"],
     riskScore: 29,
     flaggedCount: 3,
     overtimeHours: 5,

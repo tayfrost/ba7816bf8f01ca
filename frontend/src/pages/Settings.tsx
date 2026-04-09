@@ -16,6 +16,7 @@ import IntegrationsPanel from "../components/settings/integrations/IntegrationsP
 
 import { useCompany } from "../hooks/useCompany";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { getPlans } from "../api/plans";
 
 const BRAND_ORANGE = "var(--color-top)";
 const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL ?? "https://sentinelai.work";
@@ -95,6 +96,27 @@ export default function Settings() {
     } catch (err) {
       console.error("[portal] fetch failed:", err);
       alert("Network error opening billing portal. Check console.");
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!companyId) return alert("No company ID found");
+    try {
+      const plans = await getPlans();
+      const paidPlan = plans.find((p) => p.plan_name.toLowerCase() !== "free");
+      if (!paidPlan) return alert("No paid plan found");
+      const res = await fetch(`${PAYMENTS_URL}/api/v1/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company_id: companyId, plan_id: paidPlan.plan_id, interval: "month" }),
+      });
+      if (!res.ok) return alert(`Payment error ${res.status}`);
+      const data = await res.json();
+      if (data.checkout_url) window.location.href = data.checkout_url;
+      else alert("No checkout URL returned");
+    } catch (err) {
+      console.error("[checkout] failed:", err);
+      alert("Network error during checkout");
     }
   };
 
@@ -340,30 +362,38 @@ export default function Settings() {
           <div className="space-y-8">
             {canManageBilling && (
               <SectionCard title="Payment Methods">
-                <p style={{ opacity: 0.6, fontSize: "13px", marginBottom: "16px" }}>
-                  Manage your payment methods and billing details securely via Stripe.
-                </p>
-
-                <Button
-                  onClick={handlePortal}
-                  variant="secondary"
-                  className="!text-white !bg-white/10 !border-white/30"
-                >
-                  Manage Billing $ Cards (Stripe)
-                </Button>
-
-                <p
-                  style={{
-                    fontSize: "11px",
-                    opacity: 0.4,
-                    marginTop: "20px",
-                    textAlign: "center",
-                  }}
-                >
+                {plan === "paid" ? (
+                  <>
+                    <p style={{ opacity: 0.6, fontSize: "13px", marginBottom: "16px" }}>
+                      Manage your payment methods and billing details securely via Stripe.
+                    </p>
+                    <Button
+                      onClick={handlePortal}
+                      variant="secondary"
+                      className="!text-white !bg-white/10 !border-white/30"
+                    >
+                      Manage Billing &amp; Cards (Stripe)
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ opacity: 0.6, fontSize: "13px", marginBottom: "16px" }}>
+                      Upgrade to a paid plan to unlock advanced features. You'll be redirected to Stripe to complete payment.
+                    </p>
+                    <Button
+                      onClick={handleCheckout}
+                      variant="primary"
+                      disabled={!companyId}
+                    >
+                      {!companyId ? "Loading..." : "Upgrade Plan (Stripe)"}
+                    </Button>
+                  </>
+                )}
+                <p style={{ fontSize: "11px", opacity: 0.4, marginTop: "20px", textAlign: "center" }}>
                   PAYMENTS ARE SECURELY HANDLED BY STRIPE
                 </p>
               </SectionCard>
-                )}
+            )}
 
             <SectionCard title="Notifications">
               <NotificationsPreferences />

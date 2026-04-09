@@ -259,14 +259,6 @@ export default function ConnectAccounts() {
             <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0 w-full lg:w-auto">
               <Button
                 onClick={continueToDashboard}
-                variant="secondary"
-                className="w-full sm:w-autowhitespace-nowrap px-6 py-3 text-sm font-bold opacity-70 hover:opacity-100 transition-all"
-              >
-                Skip for now
-              </Button>
-
-              <Button
-                onClick={continueToDashboard}
                 disabled={!integrations.some((i) => i.connected)}
                 className="w-full sm:w-auto whitespace-nowrap px-8 py-3 text-sm font-black shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] hover:shadow-none transition-all"
               >

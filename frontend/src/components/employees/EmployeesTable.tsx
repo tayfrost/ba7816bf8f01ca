@@ -22,7 +22,7 @@ export default function EmployeesTable({ employees, onSelectEmployee }: Props) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1.5fr 1fr 1fr 1.2fr 0.8fr 0.8fr",
+          gridTemplateColumns: "1.5fr 1fr 1.2fr 0.8fr 0.8fr",
           gap: "16px",
           padding: "18px 24px",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
@@ -34,7 +34,6 @@ export default function EmployeesTable({ employees, onSelectEmployee }: Props) {
         }}
       >
         <div>Employee</div>
-        <div>Team</div>
         <div>Sources</div>
         <div>Risk Trend</div>
         <div>Flagged</div>
@@ -48,7 +47,7 @@ export default function EmployeesTable({ employees, onSelectEmployee }: Props) {
             onClick={() => onSelectEmployee(employee.id)}
             style={{
               display: "grid",
-              gridTemplateColumns: "1.5fr 1fr 1fr 1.2fr 0.8fr 0.8fr",
+              gridTemplateColumns: "1.5fr 1fr 1.2fr 0.8fr 0.8fr",
               gap: "16px",
               padding: "18px 24px",
               alignItems: "center",
@@ -65,8 +64,6 @@ export default function EmployeesTable({ employees, onSelectEmployee }: Props) {
               <div style={{ fontWeight: 800, color: "#fff" }}>{employee.fullName}</div>
               <div style={{ fontSize: "12px", opacity: 0.55 }}>{employee.role}</div>
             </div>
-
-            <div style={{ fontSize: "13px", fontWeight: 700 }}>{employee.team}</div>
 
             <div>
               <EmployeeSources sources={employee.source} />
