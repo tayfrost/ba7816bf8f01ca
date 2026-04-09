@@ -16,7 +16,12 @@ async def register(body: RegisterRequest):
             body.company_name, body.plan_id,
         )
         return TokenResponse(access_token=token)
-    except Exception as e:
+    except ValueError as e:
+        detail = str(e)
+        if "already exists" in detail.lower():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+    except RuntimeError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 

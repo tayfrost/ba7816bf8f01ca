@@ -1,5 +1,10 @@
 import httpx
+import os
+import psycopg
 import pytest
+
+
+DB_DSN = os.environ.get("TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5433/sentinelai")
 
 
 def _register(client: httpx.Client, email: str, company_name: str, display_name: str = "Test User") -> dict:
@@ -73,4 +78,17 @@ def test_duplicate_email_rejected(client: httpx.Client):
         "company_name": "Dup Corp 2",
         "plan_id": 1,
     })
-    assert resp.status_code == 400
+    assert resp.status_code == 409
+
+    with psycopg.connect(DB_DSN, autocommit=True) as conn:
+        dup_company_count = conn.execute(
+            "SELECT COUNT(*) FROM companies WHERE name = %s",
+            ("Dup Corp 2",),
+        ).fetchone()[0]
+        dup_auth_count = conn.execute(
+            "SELECT COUNT(*) FROM auth_users WHERE email = %s",
+            ("dup@example.com",),
+        ).fetchone()[0]
+
+    assert dup_company_count == 0
+    assert dup_auth_count == 1

@@ -4,6 +4,7 @@ import Stepper from "../components/Stepper";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import AuthCard from "../components/AuthCard";
+import { ApiError } from "../api/client";
 import { useOnboarding } from "../state/onboarding";
 import { getPlans, register } from "../api";
 
@@ -58,6 +59,18 @@ export default function Signup() {
     loadPlans();
   }, [selectedPlan]);
 
+  function getApiErrorDetail(message: string): string {
+    try {
+      const parsed = JSON.parse(message) as { detail?: unknown };
+      if (typeof parsed?.detail === "string" && parsed.detail.trim()) {
+        return parsed.detail;
+      }
+    } catch {
+      // Keep the original message when backend didn't return JSON.
+    }
+    return message;
+  }
+
   async function handleContinue() {
     if (!companyName || !adminName || !adminEmail || !password || !planId) return;
 
@@ -95,7 +108,17 @@ export default function Signup() {
       navigate("/plan");
     } catch (err) {
       console.error(err);
-      setError("Registration failed. Please try again.");
+      if (err instanceof ApiError) {
+        const detail = getApiErrorDetail(err.message);
+        const lowered = detail.toLowerCase();
+        if (err.status === 409 || lowered.includes("already exists")) {
+          setError("This email is already registered. Please log in instead.");
+        } else {
+          setError(detail || "Registration failed. Please try again.");
+        }
+      } else {
+        setError("Registration failed. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

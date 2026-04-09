@@ -31,6 +31,63 @@ def create_access_token(data: dict, expire_delta: timedelta | None = None) -> st
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
+def _register_user_sync(
+    email: str,
+    password_hash: str,
+    display_name: str | None,
+    company_name: str,
+    plan_id: int,
+) -> str:
+    """
+    Execute signup in one thread with one SQLAlchemy session.
+    This avoids cross-thread session reuse and guarantees transaction rollback.
+    """
+    normalized_email = (email or "").lower().strip()
+    session = companies_crud.Session()
+    try:
+        existing_auth = crud_auth_users.get_auth_user_by_email(normalized_email, session=session)
+        if existing_auth is not None:
+            raise ValueError("An account with this email already exists.")
+
+        company = companies_crud.create_company(company_name, session=session)
+
+        now = datetime.now(timezone.utc)
+        subscriptions_crud.create_subscription(
+            company.company_id,
+            plan_id,
+            status="trialing",
+            current_period_start=now,
+            current_period_end=now + timedelta(days=30),
+            session=session,
+        )
+
+        user = users_crud.create_user(
+            company.company_id,
+            role="biller",
+            status="active",
+            display_name=display_name,
+            session=session,
+        )
+
+        crud_auth_users.create_auth_user(
+            company.company_id,
+            email=normalized_email,
+            password_hash=password_hash,
+            user_id=user.user_id,
+            session=session,
+        )
+
+        session.commit()
+        return create_access_token(
+            {"sub": str(user.user_id), "company_id": company.company_id, "role": "biller"}
+        )
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 async def register_user(
     email: str,
     password: str,
@@ -42,55 +99,15 @@ async def register_user(
     Create company → subscription → user → auth_user in a single DB transaction.
     On any failure the whole transaction is rolled back atomically.
     """
-    session = companies_crud.Session()
-    try:
-        # 1. Create company
-        company = await asyncio.to_thread(
-            companies_crud.create_company, company_name, session=session
-        )
-
-        # 2. Create subscription (trial, 30 days)
-        now = datetime.now(timezone.utc)
-        await asyncio.to_thread(
-            subscriptions_crud.create_subscription,
-            company.company_id,
-            plan_id,
-            status="trialing",
-            current_period_start=now,
-            current_period_end=now + timedelta(days=30),
-            session=session,
-        )
-
-        # 3. Create user (biller role)
-        user = await asyncio.to_thread(
-            users_crud.create_user,
-            company.company_id,
-            role="biller",
-            status="active",
-            display_name=display_name,
-            session=session,
-        )
-
-        # 4. Create auth_user (email + password hash)
-        await asyncio.to_thread(
-            crud_auth_users.create_auth_user,
-            company.company_id,
-            email=email.lower().strip(),
-            password_hash=hash_password(password),
-            user_id=user.user_id,
-            session=session,
-        )
-
-        session.commit()
-        return create_access_token(
-            {"sub": str(user.user_id), "company_id": company.company_id, "role": "biller"}
-        )
-
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    password_hash = hash_password(password)
+    return await asyncio.to_thread(
+        _register_user_sync,
+        email,
+        password_hash,
+        display_name,
+        company_name,
+        plan_id,
+    )
 
 
 _ALLOWED_REMEMBER_DAYS = {1, 7, 30}
