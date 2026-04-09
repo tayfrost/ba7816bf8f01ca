@@ -17,7 +17,7 @@ export default function EmployeeProfile() {
   const { employeeId } = useParams();
   const navigate = useNavigate();
 
-  const { employees, status, error } = useEmployeesData();
+  const { employees, status } = useEmployeesData();
   const employee = useMemo(
     () => employees.find((e) => e.id === employeeId),
     [employees, employeeId]

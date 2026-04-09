@@ -29,7 +29,7 @@ export default function Settings() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const planPrice = plan === "paid" ? "£49" : "£0";
 
-  const { company, status, error, isUpdating, saveCompanyName } = useCompany();
+  const { company, status, isUpdating, saveCompanyName } = useCompany();
   const companyId = company?.company_id;
   const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
 

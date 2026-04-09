@@ -34,7 +34,6 @@ export default function Employees() {
     employees,
     stats,
     status,
-    error,
     searchTerm,
     setSearchTerm,
     riskFilter,

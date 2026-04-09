@@ -20,7 +20,6 @@ import RecentIncidentsFeed from "../components/dashboard/RecentIncidentsFeed";
 import IncidentModal from "../components/dashboard/IncidentModal";
 
 
-const BRAND_ORANGE = "var(--color-top)"; 
 
 export default function Dashboard() {
   const { signup, plan, integrations } = useOnboarding();
