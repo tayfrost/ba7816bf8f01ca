@@ -71,12 +71,16 @@ async def slack_oauth_callback(code: str | None = None, state: str | None = None
         
     data["_company_id"] = company_id
 
-    frontend_url = os.environ.get("FRONTEND_URL", "https://sentinelai.work")
+    frontend_url = os.environ.get("FRONTEND_URL")
     try:
         process_slack_oauth(data)
-        return RedirectResponse(f"{frontend_url}/connect-accounts?provider=slack&status=success", status_code=302)
+        if frontend_url:
+            return RedirectResponse(f"{frontend_url}/connect-accounts?provider=slack&status=success", status_code=302)
+        return {"ok": True}
     except ValueError as e:
-        return RedirectResponse(f"{frontend_url}/connect-accounts?provider=slack&status=error", status_code=302)
+        if frontend_url:
+            return RedirectResponse(f"{frontend_url}/connect-accounts?provider=slack&status=error", status_code=302)
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/events")

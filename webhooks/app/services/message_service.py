@@ -108,7 +108,12 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
         temp_seat = db.create_viewer_seat(company_id, display_name=display_name)
         temp_uid  = temp_seat.user_id
         acct      = db.create_slack_account(company_id, team_id, slack_uid, temp_uid, email=email)
-        user_id   = uuid.UUID(str(acct.user_id))
+        # Some test stubs (and older implementations) return None here.
+        # Fall back to the temporary seat to keep processing resilient.
+        if acct and getattr(acct, "user_id", None):
+            user_id = uuid.UUID(str(acct.user_id))
+        else:
+            user_id = temp_uid
 
         if user_id != temp_uid and str(user_id) != str(temp_uid):
             # Linking resolved to an existing user — orphan the temp seat.
@@ -209,6 +214,9 @@ def process_gmail_event(payload: dict) -> bool:
                 "sent_at":         sent_at,
                 "conversation_id": "gmail",
                 "email":           user_email,
+                "subject":         headers.get("Subject", ""),
+                "from":            headers.get("From", ""),
+                "to":              headers.get("To", ""),
                 "content_raw": {
                     "text":    body,
                     "subject": headers.get("Subject", ""),

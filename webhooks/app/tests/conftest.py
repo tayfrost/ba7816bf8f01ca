@@ -21,18 +21,21 @@ API_BASE_URL = os.getenv("INTERNAL_API_URL", "http://api:8000")
 
 @pytest.fixture(scope="session")
 def test_plan_id():
-    """Ensure a test plan exists. Create it if not."""
-    # For now, hardcode plan_id=1. The test runner (run_webhook_tests.ps1) should
-    # seed plans beforehand via:
-    #   INSERT INTO subscription_plans (plan_name, price_pennies, seat_limit)
-    #   VALUES ('Test Plan', 0, 999)
-    return 1
+    """Resolve an existing plan_id from API instead of assuming identity starts at 1."""
+    response = httpx.get(f"{API_BASE_URL}/plans", timeout=10.0)
+    response.raise_for_status()
+    plans = response.json()
+    if not plans:
+        raise RuntimeError("No subscription plans found. Seed at least one plan before running webhook tests.")
+
+    free_plan = next((p for p in plans if str(p.get("plan_name", "")).strip().lower() == "free"), None)
+    return int((free_plan or plans[0])["plan_id"])
 
 
 @pytest.fixture(scope="function")
 def test_company_id(test_plan_id):
     """Create a test company via API, return company_id, hard-delete after test."""
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+    timestamp = datetime.now(datetime.UTC).strftime("%Y%m%d%H%M%S%f")
     company_name = f"test-company-{timestamp}"
 
     # Create company

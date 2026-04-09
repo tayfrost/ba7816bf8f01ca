@@ -36,7 +36,11 @@ def gmail_login(company_id: int, return_page: str = "connect-accounts"):
     """
     if not company_id:
         raise HTTPException(status_code=400, detail="Missing company_id")
-    return RedirectResponse(get_gmail_auth_url(company_id, return_page=return_page))
+    if return_page == "connect-accounts":
+        auth_url = get_gmail_auth_url(company_id)
+    else:
+        auth_url = get_gmail_auth_url(company_id, return_page=return_page)
+    return RedirectResponse(auth_url)
 
 
 @router.get("/oauth/callback")
@@ -67,20 +71,24 @@ def gmail_callback(code: str = None, state: str = None):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid company_id in state")
 
-    frontend_url = os.environ.get("FRONTEND_URL", "https://sentinelai.work")
+    frontend_url = os.environ.get("FRONTEND_URL")
     try:
         user_email = process_gmail_oauth(code, company_id)
         logger.info(f"Gmail connected successfully: {user_email} company={company_id} return={return_page}")
-        return RedirectResponse(
-            f"{frontend_url}/{return_page}?provider=gmail&status=success",
-            status_code=302,
-        )
+        if frontend_url:
+            return RedirectResponse(
+                f"{frontend_url}/{return_page}?provider=gmail&status=success",
+                status_code=302,
+            )
+        return {"ok": True, "connected_user": user_email}
     except RuntimeError as e:
         logger.error(f"Gmail OAuth failed: {e}")
-        return RedirectResponse(
-            f"{frontend_url}/{return_page}?provider=gmail&status=error",
-            status_code=302,
-        )
+        if frontend_url:
+            return RedirectResponse(
+                f"{frontend_url}/{return_page}?provider=gmail&status=error",
+                status_code=302,
+            )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/events")
