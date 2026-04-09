@@ -13,6 +13,58 @@ from llm import get_llm_for_tools
 logger = logging.getLogger(__name__)
 
 
+def _format_tools_catalog(tools: list) -> str:
+    """
+    Build a human-readable catalog of available MCP tools to inject into the system prompt.
+    Lists exact names (the only valid values the LLM may call) plus descriptions and parameters.
+    """
+    if not tools:
+        return "  (no tools available — proceed directly to report synthesis without any tool calls)"
+
+    parts = []
+    for i, tool in enumerate(tools, 1):
+        name = getattr(tool, "name", str(tool))
+        desc = (getattr(tool, "description", "") or "No description available").strip()
+
+        # Try to extract parameter schema from the StructuredTool's args_schema
+        param_lines: list[str] = []
+        args_schema = getattr(tool, "args_schema", None)
+        if args_schema is not None:
+            try:
+                if hasattr(args_schema, "model_json_schema"):
+                    schema_dict = args_schema.model_json_schema()
+                elif hasattr(args_schema, "schema"):
+                    schema_dict = args_schema.schema()
+                else:
+                    schema_dict = {}
+
+                props = schema_dict.get("properties", {})
+                required = set(schema_dict.get("required", []))
+
+                for param, info in props.items():
+                    req_label = "required" if param in required else "optional"
+                    p_type = info.get("type", "string")
+                    p_desc = info.get("description", "")
+                    suffix = f" — {p_desc}" if p_desc else ""
+                    param_lines.append(f"        • {param} ({p_type}, {req_label}){suffix}")
+            except Exception as exc:
+                logger.debug(f"[tools_catalog] Could not extract schema for {name!r}: {exc}")
+
+        params_block = (
+            "\n" + "\n".join(param_lines)
+            if param_lines
+            else " (none)"
+        )
+
+        parts.append(
+            f"  [{i}] Tool name (use exactly): {name!r}\n"
+            f"      What it does: {desc}\n"
+            f"      Parameters:{params_block}"
+        )
+
+    return "\n\n".join(parts)
+
+
 async def generate_recommendations(state: AgentState, config: RunnableConfig) -> AgentState:
     """Generate HR recommendations based on assessment with evidence-based advice from knowledge graph."""
     from agent import prompt_service
@@ -22,33 +74,41 @@ async def generate_recommendations(state: AgentState, config: RunnableConfig) ->
     logger.info("[NODE: generate_recommendations] Starting recommendations generation")
     logger.debug(f"[NODE: generate_recommendations] Input state keys: {list(state.keys())}")
     
-    try:
-        system_prompt = prompt_service.load_prompt(subfolder="generate_recommendations")
-        logger.info("[NODE: generate_recommendations] Prompt loaded successfully")
-    except Exception as e:
-        logger.error(f"[NODE: generate_recommendations] Failed to load prompt: {e}")
-        raise
-    
     scores = state['hr_report']['scores']
     raw_message = state['raw_message']
-    
-    # Load and bind MCP tools
+    filter_category = state.get('filter_category', 'unknown')
+    filter_severity = state.get('filter_severity', 'unknown')
+
+    # Load MCP tools FIRST so we can inject the live catalog into the system prompt
     logger.info("[NODE: generate_recommendations] Loading MCP tools")
     mcp_client = config.get("configurable", {}).get("mcp_client")
     kg_tools = await load_mcp_tools(mcp_client)
-    logger.info(f"[NODE: generate_recommendations] Loaded {len(kg_tools)} MCP tools")
-    
-    llm_with_tools = llm.bind_tools(kg_tools) if kg_tools else llm
-    
-    human_prompt = f"""Based on message: "{raw_message}"
-And scores: {json.dumps(scores)}
+    logger.info(f"[NODE: generate_recommendations] Loaded {len(kg_tools)} MCP tools: {[t.name for t in kg_tools]}")
 
-Use available MCP tools to gather evidence-based recommendations.
-If crisis detected, prioritize crisis resources.
-Generate HR recommendations and detailed analysis response.
-Respond with JSON:
-{{"recommendations": ["rec1", "rec2"], "response": "detailed analysis text"}}"""
-    
+    try:
+        system_prompt_template = prompt_service.load_prompt(subfolder="generate_recommendations")
+        logger.info("[NODE: generate_recommendations] Prompt template loaded successfully")
+    except Exception as e:
+        logger.error(f"[NODE: generate_recommendations] Failed to load prompt: {e}")
+        raise
+
+    # Inject the live tool catalog so the model knows exactly which names are valid
+    tools_catalog = _format_tools_catalog(kg_tools)
+    system_prompt = system_prompt_template.replace("{tools_catalog}", tools_catalog)
+
+    llm_with_tools = llm.bind_tools(kg_tools) if kg_tools else llm
+
+    human_prompt = f"""<case>
+<message>{raw_message}</message>
+<scores>
+{json.dumps(scores, indent=2)}
+</scores>
+<detection_category>{filter_category}</detection_category>
+<detection_severity>{filter_severity}</detection_severity>
+</case>
+
+Follow the reasoning protocol in the system prompt. Call relevant tools if applicable, then output the JSON report and nothing else."""
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=human_prompt)
