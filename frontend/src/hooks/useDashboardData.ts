@@ -50,6 +50,28 @@ function fillRangeGaps(series: Series[], start: string, end: string): Series[] {
   });
 }
 
+function normalizeGraphValue(value: number, targetMax: number = 10): number {
+  let normalized = value;
+  let guard = 0;
+
+  while (Math.abs(normalized) > targetMax && guard < 8) {
+    normalized /= 10;
+    guard += 1;
+  }
+
+  return Math.round(normalized * 10000) / 10000;
+}
+
+function normalizeGraphSeries(series: Series[], targetMax: number = 10): Series[] {
+  return series.map((s) => ({
+    ...s,
+    points: s.points.map((point) => ({
+      ...point,
+      value: normalizeGraphValue(point.value, targetMax),
+    })),
+  }));
+}
+
 // Frontend smoothing commented out — backend already applies 3-day rolling average.
 // Double-smoothing caused excessive peak flattening. Uncomment to restore if needed.
 // function smoothPoints(points: SeriesPoint[], window: number = 7): SeriesPoint[] {
@@ -98,11 +120,13 @@ export function useDashboardData(range: DateRange) {
         const transformed = fetched.length > 0
           ? /* smoothSeries( */ fillRangeGaps(fetched, range.start, range.end) /* ) */
           : PLACEHOLDER_SERIES;
+        const normalized = normalizeGraphSeries(transformed, 10);
         dashboardDebug("useDashboardData", "transform-complete", {
           usedPlaceholder: fetched.length === 0,
           transformedSummary: summarizeSeries(transformed, 10),
+          normalizedSummary: summarizeSeries(normalized, 10),
         });
-        setSeries(transformed);
+        setSeries(normalized);
         setStatus("success");
         dashboardDebug("useDashboardData", "state-success", { status: "success" });
       } catch (e) {
@@ -113,10 +137,12 @@ export function useDashboardData(range: DateRange) {
 
         if (IS_MOCK) {
           const mocked = /* smoothSeries( */ makeAllSeries(range) /* ) */;
+          const normalizedMocked = normalizeGraphSeries(mocked, 10);
           dashboardDebug("useDashboardData", "mock-fallback", {
             transformedSummary: summarizeSeries(mocked, 10),
+            normalizedSummary: summarizeSeries(normalizedMocked, 10),
           });
-          setSeries(mocked);
+          setSeries(normalizedMocked);
           setStatus("success");
           return;
         }
