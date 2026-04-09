@@ -12,17 +12,18 @@ logger = logging.getLogger(__name__)
 async def grade_message(state: AgentState) -> AgentState:
     """Grade message across mental health dimensions."""
     from agent import prompt_service
+    req = state.get("request_id", "n/a")
     
     llm = get_llm()
     
-    logger.info("[NODE: grade_message] Starting message grading")
+    logger.info(f"[NODE: grade_message][req={req}] Starting message grading")
     logger.debug(f"[NODE: grade_message] Input state keys: {list(state.keys())}")
     
     try:
         system_prompt = prompt_service.load_prompt(subfolder="grade_message")
-        logger.info("[NODE: grade_message] Prompt loaded successfully")
+        logger.info(f"[NODE: grade_message][req={req}] Prompt loaded successfully")
     except Exception as e:
-        logger.error(f"[NODE: grade_message] Failed to load prompt: {e}")
+        logger.error(f"[NODE: grade_message][req={req}] Failed to load prompt: {e}")
         raise
     
     filter_category = state.get('filter_category') or 'unknown'
@@ -60,7 +61,7 @@ Field guidance:
         HumanMessage(content=human_prompt)
     ]
 
-    logger.info("[NODE: grade_message] Calling LLM for scoring")
+    logger.info(f"[NODE: grade_message][req={req}] Calling LLM for scoring")
     default_scores = {
         "neutral_score": 100, "humor_sarcasm_score": 0, "stress_score": 0,
         "burnout_score": 0, "depression_score": 0, "harassment_score": 0,
@@ -71,7 +72,7 @@ Field guidance:
         content = response.content if response.content is not None else ""
         if isinstance(content, list):
             content = next((b["text"] for b in content if isinstance(b, dict) and "text" in b), "")
-        logger.info(f"[NODE: grade_message] LLM response (first 100 chars): {content[:100]}")
+        logger.info(f"[NODE: grade_message][req={req}] LLM response (first 100 chars): {content[:100]}")
         scores = safe_json_loads(content)
         # Ensure all expected keys exist with safe defaults
         for k, v in default_scores.items():
@@ -79,13 +80,13 @@ Field guidance:
         # Clamp all values to 0-100 int
         scores = {k: max(0, min(100, int(scores[k]))) for k in default_scores}
     except Exception as e:
-        logger.warning(f"[NODE: grade_message] Grading failed, using zero scores: {e}")
+        logger.exception(f"[NODE: grade_message][req={req}] Grading failed, using zero scores: {e}")
         scores = default_scores
 
     if state.get('hr_report') is None:
         state['hr_report'] = {}
     state['hr_report']['scores'] = scores
 
-    logger.info(f"[NODE: grade_message] Scores: {scores}")
-    logger.info("[NODE: grade_message] → Transition to generate_recommendations")
+    logger.info(f"[NODE: grade_message][req={req}] Scores: {scores}")
+    logger.info(f"[NODE: grade_message][req={req}] → Transition to generate_recommendations")
     return state

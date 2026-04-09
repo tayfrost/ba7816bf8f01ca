@@ -12,17 +12,18 @@ logger = logging.getLogger(__name__)
 async def assess_risk(state: AgentState) -> AgentState:
     """Assess if message indicates mental health risk."""
     from agent import prompt_service
+    req = state.get("request_id", "n/a")
     
     llm = get_llm()
     
-    logger.info("[NODE: assess_risk] Starting risk assessment")
+    logger.info(f"[NODE: assess_risk][req={req}] Starting risk assessment")
     logger.debug(f"[NODE: assess_risk] Input state keys: {list(state.keys())}")
     
     try:
         system_prompt = prompt_service.load_prompt(subfolder="assess_risk")
-        logger.info("[NODE: assess_risk] Prompt loaded successfully")
+        logger.info(f"[NODE: assess_risk][req={req}] Prompt loaded successfully")
     except Exception as e:
-        logger.error(f"[NODE: assess_risk] Failed to load prompt: {e}")
+        logger.error(f"[NODE: assess_risk][req={req}] Failed to load prompt: {e}")
         raise
     
     filter_category = state.get('filter_category') or 'unknown'
@@ -42,21 +43,21 @@ Respond with ONLY a JSON object:
         HumanMessage(content=human_prompt)
     ]
     
-    logger.info("[NODE: assess_risk] Calling LLM for risk assessment")
+    logger.info(f"[NODE: assess_risk][req={req}] Calling LLM for risk assessment")
     try:
         response = await llm.ainvoke(messages)
         content = response.content if response.content is not None else ""
         if isinstance(content, list):
             content = next((b["text"] for b in content if isinstance(b, dict) and "text" in b), "")
-        logger.info(f"[NODE: assess_risk] LLM response (first 100 chars): {content[:100]}")
+        logger.info(f"[NODE: assess_risk][req={req}] LLM response (first 100 chars): {content[:100]}")
         result = safe_json_loads(content)
         is_risk = bool(result.get('is_risk', False))
     except Exception as e:
-        logger.warning(f"[NODE: assess_risk] Assessment failed, defaulting to no risk: {e}")
+        logger.exception(f"[NODE: assess_risk][req={req}] Assessment failed, defaulting to no risk: {e}")
         is_risk = False
 
     state['is_confirmed_risk'] = is_risk
-    logger.info(f"[NODE: assess_risk] Risk detected: {is_risk}")
+    logger.info(f"[NODE: assess_risk][req={req}] Risk detected: {is_risk}")
     next_node = "grade_message" if is_risk else "END"
-    logger.info(f"[NODE: assess_risk] → Transition to {next_node}")
+    logger.info(f"[NODE: assess_risk][req={req}] → Transition to {next_node}")
     return state

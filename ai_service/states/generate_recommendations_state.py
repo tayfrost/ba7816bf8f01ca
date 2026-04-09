@@ -68,10 +68,11 @@ def _format_tools_catalog(tools: list) -> str:
 async def generate_recommendations(state: AgentState, config: RunnableConfig) -> AgentState:
     """Generate HR recommendations based on assessment with evidence-based advice from knowledge graph."""
     from agent import prompt_service
+    req = state.get("request_id", "n/a")
     
     llm = get_llm_for_tools()
     
-    logger.info("[NODE: generate_recommendations] Starting recommendations generation")
+    logger.info(f"[NODE: generate_recommendations][req={req}] Starting recommendations generation")
     logger.debug(f"[NODE: generate_recommendations] Input state keys: {list(state.keys())}")
     
     scores = state['hr_report']['scores']
@@ -80,16 +81,30 @@ async def generate_recommendations(state: AgentState, config: RunnableConfig) ->
     filter_severity = state.get('filter_severity', 'unknown')
 
     # Load MCP tools FIRST so we can inject the live catalog into the system prompt
-    logger.info("[NODE: generate_recommendations] Loading MCP tools")
+    logger.info(f"[NODE: generate_recommendations][req={req}] Loading MCP tools")
     mcp_client = config.get("configurable", {}).get("mcp_client")
-    kg_tools = await load_mcp_tools(mcp_client)
-    logger.info(f"[NODE: generate_recommendations] Loaded {len(kg_tools)} MCP tools: {[t.name for t in kg_tools]}")
+    if mcp_client is None:
+        logger.error(f"[NODE: generate_recommendations][req={req}] Missing mcp_client in runnable config")
+        raise RuntimeError("mcp_client missing from LangGraph config")
+
+    logger.info(
+        f"[NODE: generate_recommendations][req={req}] mcp_client type={type(mcp_client).__name__} "
+        f"client_id={id(mcp_client)}"
+    )
+    try:
+        kg_tools = await load_mcp_tools(mcp_client)
+    except Exception as e:
+        logger.error(f"[NODE: generate_recommendations][req={req}] Failed loading MCP tools: {e}", exc_info=True)
+        raise
+    logger.info(
+        f"[NODE: generate_recommendations][req={req}] Loaded {len(kg_tools)} MCP tools: {[t.name for t in kg_tools]}"
+    )
 
     try:
         system_prompt_template = prompt_service.load_prompt(subfolder="generate_recommendations")
-        logger.info("[NODE: generate_recommendations] Prompt template loaded successfully")
+        logger.info(f"[NODE: generate_recommendations][req={req}] Prompt template loaded successfully")
     except Exception as e:
-        logger.error(f"[NODE: generate_recommendations] Failed to load prompt: {e}")
+        logger.error(f"[NODE: generate_recommendations][req={req}] Failed to load prompt: {e}")
         raise
 
     # Inject the live tool catalog so the model knows exactly which names are valid
@@ -114,7 +129,7 @@ Follow the reasoning protocol in the system prompt. Call relevant tools if appli
         HumanMessage(content=human_prompt)
     ]
     
-    logger.info("[NODE: generate_recommendations] Calling LLM with bound MCP tools")
+    logger.info(f"[NODE: generate_recommendations][req={req}] Calling LLM with bound MCP tools")
     
     # Tool-calling loop: iterate until final text response
     max_iterations = 5
@@ -122,13 +137,25 @@ Follow the reasoning protocol in the system prompt. Call relevant tools if appli
     
     while iteration < max_iterations:
         iteration += 1
-        logger.info(f"[NODE: generate_recommendations] Iteration {iteration}/{max_iterations}")
+        logger.info(f"[NODE: generate_recommendations][req={req}] Iteration {iteration}/{max_iterations}")
 
-        response = await llm_with_tools.ainvoke(messages)
+        try:
+            response = await llm_with_tools.ainvoke(messages)
+        except Exception as e:
+            logger.error(
+                f"[NODE: generate_recommendations][req={req}] LLM invoke failed at iteration {iteration}: {e}",
+                exc_info=True,
+            )
+            raise
+
+        logger.info(
+            f"[NODE: generate_recommendations][req={req}] Response type={type(response).__name__} "
+            f"has_tool_calls={bool(getattr(response, 'tool_calls', None))}"
+        )
 
         # If the model wants to call tools
         if hasattr(response, "tool_calls") and response.tool_calls:
-            logger.info(f"[NODE: generate_recommendations] Tool calls detected: {response.tool_calls}")
+            logger.info(f"[NODE: generate_recommendations][req={req}] Tool calls detected: {response.tool_calls}")
 
             # Append the assistant message that requested the tools
             messages.append(response)
@@ -138,7 +165,10 @@ Follow the reasoning protocol in the system prompt. Call relevant tools if appli
                 tool_args = tool_call["args"]
                 tool_call_id = tool_call["id"]
 
-                logger.info(f"[NODE: generate_recommendations] Executing tool: {tool_name} with args: {tool_args}")
+                logger.info(
+                    f"[NODE: generate_recommendations][req={req}] Executing tool={tool_name} "
+                    f"arg_keys={sorted(list(tool_args.keys())) if isinstance(tool_args, dict) else 'n/a'}"
+                )
 
                 try:
                     tool = next(t for t in kg_tools if t.name == tool_name)
@@ -146,9 +176,22 @@ Follow the reasoning protocol in the system prompt. Call relevant tools if appli
                     raise RuntimeError(f"Tool {tool_name} not found among loaded MCP tools")
 
                 # Execute tool
-                tool_result = await tool.ainvoke(tool_args)
+                try:
+                    tool_result = await tool.ainvoke(tool_args)
+                except Exception as e:
+                    logger.error(
+                        f"[NODE: generate_recommendations][req={req}] Tool execution failed tool={tool_name}: {e}",
+                        exc_info=True,
+                    )
+                    raise
 
-                logger.info(f"[NODE: generate_recommendations] Tool result received")
+                tool_preview = str(tool_result)
+                if len(tool_preview) > 240:
+                    tool_preview = f"{tool_preview[:240]}..."
+                logger.info(
+                    f"[NODE: generate_recommendations][req={req}] Tool result received tool={tool_name} "
+                    f"preview={tool_preview}"
+                )
 
                 # Append tool result properly
                 messages.append(
@@ -179,14 +222,23 @@ Follow the reasoning protocol in the system prompt. Call relevant tools if appli
                 content_text = str(content_text[0])
 
         if content_text and isinstance(content_text, str) and content_text.strip():
-            logger.info(f"[NODE: generate_recommendations] Final response (first 100 chars): {content_text[:100]}")
+            logger.info(
+                f"[NODE: generate_recommendations][req={req}] Final response (first 100 chars): {content_text[:100]}"
+            )
 
             try:
                 result = safe_json_loads(content_text)
             except json.JSONDecodeError as e:
-                logger.error(f"[NODE: generate_recommendations] JSON decode failed: {e}")
+                logger.error(
+                    f"[NODE: generate_recommendations][req={req}] JSON decode failed: {e} "
+                    f"content_preview={content_text[:300]}",
+                    exc_info=True,
+                )
                 raise RuntimeError("Failed to parse JSON from LLM response")
         else:
+            logger.error(
+                f"[NODE: generate_recommendations][req={req}] Empty/non-text final response type={type(content_text).__name__}"
+            )
             raise RuntimeError("LLM did not produce valid text response")
 
         # Ensure hr_report exists
@@ -197,7 +249,10 @@ Follow the reasoning protocol in the system prompt. Call relevant tools if appli
         state["hr_report"]["recommendations"] = result.get("recommendations", [])
         state["hr_report"]["response"] = result.get("response", result.get("reasoning", ""))
 
-        logger.info("[NODE: generate_recommendations] → Transition to END")
+        logger.info(f"[NODE: generate_recommendations][req={req}] → Transition to END")
         return state
 
+    logger.error(
+        f"[NODE: generate_recommendations][req={req}] Exceeded max iterations without final response"
+    )
     raise RuntimeError("LLM did not produce final response after tool calls")

@@ -182,6 +182,16 @@ def _state_summary(state: AgentState) -> dict:
     }
 
 
+def _result_summary(result: dict) -> dict:
+    hr_report = result.get("hr_report") or {}
+    return {
+        "keys": sorted(list(result.keys())),
+        "is_confirmed_risk": result.get("is_confirmed_risk"),
+        "has_hr_report": bool(hr_report),
+        "hr_report_keys": sorted(list(hr_report.keys())) if isinstance(hr_report, dict) else [],
+    }
+
+
 @app.get("/")
 async def root():
     """Health check endpoint."""
@@ -211,7 +221,7 @@ async def analyze_message(request: AnalyzeRequest, mcp_client: Client = Depends(
         return result
     except Exception as e:
         logger.error(f"[API][req={request_id}] Analysis failed: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed (req={request_id}): {str(e)}")
 
 
 async def _analyze_single(
@@ -236,16 +246,17 @@ async def _analyze_single(
     }
     _start = time.perf_counter()
     logger.info(f"[PIPELINE][req={request_id}] Starting LangGraph invoke with state={_state_summary(initial_state)}")
+    logger.info(
+        f"[PIPELINE][req={request_id}] MCP client type={type(mcp_client).__name__} "
+        f"client_id={id(mcp_client)}"
+    )
     try:
         result = await agent.ainvoke(
             initial_state,
             config={"configurable": {"mcp_client": mcp_client}},
         )
         ai_pipeline_calls_total.labels(mode="single", outcome="success").inc()
-        logger.info(
-            f"[PIPELINE][req={request_id}] LangGraph invoke finished. "
-            f"is_confirmed_risk={result.get('is_confirmed_risk')} keys={list(result.keys())}"
-        )
+        logger.info(f"[PIPELINE][req={request_id}] LangGraph invoke finished summary={_result_summary(result)}")
     except Exception as e:
         ai_pipeline_calls_total.labels(mode="single", outcome="error").inc()
         logger.error(
@@ -258,6 +269,7 @@ async def _analyze_single(
         ai_pipeline_duration_seconds.labels(mode="single").observe(time.perf_counter() - _start)
 
     if not result.get("is_confirmed_risk"):
+        logger.info(f"[PIPELINE][req={request_id}] Returning no-risk default response")
         return AgentOutput(
             score=MentalHealthScore(
                 neutral_score=100, humor_sarcasm_score=0, stress_score=0,
@@ -267,11 +279,23 @@ async def _analyze_single(
             response="No significant mental health risk detected.",
         )
 
-    scores_dict = result["hr_report"]["scores"]
-    return AgentOutput(
-        score=MentalHealthScore(**scores_dict),
-        response=result["hr_report"]["response"],
-    )
+    try:
+        scores_dict = result["hr_report"]["scores"]
+        response_text = result["hr_report"]["response"]
+        logger.info(
+            f"[PIPELINE][req={request_id}] Returning risk response with score_keys={sorted(list(scores_dict.keys()))}"
+        )
+        return AgentOutput(
+            score=MentalHealthScore(**scores_dict),
+            response=response_text,
+        )
+    except Exception as e:
+        logger.error(
+            f"[PIPELINE][req={request_id}] Final output mapping failed: {e}. "
+            f"result_summary={_result_summary(result)}",
+            exc_info=True,
+        )
+        raise
 
 
 # Semaphore to limit concurrent LangGraph invocations (protects shared MCP client)

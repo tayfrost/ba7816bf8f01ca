@@ -12,17 +12,18 @@ logger = logging.getLogger(__name__)
 async def redactor(state: AgentState) -> AgentState:
     """Redact company-sensitive information while preserving employee mental health indicators."""
     from agent import prompt_service
+    req = state.get("request_id", "n/a")
     
     llm = get_llm()
     
-    logger.info("[NODE: redactor] Starting redaction")
+    logger.info(f"[NODE: redactor][req={req}] Starting redaction")
     logger.debug(f"[NODE: redactor] Input state keys: {list(state.keys())}")
     
     try:
         system_prompt = prompt_service.load_prompt(subfolder="redactor")
-        logger.info("[NODE: redactor] Prompt loaded successfully")
+        logger.info(f"[NODE: redactor][req={req}] Prompt loaded successfully")
     except Exception as e:
-        logger.error(f"[NODE: redactor] Failed to load redactor prompt: {e}")
+        logger.error(f"[NODE: redactor][req={req}] Failed to load redactor prompt: {e}")
         raise
     
     human_prompt = f"""Original message: "{state['raw_message']}"
@@ -35,17 +36,17 @@ Respond with ONLY a JSON object:
         HumanMessage(content=human_prompt)
     ]
     
-    logger.info("[NODE: redactor] Calling LLM for redaction")
+    logger.info(f"[NODE: redactor][req={req}] Calling LLM for redaction")
     try:
         response = await llm.ainvoke(messages)
         content = response.content if response.content is not None else ""
         if isinstance(content, list):
             content = next((b["text"] for b in content if isinstance(b, dict) and "text" in b), "")
-        logger.info(f"[NODE: redactor] LLM response (first 100 chars): {content[:100]}")
+        logger.info(f"[NODE: redactor][req={req}] LLM response (first 100 chars): {content[:100]}")
         result = safe_json_loads(content)
         state['raw_message'] = result.get('redacted_message') or state['raw_message']
-        logger.info(f"[NODE: redactor] Redaction complete")
+        logger.info(f"[NODE: redactor][req={req}] Redaction complete")
     except Exception as e:
-        logger.warning(f"[NODE: redactor] Redaction failed, using original message: {e}")
-    logger.info("[NODE: redactor] → Transition to assess_risk")
+        logger.exception(f"[NODE: redactor][req={req}] Redaction failed, using original message: {e}")
+    logger.info(f"[NODE: redactor][req={req}] → Transition to assess_risk")
     return state
