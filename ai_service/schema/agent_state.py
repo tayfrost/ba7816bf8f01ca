@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, TypedDict
 class AgentState(TypedDict, total=False):
     """State dictionary for AI agent processing."""
 
+    request_id: Optional[str]
     raw_message: str
     is_confirmed_risk: Optional[bool]
     retrieved_resources: Optional[list[dict]]

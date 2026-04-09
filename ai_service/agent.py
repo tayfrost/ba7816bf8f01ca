@@ -5,6 +5,7 @@ import asyncio
 import logging
 import re
 import time
+import uuid
 from typing import Literal, List
 from dotenv import load_dotenv
 
@@ -161,6 +162,26 @@ workflow.add_edge("store_incident", END)
 agent = workflow.compile()
 
 
+def _message_preview(message: str, limit: int = 220) -> str:
+    compact = " ".join((message or "").split())
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[:limit]}..."
+
+
+def _state_summary(state: AgentState) -> dict:
+    return {
+        "request_id": state.get("request_id"),
+        "user_id": state.get("user_id"),
+        "company_id": state.get("company_id"),
+        "source": state.get("source"),
+        "conversation_id": state.get("conversation_id"),
+        "filter_category": state.get("filter_category"),
+        "filter_severity": state.get("filter_severity"),
+        "message_preview": _message_preview(state.get("raw_message", "")),
+    }
+
+
 @app.get("/")
 async def root():
     """Health check endpoint."""
@@ -170,25 +191,40 @@ async def root():
 @app.post("/analyze", response_model=AgentOutput)
 async def analyze_message(request: AnalyzeRequest, mcp_client: Client = Depends(get_mcp_client)):
     """Analyze a single message for mental health risks."""
+    request_id = uuid.uuid4().hex[:12]
     logger.info("="*80)
-    logger.info(f"[API] New analyze request received")
-    logger.info(f"[API] Message length: {len(request.message)} chars")
+    logger.info(f"[API][req={request_id}] New analyze request received")
+    logger.info(
+        f"[API][req={request_id}] message_len={len(request.message)} user_id={request.user_id} "
+        f"company_id={request.company_id} source={request.source} "
+        f"filter={request.filter_category}/{request.filter_severity}"
+    )
+    logger.info(f"[API][req={request_id}] message_preview={_message_preview(request.message)}")
     logger.info("="*80)
 
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
 
     try:
-        return await _analyze_single(request, mcp_client)
+        result = await _analyze_single(request, mcp_client, request_id=request_id)
+        logger.info(f"[API][req={request_id}] Analyze request completed successfully")
+        return result
     except Exception as e:
-        logger.error(f"[API] Analysis failed: {str(e)}", exc_info=True)
+        logger.error(f"[API][req={request_id}] Analysis failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
-async def _analyze_single(request: AnalyzeRequest, mcp_client: Client) -> AgentOutput:
+async def _analyze_single(
+    request: AnalyzeRequest,
+    mcp_client: Client,
+    *,
+    request_id: str | None = None,
+) -> AgentOutput:
     """Run the agent workflow on a single message. Reused by both endpoints."""
+    request_id = request_id or uuid.uuid4().hex[:12]
     initial_state: AgentState = {
         "raw_message": request.message,
+        "request_id": request_id,
         "user_id": request.user_id,
         "company_id": request.company_id,
         "source": request.source,
@@ -199,14 +235,24 @@ async def _analyze_single(request: AnalyzeRequest, mcp_client: Client) -> AgentO
         "filter_severity": request.filter_severity,
     }
     _start = time.perf_counter()
+    logger.info(f"[PIPELINE][req={request_id}] Starting LangGraph invoke with state={_state_summary(initial_state)}")
     try:
         result = await agent.ainvoke(
             initial_state,
             config={"configurable": {"mcp_client": mcp_client}},
         )
         ai_pipeline_calls_total.labels(mode="single", outcome="success").inc()
-    except Exception:
+        logger.info(
+            f"[PIPELINE][req={request_id}] LangGraph invoke finished. "
+            f"is_confirmed_risk={result.get('is_confirmed_risk')} keys={list(result.keys())}"
+        )
+    except Exception as e:
         ai_pipeline_calls_total.labels(mode="single", outcome="error").inc()
+        logger.error(
+            f"[PIPELINE][req={request_id}] LangGraph invoke failed: {e}. "
+            f"state={_state_summary(initial_state)}",
+            exc_info=True,
+        )
         raise
     finally:
         ai_pipeline_duration_seconds.labels(mode="single").observe(time.perf_counter() - _start)
@@ -232,10 +278,10 @@ async def _analyze_single(request: AnalyzeRequest, mcp_client: Client) -> AgentO
 _BATCH_SEMAPHORE = asyncio.Semaphore(5)
 
 
-async def _analyze_single_throttled(message: str, mcp_client: Client) -> AgentOutput:
+async def _analyze_single_throttled(message: str, mcp_client: Client, *, request_id: str) -> AgentOutput:
     """Throttled wrapper around _analyze_single to limit concurrency."""
     async with _BATCH_SEMAPHORE:
-        return await _analyze_single(AnalyzeRequest(message=message), mcp_client)
+        return await _analyze_single(AnalyzeRequest(message=message), mcp_client, request_id=request_id)
 
 
 @app.post("/analyze/batch", response_model=BatchAgentOutput)
@@ -244,20 +290,24 @@ async def analyze_messages_batch(
     mcp_client: Client = Depends(get_mcp_client),
 ):
     """Analyze multiple messages concurrently (max 5 at a time)."""
-    logger.info(f"[BATCH] Received batch request: {len(request.messages)} messages")
+    batch_id = uuid.uuid4().hex[:10]
+    logger.info(f"[BATCH][batch={batch_id}] Received batch request: {len(request.messages)} messages")
 
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
 
     try:
-        tasks = [_analyze_single_throttled(msg, mcp_client) for msg in request.messages]
+        tasks = [
+            _analyze_single_throttled(msg, mcp_client, request_id=f"{batch_id}-{i}")
+            for i, msg in enumerate(request.messages)
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         outputs: List[AgentOutput] = []
         processed = 0
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"[BATCH] Message {i} failed: {result}")
+                logger.error(f"[BATCH][batch={batch_id}] Message {i} failed: {result}", exc_info=True)
                 outputs.append(AgentOutput(
                     score=MentalHealthScore(
                         neutral_score=100, humor_sarcasm_score=0, stress_score=0,
@@ -278,7 +328,7 @@ async def analyze_messages_batch(
         )
 
     except Exception as e:
-        logger.error(f"[BATCH] Batch analysis failed: {str(e)}", exc_info=True)
+        logger.error(f"[BATCH][batch={batch_id}] Batch analysis failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
 
 
