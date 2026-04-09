@@ -4,16 +4,22 @@ import { ApiError } from "../api/client";
 
 type Status = "idle" | "loading" | "success" | "error";
 
+function hasAccessToken(): boolean {
+  try {
+    return Boolean(localStorage.getItem("sentinel_access_token"));
+  } catch {
+    return false;
+  }
+}
+
 export function useCurrentUser() {
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<Status>(() => (hasAccessToken() ? "loading" : "error"));
   const [user, setUser] = useState<Awaited<ReturnType<typeof getMe>> | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => (hasAccessToken() ? null : "No token found."));
 
   useEffect(() => {
     const token = localStorage.getItem("sentinel_access_token");
     if (!token) {
-      setStatus("error");
-      setError("No token found.");
       return;
     }
 

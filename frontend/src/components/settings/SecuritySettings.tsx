@@ -27,7 +27,7 @@ export default function SecuritySettings() {
     setSessionDays(days);
     try {
       localStorage.setItem(SESSION_DAYS_KEY, String(days));
-    } catch {}
+    } catch { void 0; }
   }
 
   return (

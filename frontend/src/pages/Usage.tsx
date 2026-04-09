@@ -4,26 +4,14 @@ import Button from "../components/Button";
 import LandingHeader from "../components/LandingHeader";
 import { useEffect } from "react";
 
-export default function Usage() {
-  const nav = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const isDark = searchParams.get("theme") === "dark"; 
+type StepItemProps = { number: string; text: string };
 
-  useEffect(() => {
-    if (isDark) {
-      document.body.classList.add('theme-dark');
-    } else {
-      document.body.classList.remove('theme-dark');
-    }
-    
-    return () => document.body.classList.remove('theme-dark');
-  }, [isDark]);
-
-  const StepItem = ({ number, text }: { number: string; text: string }) => (
-    <div 
+function StepItem({ number, text }: StepItemProps) {
+  return (
+    <div
       style={{ background: "var(--dynamic-card)", borderColor: "var(--dynamic-border)" }}
       className="border rounded-[32px] p-6 md:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-8 backdrop-blur-md shadow-sm"
-      >
+    >
       <div style={{
         minWidth: "48px",
         height: "48px",
@@ -43,6 +31,22 @@ export default function Usage() {
       </p>
     </div>
   );
+}
+
+export default function Usage() {
+  const nav = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isDark = searchParams.get("theme") === "dark"; 
+
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.add('theme-dark');
+    } else {
+      document.body.classList.remove('theme-dark');
+    }
+    
+    return () => document.body.classList.remove('theme-dark');
+  }, [isDark]);
 
   return (
     <div 

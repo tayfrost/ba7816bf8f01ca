@@ -18,6 +18,7 @@ import { useIncidents } from "../hooks/useIncidents";
 import IncidentStatsPanel from "../components/dashboard/IncidentStatsPanel";
 import RecentIncidentsFeed from "../components/dashboard/RecentIncidentsFeed";
 import IncidentModal from "../components/dashboard/IncidentModal";
+import type { Incident } from "../api";
 
 
 
@@ -32,7 +33,7 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"focused" | "grid">("focused");
   const [activeCatalogIndex, setActiveCatalogIndex] = useState(0);
 
-  const [selectedIncident, setSelectedIncident] = useState<any | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
 
   const range = useMemo(() => {
     if (preset === "custom") return computeRange("custom", { start: customStart, end: customEnd });

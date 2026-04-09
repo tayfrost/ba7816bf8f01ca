@@ -44,8 +44,25 @@ export default function Employees() {
     setSortBy,
   } = useEmployeesData();
 
-  // Reset to page 1 when filters change
-  useEffect(() => { setPage(1); }, [searchTerm, riskFilter, sourceFilter, sortBy]);
+  const handleSearchTermChange = (value: string) => {
+    setPage(1);
+    setSearchTerm(value);
+  };
+
+  const handleRiskFilterChange = (value: typeof riskFilter) => {
+    setPage(1);
+    setRiskFilter(value);
+  };
+
+  const handleSourceFilterChange = (value: typeof sourceFilter) => {
+    setPage(1);
+    setSourceFilter(value);
+  };
+
+  const handleSortByChange = (value: typeof sortBy) => {
+    setPage(1);
+    setSortBy(value);
+  };
 
   // Redirect on data load failure
   useEffect(() => {
@@ -141,7 +158,7 @@ export default function Employees() {
              <input 
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchTermChange(e.target.value)}
               placeholder="Filter by name or role..."
               style={{
                 background: "transparent",
@@ -198,11 +215,11 @@ export default function Employees() {
 
         <EmployeesFilters
           riskFilter={riskFilter}
-          setRiskFilter={setRiskFilter}
+          setRiskFilter={handleRiskFilterChange}
           sourceFilter={sourceFilter}
-          setSourceFilter={setSourceFilter}
+          setSourceFilter={handleSourceFilterChange}
           sortBy={sortBy}
-          setSortBy={setSortBy}
+          setSortBy={handleSortByChange}
         />
 
         <TopRiskEmployees

@@ -17,6 +17,7 @@ import IntegrationsPanel from "../components/settings/integrations/IntegrationsP
 import { useCompany } from "../hooks/useCompany";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { getPlans } from "../api/plans";
+import type { BillingInvoice } from "../state/settingsMock";
 
 const BRAND_ORANGE = "var(--color-top)";
 const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL ?? "https://sentinelai.work";
@@ -26,12 +27,13 @@ export default function Settings() {
   const { signup, plan } = useOnboarding();
   const navigate = useNavigate();
 
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
   const planPrice = plan === "paid" ? "£49" : "£0";
 
   const { company, status, isUpdating, saveCompanyName } = useCompany();
   const companyId = company?.company_id;
   const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
+  const [companyNameTouched, setCompanyNameTouched] = useState(false);
 
   const {
     status: currentUserStatus,
@@ -119,9 +121,9 @@ export default function Settings() {
     }
   };
 
-  useEffect(() => {
-    if (company?.company_name) setCompanyNameDraft(company.company_name);
-  }, [company]);
+  const effectiveCompanyName = companyNameTouched
+    ? companyNameDraft
+    : company?.company_name ?? companyNameDraft;
 
   return (
     <div
@@ -279,15 +281,18 @@ export default function Settings() {
 
                 <Input
                   label="Company Name"
-                  value={companyNameDraft}
-                  onChange={(e) => setCompanyNameDraft(e.target.value)}
+                  value={effectiveCompanyName}
+                  onChange={(e) => {
+                    setCompanyNameTouched(true);
+                    setCompanyNameDraft(e.target.value);
+                  }}
                 />
 
                 <Button
                   variant="secondary"
                   className="!text-white !bg-white/20 hover:!bg-white/30 border-white/10"
                   style={{ width: "auto", padding: "12px 30px", marginTop: "10px" }}
-                  onClick={() => saveCompanyName(companyNameDraft)}
+                  onClick={() => saveCompanyName(effectiveCompanyName)}
                   disabled={isUpdating || !canManageCompany}
                 >
                   {isUpdating ? "Updating..." : "Update Profile"}

@@ -112,7 +112,7 @@ export function useDashboardData(range: DateRange) {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [range.start, range.end, range.preset]);
+  }, [range]);
 
   return { status, error, series, isMock: IS_MOCK };
 }

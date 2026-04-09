@@ -13,10 +13,9 @@ export default function RequirePaidPlan({ children }: { children: React.ReactNod
   const navigate = useNavigate();
   const { company, status: companyStatus } = useCompany();
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [plansStatus, setPlansStatus] = useState<"idle" | "loading" | "done">("idle");
+  const [plansStatus, setPlansStatus] = useState<"loading" | "done">("loading");
 
   useEffect(() => {
-    setPlansStatus("loading");
     getPlans()
       .then((p) => { setPlans(p); setPlansStatus("done"); })
       .catch(() => setPlansStatus("done")); // on error, allow through

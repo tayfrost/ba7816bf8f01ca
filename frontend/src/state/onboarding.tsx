@@ -73,7 +73,7 @@ function loadPersisted(): Persisted {
 function savePersisted(p: Persisted) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-  } catch {}
+  } catch { void 0; }
 }
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
@@ -129,7 +129,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         try {
           localStorage.removeItem(STORAGE_KEY);
           localStorage.removeItem("sentinel_access_token");
-        } catch {}
+        } catch { void 0; }
       },
     }),
     [signup, plan, paymentSuccess, companyId, integrations, planInterval, setIntegrationConnected]
@@ -138,6 +138,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOnboarding() {
   const ctx = useContext(OnboardingContext);
   if (!ctx) throw new Error("useOnboarding must be used within OnboardingProvider");

@@ -41,7 +41,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
     // Auth or payment gate — both resolve by going through login
     if (res.status === 401 || res.status === 402 || res.status === 403) {
-      try { localStorage.removeItem("sentinel_access_token"); } catch {}
+      try { localStorage.removeItem("sentinel_access_token"); } catch { void 0; }
       window.location.replace("/login");
       return new Promise<never>(() => {});
     }

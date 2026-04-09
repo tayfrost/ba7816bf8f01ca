@@ -30,7 +30,7 @@ export default function SimpleLineChart({ points, width = 520, height = 150, max
     return points;
   }, [points]);
 
-  const { polyline, fillPath, min, max, latest, mid, padValue } = useMemo(() => {
+  const { polyline, fillPath, min, max, latest, mid, padValue } = (() => {
     const pts = workingPoints;
 
     const rawValues = pts.map((p) => p.value);
@@ -67,7 +67,7 @@ export default function SimpleLineChart({ points, width = 520, height = 150, max
     const fillPath = `${linePoints} ${coords[coords.length - 1].x},${height} ${coords[0].x},${height} Z`;
 
     return { polyline: linePoints, fillPath, min, max, latest, mid, padValue: innerPad };
-  }, [workingPoints, width, height]);
+  })();
 
   return (
     <div style={{
