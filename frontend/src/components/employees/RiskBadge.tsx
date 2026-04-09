@@ -1,4 +1,4 @@
-import { getRiskLevel } from "../../state/employeesMock";
+import { getRiskLevel } from "../../types/employees";
 
 type Props = {
   score: number;

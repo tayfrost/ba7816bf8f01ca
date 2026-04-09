@@ -51,6 +51,7 @@ class User(Base):
     def __repr__(self) -> str:
         return f"User(user_id={self.user_id!r}, company_id={self.company_id!r}, role={self.role!r})"
 
+
 class AuthUser(Base):
     __tablename__ = "auth_users"
 

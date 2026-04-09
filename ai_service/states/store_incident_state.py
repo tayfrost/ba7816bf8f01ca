@@ -85,26 +85,24 @@ async def store_incident(state: AgentState) -> AgentState:
                 )
                 return {**state, "store_succeeded": False, "store_error": response.text}
             response.raise_for_status()
+            message_id = response.json().get("message_id")
+            logger.info(f"[NODE: store_incident] Successfully stored incident {message_id}")
 
-        message_id = response.json().get("message_id")
-        logger.info(f"[NODE: store_incident] Successfully stored incident {message_id}")
+            if message_id:
+                try:
+                    scores_payload = _build_scores_payload(state)
+                    scores_resp = await client.post(
+                        f"{INTERNAL_API_URL}/internal/incidents/{message_id}/scores",
+                        json=scores_payload,
+                        timeout=10.0,
+                    )
+                    scores_resp.raise_for_status()
+                    logger.info(f"[NODE: store_incident] Stored scores for {message_id}")
+                except Exception as e:
+                    logger.error(f"[NODE: store_incident] Failed to store scores for {message_id}: {e}", exc_info=True)
 
     except Exception as e:
         logger.error(f"[NODE: store_incident] Failed to store incident: {e}", exc_info=True)
         return {**state, "store_succeeded": False, "store_error": str(e)}
-
-    if message_id:
-        try:
-            scores_payload = _build_scores_payload(state)
-            async with httpx.AsyncClient() as client:
-                scores_resp = await client.post(
-                    f"{INTERNAL_API_URL}/internal/incidents/{message_id}/scores",
-                    json=scores_payload,
-                    timeout=10.0,
-                )
-                scores_resp.raise_for_status()
-            logger.info(f"[NODE: store_incident] Stored scores for {message_id}")
-        except Exception as e:
-            logger.error(f"[NODE: store_incident] Failed to store scores for {message_id}: {e}", exc_info=True)
 
     return {**state, "store_succeeded": True, "store_error": None}

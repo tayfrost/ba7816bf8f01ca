@@ -1,4 +1,4 @@
-import type { EmployeeSource, RiskLevel } from "../../state/employeesMock";
+import type { EmployeeSource, RiskLevel } from "../../types/employees";
 import type { EmployeeSort } from "../../hooks/useEmployeesData";
 
 type Props = {

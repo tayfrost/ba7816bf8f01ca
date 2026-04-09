@@ -37,8 +37,10 @@ class SlackWorkspace(Base):
     slack_accounts: Mapped[List["SlackAccount"]] = relationship(
     back_populates="workspace",
     overlaps="slack_accounts")
+
     def __repr__(self) -> str:
         return f"SlackWorkspace(slack_workspace_id={self.slack_workspace_id!r}, team_id={self.team_id!r})"
+
 
 class SlackAccount(Base):
     __tablename__ = "slack_accounts"
@@ -81,6 +83,7 @@ class SlackAccount(Base):
 
     def __repr__(self) -> str:
         return f"SlackAccount(team_id={self.team_id!r}, slack_user_id={self.slack_user_id!r}, user_id={self.user_id!r})"
+
 
 class GoogleMailbox(Base):
     __tablename__ = "google_mailboxes"

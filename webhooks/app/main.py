@@ -7,6 +7,7 @@ logic lives in services, data structures in schemas.
 
 import logging
 import os
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,14 +26,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
-
-setup_metrics(app)
-
-app.include_router(slack_router)
-app.include_router(gmail_router)
-
-
 _scheduler = BackgroundScheduler()
 _scheduler.add_job(
     renew_expiring_watches,
@@ -42,8 +35,9 @@ _scheduler.add_job(
     replace_existing=True,
 )
 
-@app.on_event("startup")
-def start_scheduler():
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     _scheduler.start()
     logger.info("Gmail watch renewal scheduler started (interval=48h)")
     try:
@@ -51,9 +45,14 @@ def start_scheduler():
         logger.info(f"Startup watch renewal: {summary}")
     except Exception as e:
         logger.error(f"Startup watch renewal failed: {e}")
-
-
-@app.on_event("shutdown")
-def stop_scheduler():
+    yield
     _scheduler.shutdown(wait=False)
     logger.info("Gmail watch renewal scheduler stopped")
+
+
+app = FastAPI(lifespan=lifespan)
+
+setup_metrics(app)
+
+app.include_router(slack_router)
+app.include_router(gmail_router)

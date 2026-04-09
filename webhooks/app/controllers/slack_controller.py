@@ -37,7 +37,7 @@ def slack_login(company_id: int):
 
 
 @router.get("/oauth/callback")
-async def slack_oauth_callback(code: str = None, state: str = None):
+async def slack_oauth_callback(code: str | None = None, state: str | None = None):
     if not code:
         logger.warning("OAuth callback missing code parameter")
         raise HTTPException(status_code=400, detail="Missing code parameter")

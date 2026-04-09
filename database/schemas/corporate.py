@@ -36,6 +36,7 @@ class Company(Base):
     def __repr__(self) -> str:
         return f"Company(company_id={self.company_id!r}, name={self.name!r})"
 
+
 class SubscriptionPlan(Base):
     __tablename__ = "subscription_plans"
 
@@ -58,7 +59,8 @@ class SubscriptionPlan(Base):
 
     def __repr__(self) -> str:
         return f"SubscriptionPlan(plan_id={self.plan_id!r}, plan_name={self.plan_name!r})"
-    
+
+
 class Subscription(Base):
     __tablename__ = "subscriptions"
 

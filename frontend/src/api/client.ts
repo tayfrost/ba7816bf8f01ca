@@ -22,7 +22,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   const method = options.method ?? "GET";
   const url = `${BASE_URL}${path}`;
 
-  console.log(`[api] ${method} ${url}`);
+  console.debug(`[api] ${method} ${url}`);
 
   const res = await fetch(url, {
     ...options,
@@ -33,7 +33,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     },
   });
 
-  console.log(`[api] ${method} ${url} → ${res.status}`);
+  console.debug(`[api] ${method} ${url} → ${res.status}`);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

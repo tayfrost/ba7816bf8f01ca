@@ -1,22 +1,5 @@
 import { enumerateDays } from "./timeRange";
-
-export type EmployeeSource = "slack" | "gmail";
-export type RiskLevel = "low" | "medium" | "high" | "critical";
-
-export type Employee = {
-  id: string;
-  fullName: string;
-  role: string;
-  team: string;
-  email: string;
-  source: EmployeeSource[];
-  riskScore: number;
-  flaggedCount: number;
-  overtimeHours: number;
-  lastActive: string;
-  status: "active" | "watchlist" | "critical";
-  trend: { date: string; value: number }[];
-};
+import type { Employee } from "../types/employees";
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
@@ -38,17 +21,6 @@ function makeTrend(seedOffset: number, start = "2026-02-01", end = "2026-03-09")
       value: clamp(Math.round(25 + r * 70), 0, 100),
     };
   });
-}
-
-function deriveRiskLevel(score: number): RiskLevel {
-  if (score >= 85) return "critical";
-  if (score >= 65) return "high";
-  if (score >= 35) return "medium";
-  return "low";
-}
-
-export function getRiskLevel(score: number): RiskLevel {
-  return deriveRiskLevel(score);
 }
 
 export const MOCK_EMPLOYEES: Employee[] = [

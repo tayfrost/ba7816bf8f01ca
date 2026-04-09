@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getEmployees } from "../api";
 import type { Employee, EmployeeSource, RiskLevel } from "../types/employees";
-import { getRiskLevel } from "../state/employeesMock";
+import { getRiskLevel } from "../types/employees";
 
 export type EmployeeSort = "risk-desc" | "risk-asc" | "name-asc" | "flagged-desc";
 type Status = "idle" | "loading" | "success" | "error";

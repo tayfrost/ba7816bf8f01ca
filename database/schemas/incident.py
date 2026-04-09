@@ -60,6 +60,7 @@ class MessageIncident(Base):
     def __repr__(self) -> str:
         return f"MessageIncident(message_id={self.message_id!r}, company_id={self.company_id!r}, user_id={self.user_id!r})"
 
+
 class IncidentScores(Base):
     __tablename__ = "incident_scores"
 

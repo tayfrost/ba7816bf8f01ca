@@ -7,6 +7,9 @@ import re
 import time
 from typing import Literal, List
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
@@ -25,8 +28,6 @@ from services.mcp_service import get_mcp_client
 from schema.agent_state import AgentState
 from schema.output import AgentOutput, MentalHealthScore, BatchAgentOutput
 from schema.request import AnalyzeRequest, BatchAnalyzeRequest
-
-load_dotenv()
 
 # --- prometheus metrics ---
 

@@ -1,17 +1,10 @@
 """gRPC server implementation for SentinelAI Filter Service.
 
-Currently uses PyTorch as the primary inference backend for stability 
+Currently uses PyTorch as the primary inference backend for stability
 and consistent classification logic.
 """
 
 # pylint: disable=wrong-import-position,import-error,no-name-in-module
-
-# NOTE: Only respect disabled linting if you are adhering to best practices
-#       in retrospect. The import structure is designed to allow the server
-#       to run without issues regardless of execution context.
-
-# WARNING: Only ignore import errors if you have verified that the imports
-#          work correctly in all execution contexts.
 
 import logging
 import os
@@ -134,7 +127,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
     """gRPC Servicer for the Filter Service."""
 
     def __init__(self):
-        """Initialise tokenizer and ONNX model."""
+        """Initialise tokenizer and inference model (PyTorch or ONNX)."""
         self.model_name = os.environ.get("MODEL_NAME", config.MODEL_NAME)
         # Keep compatibility with both lowercase and current uppercase envs
         self.max_length = int(
@@ -154,15 +147,15 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
 
         if self.inference_backend == "pytorch":
             logger.info("Loading PyTorch model and tokenizer...")
-            self.onnx_session = load_production_model()
+            self.inference_session = load_production_model()
             self.tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
         else:
             logger.info("Loading ONNX model (%s)...", self.onnx_variant)
-            self.onnx_session, self.tokenizer = load_onnx_model_and_tokenizer(
+            self.inference_session, self.tokenizer = load_onnx_model_and_tokenizer(
                 onnx_variant=self.onnx_variant,
             )
 
-        if self.onnx_session is None:
+        if self.inference_session is None:
             raise RuntimeError(
                 "Inference model failed to load. "
                 f"Backend='{self.inference_backend}'"
@@ -242,7 +235,7 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
                 self.pad_token_id, self.max_length,
             )
             category_logits, severity_logits = run_chunk_inference(
-                self.onnx_session, input_ids, attention_mask,
+                self.inference_session, input_ids, attention_mask,
             )
             result = process_chunk_predictions(
                 category_logits, severity_logits,
