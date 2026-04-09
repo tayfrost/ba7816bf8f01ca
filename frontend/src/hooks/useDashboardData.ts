@@ -8,6 +8,15 @@ type Status = "idle" | "loading" | "success" | "error";
 
 const IS_MOCK = import.meta.env.VITE_USE_MOCKS === "true";
 
+// Shown while waiting for real data — replaced automatically once polling picks up actual points
+const PLACEHOLDER_SERIES = [
+  { key: "depression", label: "Depression", points: [] },
+  { key: "burnout", label: "Burnout", points: [] },
+  { key: "stress", label: "Stress", points: [] },
+  { key: "harassment", label: "Harassment", points: [] },
+  { key: "suicidal_ideation", label: "Suicidal ideation", points: [] },
+] as import("../api").Series[];
+
 /** Simple moving average — keeps the same number of points, uses available window at edges. */
 function smoothPoints(points: SeriesPoint[], window: number = 7): SeriesPoint[] {
   return points.map((p, i) => {
@@ -25,7 +34,7 @@ function smoothSeries(series: Series[], window: number = 7): Series[] {
 export function useDashboardData(range: DateRange) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [series, setSeries] = useState<Series[]>([]);
+  const [series, setSeries] = useState<Series[]>(PLACEHOLDER_SERIES);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +47,9 @@ export function useDashboardData(range: DateRange) {
         const res = await getUsage({ start: range.start, end: range.end });
         if (cancelled) return;
 
-        setSeries(smoothSeries(res?.series ?? []));
+        const fetched = res?.series ?? [];
+        // Keep placeholder series (empty points) if API returned nothing — polling will fill them in
+        setSeries(fetched.length > 0 ? smoothSeries(fetched) : PLACEHOLDER_SERIES);
         setStatus("success");
       } catch (e) {
         if (cancelled) return;
@@ -51,7 +62,7 @@ export function useDashboardData(range: DateRange) {
           return;
         }
 
-        setSeries([]);
+        // On error, keep current series (placeholder or real) and surface the error
         setStatus("error");
         setError("Failed to load dashboard metrics.");
       }
@@ -59,7 +70,12 @@ export function useDashboardData(range: DateRange) {
 
     run();
 
-    return () => { cancelled = true; };
+    const interval = setInterval(run, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [range.start, range.end, range.preset]);
 
   return { status, error, series, isMock: IS_MOCK };

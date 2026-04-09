@@ -14,7 +14,6 @@ import CustomDateRange from "../components/dashboard/CustomDateRange";
 import MetricCarousel from "../components/dashboard/MetricCarousel";
 import StatusBanner from "../components/dashboard/StatusBanner";
 import ChartPanel from "../components/dashboard/ChartPanel";
-import EmptyMetricsState from "../components/dashboard/EmptyMetricsState";
 import { useIncidents } from "../hooks/useIncidents";
 import IncidentStatsPanel from "../components/dashboard/IncidentStatsPanel";
 import RecentIncidentsFeed from "../components/dashboard/RecentIncidentsFeed";
@@ -119,9 +118,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!metricSeries.some(s => s.points.length > 0) ? (
-          <EmptyMetricsState />
-        ) : viewMode === "focused" ?(
+        {viewMode === "focused" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
             <ChartPanel
               series={metricSeries}

@@ -15,7 +15,6 @@ import DangerZone from "../components/settings/DangerZone";
 import IntegrationsPanel from "../components/settings/integrations/IntegrationsPanel";
 
 import { useCompany } from "../hooks/useCompany";
-import { useTeamUsers } from "../hooks/useTeamUsers";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
 const BRAND_ORANGE = "var(--color-top)";
@@ -23,31 +22,16 @@ const PAYMENTS_URL = import.meta.env.VITE_PAYMENTS_URL ?? "https://sentinelai.wo
 console.log("[settings] PAYMENTS_URL:", PAYMENTS_URL);
 
 export default function Settings() {
-  const { signup, plan, reset } = useOnboarding();
+  const { signup, plan } = useOnboarding();
   const navigate = useNavigate();
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const planPrice = plan === "paid" ? "£49" : "£0";
 
-  const {
-    users,
-    status: usersStatus,
-    error: usersError,
-    busyUserId,
-    changeRole,
-    removeUser,
-    invite,
-  } = useTeamUsers();
-
   const { company, status, error, isUpdating, saveCompanyName } = useCompany();
   const companyId = company?.company_id;
   const [companyNameDraft, setCompanyNameDraft] = useState(signup?.companyName || "");
 
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName] = useState("");
-  const [inviteSurname, setInviteSurname] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "biller" | "viewer">("viewer");
-  
   const {
     status: currentUserStatus,
     user: currentUser,
@@ -58,7 +42,6 @@ export default function Settings() {
   const isBiller = currentUser?.role === "biller";
 
   const canManageCompany = isAdmin || isBiller;
-  const canManageTeam = isAdmin || isBiller;
   const canManageBilling = isBiller;
   const canManageIntegrations = isAdmin || isBiller;
 
@@ -160,21 +143,6 @@ export default function Settings() {
           <SidebarLink to="/settings" label="Account Settings" end />
         </nav>
 
-        <button
-          onClick={() => { reset(); navigate("/login"); }}
-          style={{
-            background: "transparent",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.4)",
-            padding: "10px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "11px",
-            fontWeight: "bold",
-          }}
-        >
-          RESET SYSTEM
-        </button>
       </aside>
 
       {/* MAIN */}
@@ -363,85 +331,8 @@ export default function Settings() {
               )}
             </SectionCard>
 
-            <SectionCard title="Team Members">
-              {usersStatus === "loading" && (
-                <p style={{ opacity: 0.6 }}>Loading team members...</p>
-              )}
-              {usersError && (
-                <p style={{ color: BRAND_ORANGE }}>{usersError}</p>
-              )}
-              {canManageTeam && (
-                <div className="flex flex-col gap-3 mb-5 pb-5 border-b border-white/5">
-                  <input
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="email"
-                    style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 12px", fontSize: "12px" }}
-                  />
-                  <input
-                    value={inviteName}
-                    onChange={(e) => setInviteName(e.target.value)}
-                    placeholder="name"
-                    style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 12px", fontSize: "12px" }}
-                  />
-                  <input
-                    value={inviteSurname}
-                    onChange={(e) => setInviteSurname(e.target.value)}
-                    placeholder="surname"
-                    style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 12px", fontSize: "12px" }}
-                  />
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as "admin" | "biller" | "viewer")}
-                    style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 12px", fontSize: "12px", fontWeight: 800 }}
-                  >
-                    <option value="viewer">VIEWER</option>
-                    <option value="admin">ADMIN</option>
-                    <option value="biller">BILLER</option>
-                  </select>
-                  <button
-                    onClick={async () => {
-                      if (!inviteEmail || !inviteName || !inviteSurname) return;
-                      const ok = await invite({ email: inviteEmail, name: inviteName, surname: inviteSurname, role: inviteRole });
-                      if (ok) { setInviteEmail(""); setInviteName(""); setInviteSurname(""); setInviteRole("viewer"); }
-                    }}
-                    style={{ background: "rgba(227,141,38,0.18)", color: BRAND_ORANGE, border: "1px solid rgba(227,141,38,0.35)", borderRadius: "10px", padding: "10px 14px", fontSize: "11px", fontWeight: 900, cursor: "pointer" }}
-                  >
-                    INVITE
-                  </button>
-                </div>
-              )}
-              {users.map((user) => (
-                <div key={user.user_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", gap: "10px", flexWrap: "wrap" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700 }}>{user.display_name || user.email}</div>
-                    <div style={{ fontSize: "12px", opacity: 0.6 }}>{user.email}</div>
-                  </div>
-                  {canManageTeam ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-                      <select
-                        value={user.role}
-                        onChange={(e) => changeRole(user.user_id, e.target.value as "admin" | "biller" | "viewer")}
-                        disabled={busyUserId === user.user_id}
-                        style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "8px 10px", fontSize: "12px", fontWeight: 800 }}
-                      >
-                        <option value="viewer">VIEWER</option>
-                        <option value="admin">ADMIN</option>
-                        <option value="biller">BILLER</option>
-                      </select>
-                      <button
-                        onClick={() => removeUser(user.user_id)}
-                        disabled={busyUserId === user.user_id}
-                        style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,80,80,0.25)", borderRadius: "10px", padding: "8px 12px", fontSize: "11px", fontWeight: 900, cursor: "pointer" }}
-                      >
-                        {busyUserId === user.user_id ? "..." : "REMOVE"}
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: "12px", fontWeight: 800, opacity: 0.8 }}>{user.role.toUpperCase()}</div>
-                  )}
-                </div>
-              ))}
+            <SectionCard title="Security">
+              <SecuritySettings />
             </SectionCard>
           </div>
 
@@ -474,10 +365,6 @@ export default function Settings() {
               </SectionCard>
                 )}
 
-            <SectionCard title="Security">
-              <SecuritySettings />
-            </SectionCard>
-            
             <SectionCard title="Notifications">
               <NotificationsPreferences />
             </SectionCard>

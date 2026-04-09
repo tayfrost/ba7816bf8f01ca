@@ -9,28 +9,40 @@ type Props = {
 };
 export default function SimpleLineChart({ points, width = 520, height = 150 }: Props) {
 
-  const { polyline, fillPath, min, max, latest, mid, padValue } = useMemo(() => {
+  const workingPoints = useMemo(() => {
     if (!points || points.length === 0) {
-      return { polyline: "", fillPath: "", min: 0, max: 0, latest: 0, mid: 0, padValue: 15 };
+      // Flat zero line — replaced automatically once real data arrives via polling
+      const today = new Date();
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() - (6 - i));
+        return { date: d.toISOString().slice(0, 10), value: 0 };
+      });
     }
+    return points;
+  }, [points]);
 
-    const values = points.map((p) => p.value);
+  const { polyline, fillPath, min, max, latest, mid, padValue } = useMemo(() => {
+    const pts = workingPoints;
+
+    const values = pts.map((p) => p.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
     const latest = values[values.length - 1];
     const mid = (max + min) / 2;
 
-    const axisPad = 40; 
+    const axisPad = 40;
     const innerPad = 15;
     const w = Math.max(1, width - innerPad - axisPad);
     const h = Math.max(1, height - innerPad * 2);
 
     const denom = max - min === 0 ? 1 : max - min;
 
-    const coords = points.map((p, i) => {
-      const x = axisPad + (i / Math.max(1, points.length - 1)) * w;
+    const coords = pts.map((p, i) => {
+      const x = axisPad + (i / Math.max(1, pts.length - 1)) * w;
       const norm = (p.value - min) / denom;
-      const y = innerPad + (1 - norm) * h;
+      // When all values are equal (flat line), render at vertical midpoint
+      const y = denom === 1 && max === min ? height / 2 : innerPad + (1 - norm) * h;
       return { x, y };
     });
 
@@ -38,9 +50,7 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
     const fillPath = `${linePoints} ${coords[coords.length - 1].x},${height} ${coords[0].x},${height} Z`;
 
     return { polyline: linePoints, fillPath, min, max, latest, mid, padValue: innerPad };
-  }, [points, width, height]);
-
-  if (!points || points.length === 0) return null;
+  }, [workingPoints, width, height]);
 
   return (
     <div style={{

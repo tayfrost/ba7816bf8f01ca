@@ -20,6 +20,11 @@ export default function RecentIncidentsFeed({ incidents, onIncidentClick }: Prop
       </h3>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {incidents.length === 0 && (
+          <div style={{ padding: "32px", textAlign: "center", opacity: 0.4, fontWeight: 700, fontSize: "14px" }}>
+            No incidents detected
+          </div>
+        )}
         {incidents.map((incident) => (
           <div
             key={incident.incident_id}

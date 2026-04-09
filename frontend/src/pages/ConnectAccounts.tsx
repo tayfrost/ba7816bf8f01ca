@@ -39,6 +39,9 @@ export default function ConnectAccounts() {
     setStatus("loading");
     setError(null);
 
+    // Reset to disconnected immediately so stale localStorage state is never shown
+    providers.forEach((p) => setIntegrationConnected(p, false));
+
     try {
       const apiIntegrations = await getIntegrations();
 
@@ -52,7 +55,7 @@ export default function ConnectAccounts() {
       setStatus("error");
       setError("Failed to load integrations.");
     }
-  }, [setIntegrationConnected]);
+  }, [setIntegrationConnected, providers]);
 
   useEffect(() => {
     if (isDark) {

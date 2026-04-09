@@ -38,8 +38,11 @@ export function useIncidents() {
 
     load();
 
+    const interval = setInterval(load, 30_000);
+
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 

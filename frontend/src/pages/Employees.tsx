@@ -16,7 +16,7 @@ const BRAND_ORANGE = "var(--color-top)";
 const BRAND_DEEP = "var(--color-brand-deep)";
 
 export default function Employees() {
-  const { signup, plan, integrations, reset } = useOnboarding();
+  const { signup, plan, integrations } = useOnboarding();
 
   const [directoryView, setDirectoryView] = useState<"cards" | "table">("table");
   const navigate = useNavigate();
@@ -69,12 +69,6 @@ export default function Employees() {
           <SidebarLink to="/settings" label="Account Settings" />
         </nav>
 
-        <button onClick={() => { reset(); navigate("/login"); }} style={{
-          background: "transparent", border: "1px solid rgba(255,255,255,0.1)",
-          color: "rgba(255,255,255,0.4)", padding: "10px", borderRadius: "8px", cursor: "pointer", fontSize: "11px", fontWeight: "bold"
-        }}>
-          RESET SYSTEM
-        </button>
       </aside>
 
       {/* MAIN SECTION */}
