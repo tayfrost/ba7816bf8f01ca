@@ -156,6 +156,8 @@ jobs:
 
       - name: Run tests
         working-directory: ${{ github.workspace }}
+        env:
+          KG_MCP_URL: "http://kg-mcp-server:8001/mcp"
         run: |
           export PYTHONPATH="ai_service:."
           pytest -q ai_service/tests --ignore=ai_service/tests/test_mcp_service.py
