@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
+import { useCompany } from "../hooks/useCompany";
 import SidebarLink from "../components/SidebarLink";
 import EmployeeCard from "../components/EmployeeCard";
 import { useEmployeesData } from "../hooks/useEmployeesData";
@@ -16,7 +17,9 @@ const BRAND_ORANGE = "var(--color-top)";
 const BRAND_DEEP = "var(--color-brand-deep)";
 
 export default function Employees() {
-  const { signup, plan, integrations } = useOnboarding();
+  const { plan, integrations } = useOnboarding();
+  const { company } = useCompany();
+  const companyName = company?.company_name || "";
 
   const PAGE_SIZE = 10;
   const [directoryView, setDirectoryView] = useState<"cards" | "table">("table");
@@ -85,7 +88,7 @@ export default function Employees() {
         <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
           <div>
             <h1 style={{ fontSize: "38px", fontWeight: "900", margin: 0, letterSpacing: "-1px" }}>
-              Welcome, <span style={{ color: BRAND_ORANGE, textShadow: `0 0 20px rgba(227, 141, 38, 0.3)` }}>{signup?.companyName}</span>
+              Welcome, <span style={{ color: BRAND_ORANGE, textShadow: `0 0 20px rgba(227, 141, 38, 0.3)` }}>{companyName}</span>
             </h1>
             <p style={{ opacity: 0.5, marginTop: "10px", fontWeight: "700", textTransform: "uppercase", fontSize: "12px", letterSpacing: "1px" }}>
               {plan} MEMBER • {connectedCount} ACTIVE SOURCES

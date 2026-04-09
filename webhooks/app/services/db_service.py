@@ -76,6 +76,24 @@ def get_user_by_id(company_id: int, user_id: uuid.UUID, **_) -> Optional[SimpleN
     return _ns(_get(f"/internal/users/{user_id}", company_id=company_id))
 
 
+def delete_user(company_id: int, user_id: uuid.UUID, **_) -> None:
+    """Hard-delete an orphaned viewer seat. Raises RuntimeError on FK conflict."""
+    r = httpx.delete(f"{_BASE}/internal/users/{user_id}", params={"company_id": company_id})
+    if r.status_code == 404:
+        return  # already gone, nothing to do
+    if not r.is_success:
+        raise RuntimeError(f"delete_user {user_id} → {r.status_code}: {r.text}")
+
+
+def merge_users(company_id: int, keep_uid: str, drop_uid: str, **_) -> None:
+    """Re-assign all child rows from drop_uid → keep_uid, delete drop_uid."""
+    _post("/internal/users/merge", {
+        "company_id": company_id,
+        "keep_user_id": keep_uid,
+        "drop_user_id": drop_uid,
+    })
+
+
 # ── Google Mailboxes ──────────────────────────────────────────────
 
 def create_google_mailbox(

@@ -13,6 +13,7 @@ import json
 import base64
 import logging
 import re
+import uuid
 from typing import Optional, Tuple
 from datetime import datetime, timezone
 
@@ -74,14 +75,56 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
     existing_account = db.get_slack_account(team_id, slack_uid)
     if existing_account:
         user_id = existing_account.user_id
+
+        # ── Eventually-consistent merge: backfill email and check for duplicate user ──
         if email and not existing_account.email:
             db.update_slack_account_email(team_id, slack_uid, email)
             logger.info(f"Backfilled email for {slack_uid}: {email}")
+
+            # If a Gmail mailbox with this email already exists for a DIFFERENT user
+            # in the same company, the two records represent the same person → merge.
+            mailbox = db.get_mailbox_by_email_global(email)
+            if (
+                mailbox
+                and str(mailbox.user_id) != str(user_id)
+                and mailbox.company_id == company_id
+            ):
+                keep_uid = str(mailbox.user_id)
+                drop_uid = str(user_id)
+                logger.info(
+                    f"[merge] Email backfill revealed duplicate users: "
+                    f"keeping Gmail user {keep_uid}, merging Slack user {drop_uid}"
+                )
+                try:
+                    db.merge_users(company_id, keep_uid=keep_uid, drop_uid=drop_uid)
+                    user_id = uuid.UUID(keep_uid)
+                except Exception as exc:
+                    logger.error(f"[merge] merge_users failed (non-fatal): {exc}")
     else:
-        user    = db.create_viewer_seat(company_id, display_name=display_name)
-        user_id = user.user_id
-        db.create_slack_account(company_id, team_id, slack_uid, user_id, email=email)
-        logger.info(f"New viewer seat + slack_account created for {slack_uid} team={team_id} email={email}")
+        # New Slack user — create a temporary seat, then create the account.
+        # create_slack_account internally calls find_user_id_by_email and may
+        # override the user_id we pass with an existing Gmail user's id.
+        # If that happens the seat we just created becomes an orphan → delete it.
+        temp_seat = db.create_viewer_seat(company_id, display_name=display_name)
+        temp_uid  = temp_seat.user_id
+        acct      = db.create_slack_account(company_id, team_id, slack_uid, temp_uid, email=email)
+        user_id   = uuid.UUID(str(acct.user_id))
+
+        if user_id != temp_uid and str(user_id) != str(temp_uid):
+            # Linking resolved to an existing user — orphan the temp seat.
+            logger.info(
+                f"[merge] Slack account linked to existing user {user_id}; "
+                f"deleting orphaned viewer seat {temp_uid}"
+            )
+            try:
+                db.delete_user(company_id, temp_uid)
+            except Exception as exc:
+                logger.warning(f"[merge] Could not delete orphaned seat {temp_uid}: {exc}")
+        else:
+            logger.info(
+                f"New viewer seat + slack_account created for {slack_uid} "
+                f"team={team_id} email={email}"
+            )
 
     try:
         sent_at = datetime.fromtimestamp(float(message_ts), tz=timezone.utc).isoformat()

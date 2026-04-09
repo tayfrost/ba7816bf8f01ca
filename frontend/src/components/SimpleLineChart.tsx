@@ -31,24 +31,34 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
   const { polyline, fillPath, min, max, latest, mid, padValue } = useMemo(() => {
     const pts = workingPoints;
 
-    const values = pts.map((p) => p.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    const rawValues = pts.map((p) => p.value);
+    const allZero = rawValues.every((v) => v === 0);
+
+    // When there is real data, clamp every value to [0, 10] (guard against LLM scores out of range)
+    const values = allZero
+      ? rawValues
+      : rawValues.map((v) => Math.min(10, Math.max(0, v)));
+
+    // Axis bounds: all-zero keeps the flat-line behaviour; non-zero fixes to [0, 10]
+    const axisMin = 0;
+    const axisMax = allZero ? 0 : 10;
+    const denom   = allZero ? 1 : 10;   // allZero: denom=1 triggers the flat-line path below
+
     const latest = values[values.length - 1];
-    const mid = (max + min) / 2;
+    const min = allZero ? 0 : axisMin;
+    const max = allZero ? 0 : axisMax;
+    const mid = allZero ? 0 : 5;
 
     const axisPad = 40;
     const innerPad = 15;
     const w = Math.max(1, width - innerPad - axisPad);
     const h = Math.max(1, height - innerPad * 2);
 
-    const denom = max - min === 0 ? 1 : max - min;
-
     const coords = pts.map((p, i) => {
+      const v = allZero ? p.value : Math.min(10, Math.max(0, p.value));
       const x = axisPad + (i / Math.max(1, pts.length - 1)) * w;
-      const norm = (p.value - min) / denom;
-      // When all values are equal (flat line), render at vertical midpoint
-      const y = denom === 1 && max === min ? height / 2 : innerPad + (1 - norm) * h;
+      // All-zero: render flat line at vertical midpoint (same as before)
+      const y = allZero ? height / 2 : innerPad + (1 - v / denom) * h;
       return { x, y };
     });
 
@@ -93,9 +103,9 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
         </g>
 
         <g fill="rgba(255,255,255,0.4)" fontSize="10" textAnchor="end">
-          <text x="32" y={padValue + 4}>{max < 1 ? max.toFixed(2) : Math.round(max)}</text>
-          <text x="32" y={height / 2 + 4}>{mid < 1 ? mid.toFixed(2) : Math.round(mid)}</text>
-          <text x="32" y={height - padValue + 4}>{min < 1 ? min.toFixed(2) : Math.round(min)}</text>
+          <text x="32" y={padValue + 4}>{max}</text>
+          <text x="32" y={height / 2 + 4}>{mid}</text>
+          <text x="32" y={height - padValue + 4}>{min}</text>
         </g>
 
         <polyline points={fillPath} fill="url(#areaGradient)" stroke="none" />
@@ -119,9 +129,9 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
         borderTop: "1px solid rgba(255,255,255,0.1)",
         paddingTop: "12px"
       }}>
-        <div style={{ color: "white" }}>MIN: <span style={{ color: "#ffb347", fontWeight: "bold" }}>{min < 1 ? min.toFixed(3) : Math.round(min)}</span></div>
-        <div style={{ color: "white" }}>LATEST: <span style={{ color: "#ffb347", fontWeight: "bold" }}>{latest < 1 ? latest.toFixed(3) : Math.round(latest)}</span></div>
-        <div style={{ color: "white" }}>MAX: <span style={{ color: "#ef6330", fontWeight: "bold" }}>{max < 1 ? max.toFixed(3) : Math.round(max)}</span></div>
+        <div style={{ color: "white" }}>MIN: <span style={{ color: "#ffb347", fontWeight: "bold" }}>{min}</span></div>
+        <div style={{ color: "white" }}>LATEST: <span style={{ color: "#ffb347", fontWeight: "bold" }}>{latest}</span></div>
+        <div style={{ color: "white" }}>MAX: <span style={{ color: "#ef6330", fontWeight: "bold" }}>{max}</span></div>
       </div>
     </div>
   );

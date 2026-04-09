@@ -38,6 +38,15 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     console.error(`[api] ${method} ${url} failed: ${res.status}`, text);
+
+    if (res.status === 401) {
+      // Token expired or invalid — clear it and bounce to login immediately
+      try { localStorage.removeItem("sentinel_access_token"); } catch {}
+      window.location.replace("/login");
+      // Return a promise that never resolves so no further code runs
+      return new Promise<never>(() => {});
+    }
+
     throw new ApiError(res.status, text || `API error ${res.status}`);
   }
 

@@ -1,5 +1,5 @@
 from database.database import models as model
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, update
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session as SASession
 from typing import Optional as optional
@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func
 import os
+import uuid as _uuid_mod
 
 
 engine = create_engine(os.environ["DATABASE_URL_SYNC"], echo=True)
@@ -302,6 +303,89 @@ def find_user_id_by_email(
         return gmail_match if isinstance(gmail_match, _uuid.UUID) else _uuid.UUID(str(gmail_match))
 
     return None
+
+
+def merge_users(
+    company_id: int,
+    keep_uid: "_uuid_mod.UUID",
+    drop_uid: "_uuid_mod.UUID",
+    *,
+    session: "SASession | None" = None,
+) -> None:
+    """
+    Re-assign all child rows from drop_uid → keep_uid, then delete drop_uid.
+
+    Touches: message_incidents, slack_accounts, google_mailboxes, auth_users.
+    Safe to call if keep_uid == drop_uid (no-op).
+
+    Raises RuntimeError if the delete is still blocked after re-pointing
+    (shouldn't happen but is surfaced so the caller can log and continue).
+    """
+    if keep_uid == drop_uid:
+        return
+
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        cid = int(company_id)
+
+        # 1. Re-point message_incidents (composite FK company_id+user_id)
+        session.execute(
+            update(model.MessageIncident)
+            .where(
+                model.MessageIncident.company_id == cid,
+                model.MessageIncident.user_id == drop_uid,
+            )
+            .values(user_id=keep_uid)
+        )
+
+        # 2. Re-point slack_accounts
+        session.execute(
+            update(model.SlackAccount)
+            .where(
+                model.SlackAccount.company_id == cid,
+                model.SlackAccount.user_id == drop_uid,
+            )
+            .values(user_id=keep_uid)
+        )
+
+        # 3. Re-point google_mailboxes
+        session.execute(
+            update(model.GoogleMailbox)
+            .where(
+                model.GoogleMailbox.company_id == cid,
+                model.GoogleMailbox.user_id == drop_uid,
+            )
+            .values(user_id=keep_uid)
+        )
+
+        # 4. Re-point auth_users (viewer seats won't have these, but be safe)
+        session.execute(
+            update(model.AuthUser)
+            .where(model.AuthUser.user_id == drop_uid)
+            .values(user_id=keep_uid)
+        )
+
+        # 5. Delete the now-unreferenced orphan user
+        orphan = session.execute(
+            select(model.User).where(
+                model.User.company_id == cid,
+                model.User.user_id == drop_uid,
+            )
+        ).scalar_one_or_none()
+        if orphan:
+            session.delete(orphan)
+
+        session.commit()
+
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
 
 
 def validate_role(role: str) -> None:

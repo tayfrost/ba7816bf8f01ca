@@ -20,6 +20,7 @@ from database.services import (
     slack_workspaces_crud,
     users_crud,
 )
+from database.services.utility_functions import merge_users as _merge_users
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,38 @@ async def link_or_create_account(body: LinkAccountRequest):
 class ViewerSeatRequest(BaseModel):
     company_id: int
     display_name: str | None = None
+
+
+@router.delete("/users/{user_id}", status_code=204)
+async def delete_user_internal(user_id: uuid.UUID, company_id: int):
+    """Hard-delete an orphaned viewer seat (no child rows must reference it)."""
+    try:
+        deleted = await asyncio.to_thread(users_crud.hard_delete_user, company_id, user_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    if not deleted:
+        raise HTTPException(status_code=404, detail="User not found")
+
+
+class MergeUsersRequest(BaseModel):
+    company_id: int
+    keep_user_id: uuid.UUID
+    drop_user_id: uuid.UUID
+
+
+@router.post("/users/merge", status_code=200)
+async def merge_users_internal(body: MergeUsersRequest):
+    """
+    Re-assign all child rows from drop_user_id → keep_user_id, delete drop_user_id.
+    Idempotent when keep == drop.
+    """
+    try:
+        await asyncio.to_thread(
+            _merge_users, body.company_id, body.keep_user_id, body.drop_user_id
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"ok": True, "keep_user_id": str(body.keep_user_id), "drop_user_id": str(body.drop_user_id)}
 
 
 @router.post("/users/viewer-seat", response_model=UserRead, status_code=201)
