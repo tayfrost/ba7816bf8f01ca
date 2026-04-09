@@ -1,3 +1,5 @@
+# .github/workflows/CI.yml
+
 name: CI
 
 on:
@@ -49,21 +51,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r filter/requirements.txt pytest grpcio-tools setuptools
-
-      - name: Ensure setuptools for proto compilation
-        run: python -m pip install --upgrade setuptools
+          python -m pip install -r filter/requirements.txt pytest
 
       - name: Compile Protos
         run: |
-          # Find and run the compile script
+          python -m pip install grpcio-tools setuptools
           SCRIPT=$(find . -name compile_protos.py | head -n 1)
           python $SCRIPT
 
       - name: Run tests
         working-directory: ${{ github.workspace }}
         run: |
-          # Include the generated output folder in PYTHONPATH
           export PYTHONPATH=".:filter/generated"
           pytest -q filter/tests
 
@@ -121,7 +119,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Added psycopg2-binary to satisfy SQLAlchemy's default postgresql:// dialect
           python -m pip install pytest sqlalchemy psycopg[binary] psycopg2-binary
 
       - name: Map pgvector hostname used by scripts
@@ -163,7 +160,6 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           export PYTHONPATH="ai_service:."
-          # TODO: Remove ignore once tests refactored and passing
           pytest -q ai_service/tests --ignore=ai_service/tests/test_mcp_service.py
 
   knowledge-graph-tests:
@@ -189,7 +185,6 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           export PYTHONPATH="knowledge-graph:."
-          # TODO: Remove ignore once tests refactored and passing
           pytest -q knowledge-graph/tests --ignore=knowledge-graph/tests/test_mcp_server.py
 
   webhooks-tests:
@@ -223,7 +218,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r webhooks/requirements.txt pytest grpcio-tools setuptools
+          python -m pip install -r webhooks/requirements.txt pytest
           python -m pip install -r api/requirements.txt psycopg[binary] psycopg2-binary
 
       - name: Map pgvector hostname used by schema script
@@ -234,18 +229,10 @@ jobs:
           POSTGRES_PASSWORD: postgres
         run: python database/database/tables.py
 
-      - name: Setup isolated proto compile environment
+      - name: Compile Protos
         run: |
-          python -m venv .proto-venv
-          source .proto-venv/bin/activate
-          python --version
-          python -m pip install --upgrade pip
-          python -m pip install --no-cache-dir --force-reinstall setuptools grpcio-tools
-          python -m pip show setuptools
-          python -c "import pkg_resources; print('pkg_resources OK:', pkg_resources.__file__)"
-          python -m grpc_tools.protoc --version
+          python -m pip install grpcio-tools setuptools
           SCRIPT=$(find . -name compile_protos.py | head -n 1)
-          echo "SCRIPT=$SCRIPT"
           python $SCRIPT
 
       - name: Start API server
@@ -308,7 +295,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r api/requirements.txt pytest psycopg[binary] psycopg2-binary grpcio-tools setuptools
+          python -m pip install -r api/requirements.txt pytest psycopg[binary] psycopg2-binary
 
       - name: Map pgvector hostname used by schema script
         run: echo "127.0.0.1 pgvector" | sudo tee -a /etc/hosts
@@ -317,9 +304,10 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
         run: python database/database/tables.py
-        
+
       - name: Compile Protos
         run: |
+          python -m pip install grpcio-tools setuptools
           SCRIPT=$(find . -name compile_protos.py | head -n 1)
           python $SCRIPT
 
