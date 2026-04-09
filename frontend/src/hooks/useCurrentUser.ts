@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getMe } from "../api";
+import { ApiError } from "../api/client";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -31,7 +32,10 @@ export function useCurrentUser() {
       } catch (err) {
         if (cancelled) return;
 
-        localStorage.removeItem("sentinel_access_token");
+        // Only clear the token on a genuine 401 — not on network errors or 5xx
+        if (err instanceof ApiError && err.status === 401) {
+          localStorage.removeItem("sentinel_access_token");
+        }
         setUser(null);
         setStatus("error");
         setError("Session expired or invalid.");

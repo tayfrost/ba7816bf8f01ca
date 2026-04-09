@@ -22,7 +22,7 @@ async def register(body: RegisterRequest):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest):
-    token = await auth_service.login_user(body.email, body.password)
+    token = await auth_service.login_user(body.email, body.password, body.remember_days)
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

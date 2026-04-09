@@ -23,9 +23,10 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(data: dict) -> str:
+def create_access_token(data: dict, expire_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    delta = expire_delta if expire_delta is not None else timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + delta
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
@@ -92,7 +93,10 @@ async def register_user(
         session.close()
 
 
-async def login_user(email: str, password: str) -> str | None:
+_ALLOWED_REMEMBER_DAYS = {1, 7, 30}
+
+
+async def login_user(email: str, password: str, remember_days: int = 1) -> str | None:
     auth_user = await asyncio.to_thread(
         crud_auth_users.get_auth_user_by_email, email.lower().strip()
     )
@@ -114,6 +118,8 @@ async def login_user(email: str, password: str) -> str | None:
     if not company or company.deleted_at is not None:
         return None
 
+    days = remember_days if remember_days in _ALLOWED_REMEMBER_DAYS else 1
     return create_access_token(
-        {"sub": str(user.user_id), "company_id": auth_user.company_id, "role": user.role}
+        {"sub": str(user.user_id), "company_id": auth_user.company_id, "role": user.role},
+        expire_delta=timedelta(days=days),
     )

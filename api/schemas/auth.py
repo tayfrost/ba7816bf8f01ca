@@ -12,6 +12,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+    remember_days: int = 1
 
 
 class TokenResponse(BaseModel):

@@ -76,7 +76,7 @@ export default function LandingHeader({ isLoggedIn = false, theme = 'light', onT
                 Login
               </button>
               <div className="w-32">
-                <Button variant="primary" onClick={() => navigate("/signup")}>Join Now</Button>
+                <Button variant="primary" onClick={() => navigate("/plan")}>Join Now</Button>
               </div>
             </>
           )}

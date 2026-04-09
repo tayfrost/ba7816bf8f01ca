@@ -6,10 +6,11 @@ import AuthCard from "../components/AuthCard";
 import { login, getIntegrations, getMe } from "../api";
 import { useOnboarding } from "../state/onboarding";
 import type { Provider } from "../state/onboarding";
+import { SESSION_DAYS_KEY, SESSION_DAYS_DEFAULT } from "../components/settings/SecuritySettings";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { setIntegrationConnected, setSignup } = useOnboarding();
+  const { setIntegrationConnected, setSignup, setPlan } = useOnboarding();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +24,17 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      const res = await login({ email, password });
+      const rememberDays = (() => {
+        try {
+          const raw = localStorage.getItem(SESSION_DAYS_KEY);
+          const parsed = raw ? parseInt(raw, 10) : NaN;
+          return [1, 7, 30].includes(parsed) ? parsed : SESSION_DAYS_DEFAULT;
+        } catch {
+          return SESSION_DAYS_DEFAULT;
+        }
+      })();
+
+      const res = await login({ email, password, remember_days: rememberDays });
       localStorage.setItem("sentinel_access_token", res.access_token);
 
       // Sync onboarding state from server to prevent stale localStorage
@@ -43,8 +54,12 @@ export default function Login() {
           setIntegrationConnected(i.provider as Provider, i.connected);
         });
       } catch {
-        // Non-fatal: stale state is better than blocking the login
+        // Non-fatal: ensure signup is populated even if getMe fails
+        setSignup({ companyName: "", adminName: email, adminEmail: email });
       }
+
+      // Always set plan so RequireOnboarding doesn't redirect to /plan
+      setPlan("free");
 
       navigate("/dashboard");
     } catch (err) {
