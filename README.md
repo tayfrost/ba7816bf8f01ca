@@ -1,6 +1,6 @@
 # SentinelAI
 
-**Team 7** | Large Group Project | King's College London — BSc Artificial Intelligence
+**Team Rocket Number One** | Large Group Project | King's College London — BSc Artificial Intelligence
 
 SentinelAI is a multi-service platform for workplace wellbeing monitoring, automated risk triage, and operational analytics. It ingests communication signals from Slack and Gmail, classifies them through a fine-tuned BERT model, escalates high-risk incidents via an LLM-powered assessment pipeline, and surfaces actionable insights to managers through a React dashboard.
 
@@ -308,7 +308,7 @@ Evaluation was conducted on a held-out split. Precision on the high-risk class w
 
 **Payments** wraps the Stripe Python SDK. Subscription lifecycle events (created, updated, cancelled) are handled via Stripe webhooks with idempotency key enforcement.
 
-**Knowledge Graph MCP Server** is a FastAPI service exposing MCP-spec tool endpoints. The graph is stored in a structured format and queried by embedding similarity for retrieval-augmented recommendation.
+**Knowledge Graph MCP Server** is a FastAPI service exposing MCP-spec tool endpoints. The graph is stored in Neo4j and anchored by 92 peer-reviewed medical papers (sources include JAMA and Cochrane), encoding 368 specific actionable advice items. The AI service agent queries it during reasoning for evidence-backed recommendations.
 
 **Frontend** is a React 18 + TypeScript + Vite SPA. Routing is via React Router. State management uses React Query for server state and Zustand for local UI state. The dashboard renders incident timelines, risk trend charts (Recharts), and company/user management tables.
 
@@ -320,21 +320,21 @@ CI is deliberately split into blocking and advisory gates. Advisory jobs cover s
 
 ### 6. Deployment
 
-The live deployment at https://sentinelai.work runs on a single VM behind a reverse proxy (Caddy), with TLS termination handled automatically. All services run as Docker containers under the same Compose configuration used locally, with production `.env` values injected at runtime. The Grafana instance at https://sentinelai.work/grafana/ provides live operational observability.
+The live deployment at https://sentinelai.work runs on a Digital Ocean Droplet behind NGINX, which handles reverse proxying and TLS termination. All services run as Docker containers under the same Compose configuration used locally, with production `.env` values injected at runtime. The Grafana instance at https://sentinelai.work/grafana/ provides live operational observability.
 
 ### 7. Division of Work
 
-| Area | Lead |
+| Member | Responsibilities |
 |---|---|
-| API design and auth | Kishan Prakash, Dmytro Syzonenko |
-| Filter model training and gRPC service | Oguzhan Cagirir |
-| Webhooks and Slack/Gmail integration | Davyd Shtepa, Mariam Hafiz |
-| AI service and LangGraph agent | Derja Sulevani, Lupupa Chansa |
-| Knowledge graph and MCP server | Daria Pampukha |
-| Payments and Stripe integration | Vishal Thakwani |
-| Frontend | Mariam Hafiz, Dmytro Syzonenko |
-| Database schema and testing | Kishan Prakash |
-| Monitoring and deployment | Oguzhan Cagirir, Dmytro Syzonenko |
+| Dmytro Syzonenko | Project Manager, Webhooks, Inference, API, Deployment |
+| Oguzhan Cagirir | Filter Model, Git Manager, Evaluation, QA |
+| Kishan Prakash | Integration, Webhooks, AI Agent |
+| Davyd Shtepa | Datasets, Payments |
+| Derja Sulevani | Database |
+| Daria Pampukha | Resilience Testing, Frontend |
+| Lupupa Chansa | UI/UX |
+| Mariam Hafiz | API |
+| Vishal Thakwani | Knowledge Graph |
 
 ### 8. Reflection and Limitations
 
