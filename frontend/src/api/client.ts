@@ -19,10 +19,7 @@ function getAccessToken(): string | null {
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAccessToken();
-  const method = options.method ?? "GET";
   const url = `${BASE_URL}${path}`;
-
-  console.debug(`[api] ${method} ${url}`);
 
   const res = await fetch(url, {
     ...options,
@@ -33,11 +30,8 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     },
   });
 
-  console.debug(`[api] ${method} ${url} → ${res.status}`);
-
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    console.error(`[api] ${method} ${url} failed: ${res.status}`, text);
 
     // Auth or payment gate — both resolve by going through login
     if (res.status === 401 || res.status === 402 || res.status === 403) {

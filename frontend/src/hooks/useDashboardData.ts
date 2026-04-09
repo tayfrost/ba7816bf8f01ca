@@ -4,7 +4,7 @@ import { enumerateDays } from "../state/timeRange";
 import { getUsage } from "../api";
 import type { Series, SeriesPoint } from "../api";
 import { makeAllSeries } from "../state/metricsMock";
-import { dashboardDebug, dashboardDebugError, summarizeSeries, isDashboardDebugEnabled } from "../utils/dashboardDebug";
+import { dashboardDebug, dashboardDebugError } from "../utils/dashboardDebug";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -94,54 +94,38 @@ export function useDashboardData(range: DateRange) {
   useEffect(() => {
     let cancelled = false;
 
-    dashboardDebug("useDashboardData", "effect-start", {
-      range,
-      isMockEnv: IS_MOCK,
-      debugEnabled: isDashboardDebugEnabled(),
-    });
-
     async function run() {
       setStatus("loading");
       setError(null);
-      dashboardDebug("useDashboardData", "fetch-start", { range });
 
       try {
         const res = await getUsage({ start: range.start, end: range.end });
         if (cancelled) return;
 
+        dashboardDebug("useDashboardData", "raw-usage-response", res);
+
         const fetched = res?.series ?? [];
-        dashboardDebug("useDashboardData", "fetch-success", {
-          range: res?.range,
-          seriesCount: fetched.length,
-          rawSeriesSummary: summarizeSeries(fetched),
-        });
         // Fill prefix gaps with 0, leaving suffix as-is (backend applies 3-day rolling avg)
         // Frontend smoothing commented out — backend already smooths; double-smoothing distorted peaks
         const transformed = fetched.length > 0
           ? /* smoothSeries( */ fillRangeGaps(fetched, range.start, range.end) /* ) */
           : PLACEHOLDER_SERIES;
         const normalized = normalizeGraphSeries(transformed, 10);
-        dashboardDebug("useDashboardData", "transform-complete", {
-          usedPlaceholder: fetched.length === 0,
-          transformedSummary: summarizeSeries(transformed, 10),
-          normalizedSummary: summarizeSeries(normalized, 10),
-        });
+        dashboardDebug("useDashboardData", "raw-incident-score-series", transformed);
+        dashboardDebug("useDashboardData", "normalized-incident-score-series", normalized);
         setSeries(normalized);
         setStatus("success");
-        dashboardDebug("useDashboardData", "state-success", { status: "success" });
       } catch (e) {
         if (cancelled) return;
 
         console.error(e);
-        dashboardDebugError("useDashboardData", "fetch-failed", e, { range, isMockEnv: IS_MOCK });
+        dashboardDebugError("useDashboardData", "usage-payload-failed", e, { range, isMockEnv: IS_MOCK });
 
         if (IS_MOCK) {
           const mocked = /* smoothSeries( */ makeAllSeries(range) /* ) */;
           const normalizedMocked = normalizeGraphSeries(mocked, 10);
-          dashboardDebug("useDashboardData", "mock-fallback", {
-            transformedSummary: summarizeSeries(mocked, 10),
-            normalizedSummary: summarizeSeries(normalizedMocked, 10),
-          });
+          dashboardDebug("useDashboardData", "raw-incident-score-series", mocked);
+          dashboardDebug("useDashboardData", "normalized-incident-score-series", normalizedMocked);
           setSeries(normalizedMocked);
           setStatus("success");
           return;
@@ -150,22 +134,16 @@ export function useDashboardData(range: DateRange) {
         // On error, keep current series (placeholder or real) and surface the error
         setStatus("error");
         setError("Failed to load dashboard metrics.");
-        dashboardDebug("useDashboardData", "state-error", {
-          status: "error",
-          error: "Failed to load dashboard metrics.",
-        });
       }
     }
 
     run();
-    dashboardDebug("useDashboardData", "polling-scheduled", { intervalMs: 60000 });
 
     const interval = setInterval(run, 60_000);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
-      dashboardDebug("useDashboardData", "effect-cleanup", { range });
     };
   }, [range]);
 
