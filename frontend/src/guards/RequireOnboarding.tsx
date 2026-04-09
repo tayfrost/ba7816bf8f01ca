@@ -6,11 +6,14 @@ import { hasAnyIntegrationConnected } from "../state/integrationRules";
 export default function RequireOnboarding({ children }: { children: React.ReactNode }) {
   const { signup, plan, paymentSuccess, integrations } = useOnboarding();
   const location = useLocation();
+  const hasStripeSessionReturn =
+    location.pathname === "/connect-accounts" &&
+    new URLSearchParams(location.search).has("session_id");
 
   if (!signup) return <Navigate to="/signup" replace />;
 
   // Only paid plans must complete payment
-  if (plan === "paid" && !paymentSuccess) {
+  if (plan === "paid" && !paymentSuccess && !hasStripeSessionReturn) {
     console.log("[RequireOnboarding] Redirecting to /payment -> plan=paid, paymentSuccess=false");
     return <Navigate to="/payment" replace />;
   }

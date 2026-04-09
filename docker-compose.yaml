@@ -226,6 +226,7 @@ services:
     env_file:
       - ./payments/.env
     environment:
+      - FRONTEND_URL=https://sentinelai.work
       - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@pgvector:5432/sentinelai
     depends_on:
       - pgvector

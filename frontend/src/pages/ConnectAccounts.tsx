@@ -27,7 +27,7 @@ export default function ConnectAccounts() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isDark = searchParams.get("theme") === "dark";
 
-  const { integrations, setIntegrationConnected } = useOnboarding();
+  const { integrations, setIntegrationConnected, setPaymentSuccess } = useOnboarding();
   const providers = useMemo<Provider[]>(() => ["slack", "gmail"], []);
 
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -70,6 +70,21 @@ export default function ConnectAccounts() {
   useEffect(() => {
     refreshIntegrations();
   }, [refreshIntegrations]);
+
+  useEffect(() => {
+    const stripeSessionId = searchParams.get("session_id");
+    if (!stripeSessionId) {
+      return;
+    }
+
+    setPaymentSuccess(true);
+    setError(null);
+    setNotice("Payment confirmed. You can now connect your accounts.");
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("session_id");
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams, setPaymentSuccess]);
 
   useEffect(() => {
     const provider = searchParams.get("provider");
