@@ -137,6 +137,8 @@ def list_message_incidents_for_user(
     source: str | None = None,
     limit: int = 100,
     offset: int = 0,
+    start_dt: datetime | None = None,
+    end_dt: datetime | None = None,
     session: optional[SASession] = None,
 ) -> list[model.MessageIncident]:
     own_session = session is None
@@ -152,6 +154,10 @@ def list_message_incidents_for_user(
             if source not in VALID_SOURCES:
                 raise ValueError(f"source must be one of {sorted(VALID_SOURCES)}")
             stmt = stmt.where(model.MessageIncident.source == source)
+        if start_dt is not None:
+            stmt = stmt.where(model.MessageIncident.sent_at >= start_dt)
+        if end_dt is not None:
+            stmt = stmt.where(model.MessageIncident.sent_at <= end_dt)
         stmt = stmt.order_by(model.MessageIncident.sent_at.desc()).limit(limit).offset(offset)
         return list(session.execute(stmt).scalars().all())
     finally:

@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -79,11 +80,17 @@ async def list_incidents(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=500),
     employee_user_id: uuid.UUID | None = Query(None),
+    start: str | None = Query(None, description="ISO date filter start (YYYY-MM-DD)"),
+    end: str | None = Query(None, description="ISO date filter end (YYYY-MM-DD)"),
 ):
+    start_dt = datetime.fromisoformat(start) if start else None
+    end_dt = datetime.fromisoformat(end) if end else None
+
     if employee_user_id is not None:
         incidents_task = asyncio.to_thread(
             crud_message_incidents.list_message_incidents_for_user,
             user.company_id, employee_user_id, limit=limit, offset=skip,
+            start_dt=start_dt, end_dt=end_dt,
         )
     else:
         incidents_task = asyncio.to_thread(

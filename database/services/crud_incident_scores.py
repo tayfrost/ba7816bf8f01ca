@@ -1,11 +1,24 @@
-from database.database import models as model
-from database.services.utility_functions import Session
+import math
+import uuid
+from datetime import datetime, date
+
 from sqlalchemy import select, func, cast, Date
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as SASession
 from typing import Optional as optional
-from sqlalchemy.exc import IntegrityError
-from datetime import datetime, date
-import uuid
+
+from database.database import models as model
+from database.services.utility_functions import Session
+
+
+def _log_damped(avg_score: float, n: int, cap: float = 10.0) -> float:
+    """
+    Log-dampened score: boosts days with many incidents above a plain average,
+    but diminishingly so. n=1 → same as avg; n=10 → ~3.5× avg (capped at cap).
+    """
+    if n <= 0:
+        return 0.0
+    return min(cap, avg_score * math.log2(1 + n))
 
 
 def create_incident_scores(
@@ -222,11 +235,12 @@ def list_daily_score_averages(
         IS = model.IncidentScores
         day_col = cast(MI.sent_at, Date).label("day")
 
-        # Inner subquery: per-employee daily averages
+        # Inner subquery: per-employee daily averages + incident count
         per_user = (
             select(
                 day_col,
                 MI.user_id,
+                func.count(MI.message_id).label("n"),
                 func.avg(IS.depression_score).label("depression"),
                 func.avg(IS.burnout_score).label("burnout"),
                 func.avg(IS.stress_score).label("stress"),
@@ -243,10 +257,11 @@ def list_daily_score_averages(
             .subquery()
         )
 
-        # Outer: average per-employee values across all employees per day
+        # Outer: sum counts, average per-employee scores across employees per day
         stmt = (
             select(
                 per_user.c.day,
+                func.sum(per_user.c.n).label("total_n"),
                 func.avg(per_user.c.depression).label("depression"),
                 func.avg(per_user.c.burnout).label("burnout"),
                 func.avg(per_user.c.stress).label("stress"),
@@ -261,11 +276,12 @@ def list_daily_score_averages(
         return [
             {
                 "day": row.day,
-                "depression": float(row.depression or 0),
-                "burnout": float(row.burnout or 0),
-                "stress": float(row.stress or 0),
-                "harassment": float(row.harassment or 0),
-                "suicidal_ideation": float(row.suicidal_ideation or 0),
+                # Log-damped: days with more incidents score higher, diminishingly
+                "depression": _log_damped(float(row.depression or 0), int(row.total_n or 1)),
+                "burnout": _log_damped(float(row.burnout or 0), int(row.total_n or 1)),
+                "stress": _log_damped(float(row.stress or 0), int(row.total_n or 1)),
+                "harassment": _log_damped(float(row.harassment or 0), int(row.total_n or 1)),
+                "suicidal_ideation": _log_damped(float(row.suicidal_ideation or 0), int(row.total_n or 1)),
             }
             for row in rows
         ]

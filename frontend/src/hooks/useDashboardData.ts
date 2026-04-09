@@ -19,34 +19,49 @@ const PLACEHOLDER_SERIES = [
 ] as import("../api").Series[];
 
 /**
- * Fill every date in [start, end] with 0 if the series has no point for that day.
- * This ensures the chart always covers the full selected window, not just the days with data.
+ * Fill dates with 0 for the prefix of the window (before the first real data point).
+ * The suffix (after the last real data point) is left as-is — filling it with zeros
+ * would drag down the moving average for the most recent days.
  */
 function fillRangeGaps(series: Series[], start: string, end: string): Series[] {
   const allDates = enumerateDays(start, end);
   return series.map((s) => {
     const pointMap = new Map(s.points.map((p) => [p.date, p.value]));
-    const points: SeriesPoint[] = allDates.map((date) => ({
-      date,
-      value: pointMap.get(date) ?? 0,
-    }));
+
+    // Find the last date that has a real data point
+    const lastRealDate = s.points.length > 0
+      ? s.points.reduce((latest, p) => (p.date > latest ? p.date : latest), s.points[0].date)
+      : null;
+
+    const points: SeriesPoint[] = allDates
+      .filter((date) => date <= (lastRealDate ?? start))  // only prefix + real range
+      .map((date) => ({
+        date,
+        value: pointMap.get(date) ?? 0,  // real value or 0 for prefix gaps
+      }));
+
+    // Append suffix points that have real data (no forced zeros)
+    allDates
+      .filter((date) => lastRealDate && date > lastRealDate && pointMap.has(date))
+      .forEach((date) => points.push({ date, value: pointMap.get(date)! }));
+
     return { ...s, points };
   });
 }
 
-/** Simple moving average — keeps the same number of points, uses available window at edges. */
-function smoothPoints(points: SeriesPoint[], window: number = 7): SeriesPoint[] {
-  return points.map((p, i) => {
-    const start = Math.max(0, i - window + 1);
-    const chunk = points.slice(start, i + 1);
-    const avg = chunk.reduce((sum, pt) => sum + pt.value, 0) / chunk.length;
-    return { date: p.date, value: Math.round(avg * 10) / 10 };
-  });
-}
-
-function smoothSeries(series: Series[], window: number = 7): Series[] {
-  return series.map((s) => ({ ...s, points: smoothPoints(s.points, window) }));
-}
+// Frontend smoothing commented out — backend already applies 3-day rolling average.
+// Double-smoothing caused excessive peak flattening. Uncomment to restore if needed.
+// function smoothPoints(points: SeriesPoint[], window: number = 7): SeriesPoint[] {
+//   return points.map((p, i) => {
+//     const start = Math.max(0, i - window + 1);
+//     const chunk = points.slice(start, i + 1);
+//     const avg = chunk.reduce((sum, pt) => sum + pt.value, 0) / chunk.length;
+//     return { date: p.date, value: Math.round(avg * 10) / 10 };
+//   });
+// }
+// function smoothSeries(series: Series[], window: number = 7): Series[] {
+//   return series.map((s) => ({ ...s, points: smoothPoints(s.points, window) }));
+// }
 
 export function useDashboardData(range: DateRange) {
   const [status, setStatus] = useState<Status>("idle");
@@ -65,9 +80,10 @@ export function useDashboardData(range: DateRange) {
         if (cancelled) return;
 
         const fetched = res?.series ?? [];
-        // Fill every date in the window with 0 for missing days, then smooth
+        // Fill prefix gaps with 0, leaving suffix as-is (backend applies 3-day rolling avg)
+        // Frontend smoothing commented out — backend already smooths; double-smoothing distorted peaks
         setSeries(fetched.length > 0
-          ? smoothSeries(fillRangeGaps(fetched, range.start, range.end))
+          ? /* smoothSeries( */ fillRangeGaps(fetched, range.start, range.end) /* ) */
           : PLACEHOLDER_SERIES
         );
         setStatus("success");
@@ -77,7 +93,7 @@ export function useDashboardData(range: DateRange) {
         console.error(e);
 
         if (IS_MOCK) {
-          setSeries(smoothSeries(makeAllSeries(range)));
+          setSeries(/* smoothSeries( */ makeAllSeries(range) /* ) */);
           setStatus("success");
           return;
         }

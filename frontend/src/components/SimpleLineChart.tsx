@@ -6,8 +6,10 @@ type Props = {
   points: Point[];
   width?: number;
   height?: number;
+  /** Fixed axis maximum. Default 10 for score charts; pass 100 for the trend graph. */
+  maxValue?: number;
 };
-export default function SimpleLineChart({ points, width = 520, height = 150 }: Props) {
+export default function SimpleLineChart({ points, width = 520, height = 150, maxValue = 10 }: Props) {
 
   const workingPoints = useMemo(() => {
     if (!points || points.length === 0) {
@@ -34,20 +36,19 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
     const rawValues = pts.map((p) => p.value);
     const allZero = rawValues.every((v) => v === 0);
 
-    // When there is real data, clamp every value to [0, 10] (guard against LLM scores out of range)
+    // Clamp every value to [0, maxValue] (guard against out-of-range scores)
     const values = allZero
       ? rawValues
-      : rawValues.map((v) => Math.min(10, Math.max(0, v)));
+      : rawValues.map((v) => Math.min(maxValue, Math.max(0, v)));
 
-    // Axis bounds: all-zero keeps the flat-line behaviour; non-zero fixes to [0, 10]
-    const axisMin = 0;
-    const axisMax = allZero ? 0 : 10;
-    const denom   = allZero ? 1 : 10;   // allZero: denom=1 triggers the flat-line path below
+    // Axis bounds: all-zero keeps flat-line behaviour; non-zero fixes to [0, maxValue]
+    const axisMax = allZero ? 0 : maxValue;
+    const denom   = allZero ? 1 : maxValue;  // allZero: denom=1 triggers flat-line path below
 
     const latest = values[values.length - 1];
-    const min = allZero ? 0 : axisMin;
+    const min = 0;
     const max = allZero ? 0 : axisMax;
-    const mid = allZero ? 0 : 5;
+    const mid = allZero ? 0 : maxValue / 2;
 
     const axisPad = 40;
     const innerPad = 15;
@@ -55,7 +56,7 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
     const h = Math.max(1, height - innerPad * 2);
 
     const coords = pts.map((p, i) => {
-      const v = allZero ? p.value : Math.min(10, Math.max(0, p.value));
+      const v = allZero ? p.value : Math.min(maxValue, Math.max(0, p.value));
       const x = axisPad + (i / Math.max(1, pts.length - 1)) * w;
       // All-zero: render flat line at vertical midpoint (same as before)
       const y = allZero ? height / 2 : innerPad + (1 - v / denom) * h;

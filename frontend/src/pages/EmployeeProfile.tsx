@@ -8,7 +8,10 @@ import EmployeeProfileHeader from "../components/employees/profile/EmployeeProfi
 import EmployeeWorkloadSummary from "../components/employees/profile/EmployeeWorkloadSummary";
 import EmployeeIncidentTimeline from "../components/employees/profile/EmployeeIncidentTimeline";
 import ChartPanel from "../components/dashboard/ChartPanel";
+import RangeSelector from "../components/dashboard/RangeSelector";
 import IncidentModal from "../components/dashboard/IncidentModal";
+import { computeRange } from "../state/timeRange";
+import type { RangePreset } from "../state/timeRange";
 import type { Incident } from "../api";
 
 const BRAND_ORANGE = "var(--color-top)";
@@ -23,7 +26,10 @@ export default function EmployeeProfile() {
     [employees, employeeId]
   );
 
-  const { incidents, series: incidentSeries } = useEmployeeIncidents(employeeId ?? "");
+  const [preset, setPreset] = useState<RangePreset>("month");
+  const range = useMemo(() => computeRange(preset), [preset]);
+
+  const { incidents, series: incidentSeries } = useEmployeeIncidents(employeeId ?? "", range);
   const [activeSeriesIndex, setActiveSeriesIndex] = useState(0);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
 
@@ -98,6 +104,9 @@ export default function EmployeeProfile() {
 
         {/* Per-category incident trend charts */}
         <div style={{ marginBottom: "30px" }}>
+          <div style={{ marginBottom: "16px" }}>
+            <RangeSelector preset={preset} setPreset={(p) => { setPreset(p); setActiveSeriesIndex(0); }} />
+          </div>
           <ChartPanel
             series={incidentSeries}
             activeIndex={safeActiveIndex}

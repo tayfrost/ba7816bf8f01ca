@@ -1,4 +1,5 @@
 import asyncio
+import math
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 
@@ -68,12 +69,23 @@ def _derive_status(risk_score: int) -> str:
 
 
 def _build_trend(incident_list: list, days: int = 30, ma_window: int = 7) -> list[TrendPoint]:
-    """Daily risk score (category weight × 10, capped at 100) with moving average."""
+    """
+    Daily weighted risk score (0-100) with log dampening and moving average.
+
+    Each day's score = log-damped average of category weights across all incidents:
+      score = min(100, avg_weight * log2(1 + n) * 10)
+    where n is the incident count for that day.
+    This means more incidents push the score up, but diminishingly.
+    """
     now = datetime.now(tz=timezone.utc)
     start = now - timedelta(days=days - 1)
 
-    daily_risk: dict[str, float] = {
+    daily_weight_sum: dict[str, float] = {
         (start + timedelta(days=d)).date().isoformat(): 0.0
+        for d in range(days)
+    }
+    daily_count: dict[str, int] = {
+        (start + timedelta(days=d)).date().isoformat(): 0
         for d in range(days)
     }
 
@@ -84,12 +96,25 @@ def _build_trend(incident_list: list, days: int = 30, ma_window: int = 7) -> lis
         if sent < start:
             continue
         day = sent.date().isoformat()
-        if day in daily_risk:
+        if day in daily_weight_sum:
             category = (inc.content_raw or {}).get("filter_category") or "neutral"
-            daily_risk[day] += CATEGORY_WEIGHTS.get(category, 0.0)
+            daily_weight_sum[day] += CATEGORY_WEIGHTS.get(category, 0.0)
+            daily_count[day] += 1
 
-    sorted_days = sorted(daily_risk)
-    smoothed = _moving_average([daily_risk[d] for d in sorted_days], ma_window)
+    sorted_days = sorted(daily_weight_sum)
+
+    # Apply log dampening per day before moving average
+    dampened: list[float] = []
+    for d in sorted_days:
+        n = daily_count[d]
+        raw_sum = daily_weight_sum[d]
+        if n > 0:
+            avg_weight = raw_sum / n
+            dampened.append(avg_weight * math.log2(1 + n))
+        else:
+            dampened.append(0.0)
+
+    smoothed = _moving_average(dampened, ma_window)
 
     return [
         TrendPoint(date=d, value=round(min(100.0, v * 10), 1))

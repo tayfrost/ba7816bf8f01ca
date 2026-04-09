@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getEmployeeIncidents } from "../api";
 import type { Incident, Series } from "../api";
 import { enumerateDays } from "../state/timeRange";
+import type { DateRange } from "../state/timeRange";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -19,16 +20,18 @@ const PLACEHOLDER_SERIES: Series[] = CATEGORIES.map(({ key, label }) => ({
   points: [],
 }));
 
-function toYMD(d: Date): string {
-  return d.toISOString().slice(0, 10);
+/**
+ * Log-damped count: 1 incident → 3.2, 5 → 7.2, 10 → 10 (capped).
+ * Normalised so count=10 maps to exactly 10.
+ */
+const LOG_NORM = 10 / Math.log2(11);
+function logDampedCount(count: number): number {
+  return Math.min(10, Math.log2(1 + count) * LOG_NORM);
 }
 
-/** Build a 30-day per-category time series from raw incidents. */
-function buildCategorySeries(incidents: Incident[]): Series[] {
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(today.getDate() - 29);
-  const allDates = enumerateDays(toYMD(start), toYMD(today));
+/** Build a per-category time series from raw incidents over the given date range. */
+function buildCategorySeries(incidents: Incident[], start: string, end: string): Series[] {
+  const allDates = enumerateDays(start, end);
 
   return CATEGORIES.map(({ key, label }) => {
     const daily: Record<string, number> = {};
@@ -43,16 +46,27 @@ function buildCategorySeries(incidents: Incident[]): Series[] {
     return {
       key,
       label,
-      points: allDates.map((date) => ({ date, value: daily[date] })),
+      points: allDates.map((date) => ({
+        date,
+        value: logDampedCount(daily[date]),
+      })),
     };
   });
 }
 
-export function useEmployeeIncidents(userId: string) {
+export function useEmployeeIncidents(userId: string, range?: DateRange) {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [series, setSeries] = useState<Series[]>(PLACEHOLDER_SERIES);
+
+  // Default to last 30 days when no range is provided
+  const start = range?.start ?? (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    return d.toISOString().slice(0, 10);
+  })();
+  const end = range?.end ?? new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     if (!userId) return;
@@ -62,10 +76,10 @@ export function useEmployeeIncidents(userId: string) {
       setStatus("loading");
       setError(null);
       try {
-        const data = await getEmployeeIncidents(userId);
+        const data = await getEmployeeIncidents(userId, 500, start, end);
         if (cancelled) return;
         setIncidents(data);
-        setSeries(buildCategorySeries(data));
+        setSeries(buildCategorySeries(data, start, end));
         setStatus("success");
       } catch (err) {
         if (cancelled) return;
@@ -78,7 +92,7 @@ export function useEmployeeIncidents(userId: string) {
     load();
     const interval = setInterval(load, 30_000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [userId]);
+  }, [userId, start, end]);
 
   return { status, error, incidents, series };
 }
