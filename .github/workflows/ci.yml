@@ -52,7 +52,10 @@ jobs:
           python -m pip install -r filter/requirements.txt pytest
 
       - name: Run tests
-        run: pytest -q filter/tests
+        working-directory: ${{ github.workspace }}
+        run: |
+          export PYTHONPATH=filter
+          pytest -q filter/tests
 
   payments-smoke:
     name: Payments smoke tests
@@ -72,10 +75,12 @@ jobs:
           python -m pip install -r payments/requirements.txt pytest
 
       - name: Run tests
+        working-directory: ${{ github.workspace }}
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sentinelai
-          PYTHONPATH: payments
-        run: pytest -q payments/tests
+        run: |
+          export PYTHONPATH=payments
+          pytest -q payments/tests
 
   database-table-tests:
     name: Database table tests
@@ -117,10 +122,12 @@ jobs:
         run: python database/database/tables.py
 
       - name: Run table tests
+        working-directory: ${{ github.workspace }}
         env:
           DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/sentinelai
-          PYTHONPATH: database
-        run: pytest -q database/tests/table_test
+        run: |
+          export PYTHONPATH=database
+          pytest -q database/tests/table_test
 
   # Advisory suite: runs all other identified test folders that may need branch-specific updates.
   ai-service-tests:
@@ -143,9 +150,10 @@ jobs:
           python -m pip install -r ai_service/requirements.txt pytest
 
       - name: Run tests
-        env:
-          PYTHONPATH: ai_service
-        run: pytest -q ai_service/tests
+        working-directory: ${{ github.workspace }}
+        run: |
+          export PYTHONPATH=ai_service
+          pytest -q ai_service/tests
 
   knowledge-graph-tests:
     name: Knowledge graph tests (advisory)
@@ -189,10 +197,12 @@ jobs:
           python -m pip install -r webhooks/requirements.txt pytest
 
       - name: Run unit tests
+        working-directory: ${{ github.workspace }}
         env:
           INTERNAL_API_URL: http://127.0.0.1:8000
-          PYTHONPATH: webhooks
-        run: pytest -q webhooks/app/tests --ignore=webhooks/app/tests/test_filter_integration.py
+        run: |
+          export PYTHONPATH=webhooks
+          pytest -q webhooks/app/tests --ignore=webhooks/app/tests/test_filter_integration.py
 
   api-tests:
     name: API tests (advisory)
@@ -236,10 +246,12 @@ jobs:
         run: python database/database/tables.py
 
       - name: Start API server
+        working-directory: ${{ github.workspace }}
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sentinelai
           DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/sentinelai
         run: |
+          export PYTHONPATH=api
           nohup python -m uvicorn api.main:app --host 127.0.0.1 --port 8006 >/tmp/api.log 2>&1 &
 
       - name: Wait for health
