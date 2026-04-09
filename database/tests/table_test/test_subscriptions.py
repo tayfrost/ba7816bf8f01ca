@@ -4,11 +4,7 @@ from database.services import companies_crud as company_crud
 from database.services import subscription_plan_crud as sp_crud
 from sqlalchemy import event
 from datetime import datetime, timezone, timedelta
-
-from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-
-import inspect
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
 

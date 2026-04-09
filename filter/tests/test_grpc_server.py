@@ -1,6 +1,7 @@
 """Test gRPC server functionality."""
 
 import grpc
+import pytest
 import sys
 from pathlib import Path
 
@@ -12,9 +13,17 @@ from filter.v1 import filter_pb2
 from filter.v1 import filter_pb2_grpc
 
 
+def _wait_for_server_or_skip(channel: grpc.Channel) -> None:
+    try:
+        grpc.channel_ready_future(channel).result(timeout=1.5)
+    except grpc.FutureTimeoutError:
+        pytest.skip("Filter gRPC server not available on localhost:50051")
+
+
 def test_classify_message():
     """Test ClassifyMessage RPC call."""
     with grpc.insecure_channel('localhost:50051') as channel:
+        _wait_for_server_or_skip(channel)
         stub = filter_pb2_grpc.FilterServiceStub(channel)
 
         request = filter_pb2.ClassifyRequest(
@@ -39,6 +48,7 @@ def test_classify_message():
 def test_classify_message_empty_input():
     """Empty message should be handled safely without server errors."""
     with grpc.insecure_channel('localhost:50051') as channel:
+        _wait_for_server_or_skip(channel)
         stub = filter_pb2_grpc.FilterServiceStub(channel)
 
         response = stub.ClassifyMessage(filter_pb2.ClassifyRequest(message=""))
@@ -61,6 +71,7 @@ def test_classify_message_long_input_sliding_window():
     ] * 10)
 
     with grpc.insecure_channel('localhost:50051') as channel:
+        _wait_for_server_or_skip(channel)
         stub = filter_pb2_grpc.FilterServiceStub(channel)
 
         response = stub.ClassifyMessage(filter_pb2.ClassifyRequest(message=long_message))

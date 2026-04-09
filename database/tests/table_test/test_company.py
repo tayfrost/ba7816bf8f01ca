@@ -1,8 +1,7 @@
 import pytest
 from database.services import companies_crud as crud 
-from sqlalchemy import create_engine, event
+from sqlalchemy import event
 from sqlalchemy.orm import sessionmaker
-import inspect
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
 

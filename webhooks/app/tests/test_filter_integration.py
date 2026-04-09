@@ -1,6 +1,8 @@
 """
 Integration tests for Filter Service gRPC stub.
-Dima - what is this sentinelai.filter.v1 
+
+`sentinelai.filter.v1` is the generated proto package namespace used by
+the webhooks service for FilterService gRPC calls.
 """
 
 import pytest
@@ -9,13 +11,23 @@ from sentinelai.filter.v1 import filter_pb2, filter_pb2_grpc
 from app.services.filter_service import filter_message, FILTER_SERVICE_HOST
 
 
+def _get_filter_stub_or_skip():
+    channel = grpc.insecure_channel(FILTER_SERVICE_HOST)
+    try:
+        grpc.channel_ready_future(channel).result(timeout=1.5)
+    except grpc.FutureTimeoutError:
+        channel.close()
+        pytest.skip(f"Filter gRPC server not available on {FILTER_SERVICE_HOST}")
+    return filter_pb2_grpc.FilterServiceStub(channel), channel
+
+
 class TestFilterIntegration:
     """Integration tests for gRPC mental health filter service."""
     
     def test_classify_neutral_message(self):
         """Test that neutral messages return is_risk=False."""
-        with grpc.insecure_channel(FILTER_SERVICE_HOST) as channel:
-            stub = filter_pb2_grpc.FilterServiceStub(channel)
+        stub, channel = _get_filter_stub_or_skip()
+        try:
             request = filter_pb2.ClassifyRequest(
                 message="Hey team, the meeting is scheduled for 3pm today."
             )
@@ -26,11 +38,14 @@ class TestFilterIntegration:
             assert isinstance(response.category_confidence, float)
             assert isinstance(response.severity, str)
             assert 0.0 <= response.category_confidence <= 1.0
+        finally:
+            channel.close()
+
     
     def test_classify_stress_message(self):
         """Test that stress-indicating message gets classified."""
-        with grpc.insecure_channel(FILTER_SERVICE_HOST) as channel:
-            stub = filter_pb2_grpc.FilterServiceStub(channel)
+        stub, channel = _get_filter_stub_or_skip()
+        try:
             request = filter_pb2.ClassifyRequest(
                 message="I'm so overwhelmed with all these deadlines, I can't keep up anymore."
             )
@@ -43,11 +58,13 @@ class TestFilterIntegration:
             ]
             assert 0.0 <= response.category_confidence <= 1.0
             assert response.all_responses != ""
+        finally:
+            channel.close()
     
     def test_classify_harassment_message(self):
         """Test that harassment message gets flagged."""
-        with grpc.insecure_channel(FILTER_SERVICE_HOST) as channel:
-            stub = filter_pb2_grpc.FilterServiceStub(channel)
+        stub, channel = _get_filter_stub_or_skip()
+        try:
             request = filter_pb2.ClassifyRequest(
                 message="You're worthless and everyone hates working with you."
             )
@@ -56,16 +73,20 @@ class TestFilterIntegration:
             assert isinstance(response.is_risk, bool)
             assert response.severity in ["none", "early", "middle", "late"]
             assert 0.0 <= response.severity_confidence <= 1.0
+        finally:
+            channel.close()
     
     def test_classify_empty_message(self):
         """Test that empty messages are handled gracefully."""
-        with grpc.insecure_channel(FILTER_SERVICE_HOST) as channel:
-            stub = filter_pb2_grpc.FilterServiceStub(channel)
+        stub, channel = _get_filter_stub_or_skip()
+        try:
             request = filter_pb2.ClassifyRequest(message="")
             response = stub.ClassifyMessage(request)
             
             assert isinstance(response.is_risk, bool)
             assert response.category == "neutral"
+        finally:
+            channel.close()
     
     def test_filter_message_returns_filter_result(self):
         result = filter_message("Just finished the report, feeling good about it.")
@@ -86,12 +107,13 @@ class TestFilterIntegration:
     def test_long_message_handling(self):
         """Test that long messages are processed via sliding window."""
         long_text = "I've been feeling really stressed lately. " * 200  # ~600 tokens
-        
-        with grpc.insecure_channel(FILTER_SERVICE_HOST) as channel:
-            stub = filter_pb2_grpc.FilterServiceStub(channel)
+        stub, channel = _get_filter_stub_or_skip()
+        try:
             request = filter_pb2.ClassifyRequest(message=long_text)
             response = stub.ClassifyMessage(request)
             
             assert isinstance(response.is_risk, bool)
             # Should have multiple chunk responses
             assert "[Chunk" in response.all_responses
+        finally:
+            channel.close()

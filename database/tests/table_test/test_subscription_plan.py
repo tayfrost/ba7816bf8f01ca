@@ -1,11 +1,7 @@
 import pytest
 from database.services import subscription_plan_crud as crud 
 from sqlalchemy import event
-
-from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-
-import inspect
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
 

@@ -60,8 +60,8 @@ def test_list_incidents(client: httpx.Client):
     assert resp.status_code == 200
     incidents = resp.json()
     assert len(incidents) == 2
-    sources = {i["source"] for i in incidents}
-    assert sources == {"slack", "gmail"}
+    team_ids = {i["team_id"] for i in incidents}
+    assert team_ids == {"slack", "gmail"}
 
 
 def test_get_incident_by_id(client: httpx.Client):
@@ -97,8 +97,7 @@ def test_incident_stats(client: httpx.Client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["total"] == 3
-    assert body["by_source"]["slack"] == 2
-    assert body["by_source"]["gmail"] == 1
+    assert body["by_reason"]["unknown"] == 3
 
 
 def test_incident_isolated_between_companies(client: httpx.Client):

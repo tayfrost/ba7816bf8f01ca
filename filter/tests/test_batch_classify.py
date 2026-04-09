@@ -14,6 +14,7 @@ filter_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(filter_dir / "generated"))
 
 import grpc
+import pytest
 from filter.v1 import filter_pb2, filter_pb2_grpc
 
 
@@ -26,6 +27,11 @@ VALID_SEVERITIES = ["none", "early", "middle", "late"]
 
 def _get_stub():
     channel = grpc.insecure_channel("localhost:50051")
+    try:
+        grpc.channel_ready_future(channel).result(timeout=1.5)
+    except grpc.FutureTimeoutError:
+        channel.close()
+        pytest.skip("Filter gRPC server not available on localhost:50051")
     return filter_pb2_grpc.FilterServiceStub(channel), channel
 
 

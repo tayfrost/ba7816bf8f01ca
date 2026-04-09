@@ -51,6 +51,7 @@ def test_invite_user(client: httpx.Client):
     resp = client.post(
         "/users/invite",
         params={"company_id": company_id, "email": "invitee@test.com", "role": "viewer", "display_name": "Invited"},
+        headers=_auth(token),
     )
     assert resp.status_code == 201
     body = resp.json()
@@ -85,6 +86,7 @@ def test_deactivate_user(client: httpx.Client):
     invite_resp = client.post(
         "/users/invite",
         params={"company_id": company_id, "email": "victim@test.com", "role": "viewer"},
+        headers=_auth(token),
     )
     assert invite_resp.status_code == 201
     victim_id = invite_resp.json()["user_id"]
@@ -98,8 +100,8 @@ def test_deactivate_user(client: httpx.Client):
     assert victim_id not in ids
 
 
-def test_invite_no_auth_required(client: httpx.Client):
+def test_invite_requires_auth(client: httpx.Client):
     token = _register(client, "invite_noauth@test.com", "InviteNoAuth Corp")
     company_id = client.get("/auth/me", headers=_auth(token)).json()["company_id"]
     resp = client.post("/users/invite", params={"company_id": company_id, "email": "noauth_invitee@test.com"})
-    assert resp.status_code == 201
+    assert resp.status_code == 401

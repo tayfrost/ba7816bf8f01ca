@@ -7,10 +7,7 @@ from database.services import users_crud as user_crud
 
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import event
-from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-
-import inspect
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
 

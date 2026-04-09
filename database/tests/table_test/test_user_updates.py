@@ -1,9 +1,12 @@
 import pytest
-from database.services import users_crud as crud 
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
+from datetime import datetime, timedelta, timezone
 
-import inspect
+from database.services import users_crud as crud
+from database.services import companies_crud as company_crud
+from database.services import subscription_plan_crud as sp_crud
+from database.services import subscriptions_crud as subs_crud
+from sqlalchemy import event
+from sqlalchemy.orm import sessionmaker
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
 
@@ -32,8 +35,28 @@ def db_session():
             outer_transaction.rollback()
         connection.close()
 
-TEST_COMPANY_ID = 47
 SEAT_LIMIT = 10
+
+
+def _mk_company(db_session, name: str):
+    company = company_crud.create_company(name, session=db_session)
+    plan = sp_crud.create_subscription_plan(
+        plan_name=f"{name} Plan",
+        price_pennies=1000,
+        seat_limit=SEAT_LIMIT,
+        currency="GBP",
+        session=db_session,
+    )
+    now = datetime.now(timezone.utc)
+    subs_crud.create_subscription(
+        company.company_id,
+        plan.plan_id,
+        status="active",
+        current_period_start=now,
+        current_period_end=now + timedelta(days=30),
+        session=db_session,
+    )
+    return company
 
 def _count_active_users(session, company_id: int) -> int:
     return sum(
@@ -43,14 +66,16 @@ def _count_active_users(session, company_id: int) -> int:
     )
 
 def test_create_user_blocks_when_seat_limit_reached(db_session):
-    active_before = _count_active_users(db_session, TEST_COMPANY_ID)
+    company = _mk_company(db_session, name="SeatLimitCreateCo")
+    company_id = company.company_id
+    active_before = _count_active_users(db_session, company_id)
 
     users_to_create = max(0, SEAT_LIMIT - active_before)
 
     created_users = []
     for i in range(users_to_create):
         user = crud.create_user(
-            TEST_COMPANY_ID,
+            company_id,
             role="viewer",
             status="active",
             display_name=f"Seat Fill User {i}",
@@ -58,12 +83,12 @@ def test_create_user_blocks_when_seat_limit_reached(db_session):
         )
         created_users.append(user)
 
-    active_now = _count_active_users(db_session, TEST_COMPANY_ID)
+    active_now = _count_active_users(db_session, company_id)
     assert active_now == SEAT_LIMIT
 
     with pytest.raises(RuntimeError, match="Seat limit reached"):
         crud.create_user(
-            TEST_COMPANY_ID,
+            company_id,
             role="viewer",
             status="active",
             display_name="Should Fail",
@@ -71,24 +96,26 @@ def test_create_user_blocks_when_seat_limit_reached(db_session):
         )
 
 def test_update_user_blocks_activation_when_seat_limit_reached(db_session):
-    active_before = _count_active_users(db_session, TEST_COMPANY_ID)
+    company = _mk_company(db_session, name="SeatLimitUpdateCo")
+    company_id = company.company_id
+    active_before = _count_active_users(db_session, company_id)
 
     users_to_create = max(0, SEAT_LIMIT - active_before)
 
     for i in range(users_to_create):
         crud.create_user(
-            TEST_COMPANY_ID,
+            company_id,
             role="viewer",
             status="active",
             display_name=f"Active Fill User {i}",
             session=db_session,
         )
 
-    active_now = _count_active_users(db_session, TEST_COMPANY_ID)
+    active_now = _count_active_users(db_session, company_id)
     assert active_now == SEAT_LIMIT
 
     inactive_user = crud.create_user(
-        TEST_COMPANY_ID,
+        company_id,
         role="viewer",
         status="inactive",
         display_name="Inactive User",
@@ -97,7 +124,7 @@ def test_update_user_blocks_activation_when_seat_limit_reached(db_session):
 
     with pytest.raises(RuntimeError, match="Seat limit reached"):
         crud.update_user(
-            TEST_COMPANY_ID,
+            company_id,
             inactive_user.user_id,
             status="active",
             session=db_session,
