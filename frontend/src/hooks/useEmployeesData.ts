@@ -16,11 +16,20 @@ function matchesSource(employee: Employee, source: EmployeeSource | "all") {
   return employee.source.includes(source);
 }
 
+function getSurname(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  return parts[parts.length - 1].toLowerCase();
+}
+
 function sortEmployees(employees: Employee[], sortBy: EmployeeSort) {
   const copy = [...employees];
   if (sortBy === "risk-desc") return copy.sort((a, b) => b.riskScore - a.riskScore);
   if (sortBy === "risk-asc") return copy.sort((a, b) => a.riskScore - b.riskScore);
-  if (sortBy === "name-asc") return copy.sort((a, b) => a.fullName.localeCompare(b.fullName));
+  if (sortBy === "name-asc") return copy.sort((a, b) => {
+    const sA = getSurname(a.fullName);
+    const sB = getSurname(b.fullName);
+    return sA !== sB ? sA.localeCompare(sB) : a.fullName.localeCompare(b.fullName);
+  });
   return copy.sort((a, b) => b.flaggedCount - a.flaggedCount);
 }
 

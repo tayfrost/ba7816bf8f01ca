@@ -11,13 +11,19 @@ export default function SimpleLineChart({ points, width = 520, height = 150 }: P
 
   const workingPoints = useMemo(() => {
     if (!points || points.length === 0) {
-      // Flat zero line — replaced automatically once real data arrives via polling
+      // No data at all — flat zero line for today's window (polling fills in real data)
       const today = new Date();
       return Array.from({ length: 7 }, (_, i) => {
         const d = new Date(today);
         d.setDate(today.getDate() - (6 - i));
         return { date: d.toISOString().slice(0, 10), value: 0 };
       });
+    }
+    if (points.length === 1) {
+      // Single point — prepend a zero the day before so a line can be drawn
+      const firstDate = new Date(`${points[0].date}T00:00:00`);
+      firstDate.setDate(firstDate.getDate() - 1);
+      return [{ date: firstDate.toISOString().slice(0, 10), value: 0 }, ...points];
     }
     return points;
   }, [points]);

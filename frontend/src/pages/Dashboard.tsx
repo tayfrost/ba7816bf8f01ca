@@ -191,7 +191,6 @@ export default function Dashboard() {
         incident={selectedIncident}
         isOpen={!!selectedIncident}
         onClose={() => setSelectedIncident(null)}
-        advice="Sentinel AI analysis suggests this pattern of communication may involve sensitive credentials or internal keys. We recommend a proactive review of the user's recent file sharing activity and ensuring all shared links are appropriately restricted to internal domains."
       />
 
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-6 py-4 flex justify-around items-center" 

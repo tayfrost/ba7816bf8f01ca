@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useOnboarding } from "../state/onboarding";
 import { countConnected } from "../state/integrationRules";
 import SidebarLink from "../components/SidebarLink";
@@ -18,7 +18,9 @@ const BRAND_DEEP = "var(--color-brand-deep)";
 export default function Employees() {
   const { signup, plan, integrations } = useOnboarding();
 
+  const PAGE_SIZE = 10;
   const [directoryView, setDirectoryView] = useState<"cards" | "table">("table");
+  const [page, setPage] = useState(1);
   const navigate = useNavigate();
 
   const connectedCount = useMemo(() => countConnected(integrations), [integrations]);
@@ -39,6 +41,12 @@ export default function Employees() {
     sortBy,
     setSortBy,
   } = useEmployeesData();
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [searchTerm, riskFilter, sourceFilter, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(employees.length / PAGE_SIZE));
+  const pagedEmployees = employees.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div style={{
@@ -196,12 +204,15 @@ export default function Employees() {
           setSortBy={setSortBy}
         />
 
-        <TopRiskEmployees employees={employees} />
+        <TopRiskEmployees
+          employees={employees}
+          onSelect={(id) => navigate(`/employees/${id}`)}
+        />
 
         {/* EMPLOYEE DATA GRID */}
         {directoryView === "cards" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {employees.map((emp) => (
+            {pagedEmployees.map((emp) => (
               <div
                 key={emp.id}
                 onClick={() => navigate(`/employees/${emp.id}`)}
@@ -237,12 +248,43 @@ export default function Employees() {
           </div>
         ) : (
           <EmployeesTable
-            employees={employees}
+            employees={pagedEmployees}
             onSelectEmployee={(employeeId) => navigate(`/employees/${employeeId}`)}
           />
         )}
 
         {employees.length === 0 && <EmptyEmployees />}
+
+        {/* Pagination controls */}
+        {employees.length > PAGE_SIZE && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "20px", marginTop: "24px" }}>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              style={{
+                padding: "10px 22px", borderRadius: "12px", fontWeight: 800, fontSize: "12px", cursor: page === 1 ? "default" : "pointer",
+                background: page === 1 ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.1)", color: page === 1 ? "rgba(255,255,255,0.3)" : "#fff",
+              }}
+            >
+              ← Prev
+            </button>
+            <span style={{ fontSize: "12px", fontWeight: 800, opacity: 0.6 }}>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              style={{
+                padding: "10px 22px", borderRadius: "12px", fontWeight: 800, fontSize: "12px", cursor: page === totalPages ? "default" : "pointer",
+                background: page === totalPages ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.1)", color: page === totalPages ? "rgba(255,255,255,0.3)" : "#fff",
+              }}
+            >
+              Next →
+            </button>
+          </div>
+        )}
 
         <div className="h-24 lg:hidden" />
       </main>

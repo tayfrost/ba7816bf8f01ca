@@ -78,6 +78,7 @@ import {
 
 export const getIncidents = realGetIncidents;
 export const getIncidentStats = realGetIncidentStats;
+export { getEmployeeIncidents } from "./incidents";
 
 export type { UserResponse } from "./users";
 

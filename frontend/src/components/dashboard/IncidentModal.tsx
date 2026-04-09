@@ -1,23 +1,17 @@
+import type { Incident } from "../../api";
 
-
-interface Incident {
-  incident_id: string;
-  class_reason: string;
-  slack_user_id: string;
-  timestamp?: string;
-  raw_message_text?: { text: string };
-}
+const DEFAULT_RECOMMENDATION =
+  "Review this employee's recent communication patterns and consult with HR if the behaviour persists. Ensure any relevant welfare policies are followed.";
 
 interface Props {
   incident: Incident | null;
   isOpen: boolean;
   onClose: () => void;
-  advice: string; 
 }
 
 const BRAND_ORANGE = "var(--color-top)";
 
-export default function IncidentModal({ incident, isOpen, onClose, advice }: Props) {
+export default function IncidentModal({ incident, isOpen, onClose }: Props) {
   if (!isOpen || !incident) return null;
 
   return (
@@ -89,9 +83,9 @@ export default function IncidentModal({ incident, isOpen, onClose, advice }: Pro
           </h2>
         </div>
 
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "1fr 1fr", 
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
           gap: "20px",
           padding: "20px",
           background: "rgba(255,255,255,0.03)",
@@ -100,16 +94,20 @@ export default function IncidentModal({ incident, isOpen, onClose, advice }: Pro
           border: "1px solid rgba(255,255,255,0.05)"
         }}>
           <div>
-            <div style={{ fontSize: "10px", opacity: 0.4, fontWeight: 800, textTransform: "uppercase" }}>Employee ID</div>
-            <div style={{ fontWeight: 700, fontSize: "14px", color: BRAND_ORANGE }}>{incident.slack_user_id}</div>
+            <div style={{ fontSize: "10px", opacity: 0.4, fontWeight: 800, textTransform: "uppercase" }}>Date</div>
+            <div style={{ fontWeight: 700, fontSize: "14px" }}>
+              {incident.created_at ? incident.created_at.slice(0, 10) : new Date().toLocaleDateString()}
+            </div>
           </div>
           <div>
-            <div style={{ fontSize: "10px", opacity: 0.4, fontWeight: 800, textTransform: "uppercase" }}>Incident Date</div>
-            <div style={{ fontWeight: 700, fontSize: "14px" }}>{new Date().toLocaleDateString()}</div>
+            <div style={{ fontSize: "10px", opacity: 0.4, fontWeight: 800, textTransform: "uppercase" }}>Time</div>
+            <div style={{ fontWeight: 700, fontSize: "14px" }}>
+              {incident.created_at ? incident.created_at.slice(11, 19) : "—"}
+            </div>
           </div>
           <div style={{ gridColumn: "span 2" }}>
-            <div style={{ fontSize: "10px", opacity: 0.4, fontWeight: 800, textTransform: "uppercase" }}>Internal ID</div>
-            <div style={{ fontWeight: 700, fontSize: "14px", opacity: 0.8 }}>#{incident.incident_id}</div>
+            <div style={{ fontSize: "10px", opacity: 0.4, fontWeight: 800, textTransform: "uppercase" }}>Channel</div>
+            <div style={{ fontWeight: 700, fontSize: "14px", opacity: 0.8 }}>{incident.channel_id || "—"}</div>
           </div>
         </div>
 
@@ -134,7 +132,7 @@ export default function IncidentModal({ incident, isOpen, onClose, advice }: Pro
             fontWeight: "500",
             margin: 0
           }}>
-            {advice}
+            {incident.recommendation || DEFAULT_RECOMMENDATION}
           </p>
         </div>
 

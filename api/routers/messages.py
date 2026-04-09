@@ -77,13 +77,22 @@ async def incident_stats(user: CurrentUser = Depends(get_current_user)):
 async def list_incidents(
     user: CurrentUser = Depends(get_current_user),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=500),
+    employee_user_id: uuid.UUID | None = Query(None),
 ):
-    incidents, slack_accounts, mailboxes = await asyncio.gather(
-        asyncio.to_thread(
+    if employee_user_id is not None:
+        incidents_task = asyncio.to_thread(
+            crud_message_incidents.list_message_incidents_for_user,
+            user.company_id, employee_user_id, limit=limit, offset=skip,
+        )
+    else:
+        incidents_task = asyncio.to_thread(
             crud_message_incidents.list_message_incidents_for_company,
             user.company_id, limit=limit, offset=skip,
-        ),
+        )
+
+    incidents, slack_accounts, mailboxes = await asyncio.gather(
+        incidents_task,
         asyncio.to_thread(
             crud_slack_accounts.list_slack_accounts_for_company,
             user.company_id, limit=10000,

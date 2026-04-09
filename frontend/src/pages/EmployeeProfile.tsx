@@ -1,30 +1,35 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useOnboarding } from "../state/onboarding";
 import SidebarLink from "../components/SidebarLink";
 import { useEmployeesData } from "../hooks/useEmployeesData";
+import { useEmployeeIncidents } from "../hooks/useEmployeeIncidents";
 import EmployeeProfileHeader from "../components/employees/profile/EmployeeProfileHeader";
 import EmployeeWorkloadSummary from "../components/employees/profile/EmployeeWorkloadSummary";
 import EmployeeIncidentTimeline from "../components/employees/profile/EmployeeIncidentTimeline";
+import ChartPanel from "../components/dashboard/ChartPanel";
+import IncidentModal from "../components/dashboard/IncidentModal";
+import type { Incident } from "../api";
 
 const BRAND_ORANGE = "var(--color-top)";
 
 export default function EmployeeProfile() {
   const { employeeId } = useParams();
   const navigate = useNavigate();
-  const { reset } = useOnboarding();
 
   const { employees, status, error } = useEmployeesData();
-
   const employee = useMemo(
     () => employees.find((e) => e.id === employeeId),
     [employees, employeeId]
   );
 
+  const { incidents, series: incidentSeries } = useEmployeeIncidents(employeeId ?? "");
+  const [activeSeriesIndex, setActiveSeriesIndex] = useState(0);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+
   if (status === "loading") {
     return (
       <div
-        className="px-6 text-center" // Adds padding and centers text for mobile
+        className="px-6 text-center"
         style={{
           minHeight: "100vh",
           background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
@@ -42,7 +47,7 @@ export default function EmployeeProfile() {
   if (error) {
     return (
       <div
-        className="px-6 text-center" // Adds padding and centers text for mobile
+        className="px-6 text-center"
         style={{
           minHeight: "100vh",
           background: "linear-gradient(to bottom, #20022bfd, #1a011d)",
@@ -91,12 +96,7 @@ export default function EmployeeProfile() {
     );
   }
 
-  const incidents = [
-    "Burnout language spike detected in team communication.",
-    "Elevated after-hours activity observed across 3 consecutive days.",
-    "Stress-related language flagged in internal message thread.",
-    "Sharp increase in flagged message severity during current week.",
-  ];
+  const safeActiveIndex = Math.min(activeSeriesIndex, Math.max(0, incidentSeries.length - 1));
 
   return (
     <div
@@ -120,28 +120,11 @@ export default function EmployeeProfile() {
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "50px" }}>
           <img src="/logo-text.png" alt="SentinelAI" style={{ height: "30px", marginBottom: "40px", paddingLeft: "20px", filter: "brightness(0) invert(1)" }} />
         </div>
-
         <nav style={{ flexGrow: 1 }}>
           <SidebarLink to="/dashboard" label="Dashboard" />
           <SidebarLink to="/employees" label="Employees" />
           <SidebarLink to="/settings" label="Account Settings" />
         </nav>
-
-        <button
-          onClick={() => { reset(); navigate("/login"); }}
-          style={{
-            background: "transparent",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.4)",
-            padding: "10px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "11px",
-            fontWeight: "bold",
-          }}
-        >
-          RESET SYSTEM
-        </button>
       </aside>
 
       <main className="flex-grow min-w-0 p-4 md:p-10 lg:p-[60px] overflow-y-auto h-screen">
@@ -162,27 +145,44 @@ export default function EmployeeProfile() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 lg:gap-8 mb-8">
           <EmployeeProfileHeader employee={employee} />
-
           <EmployeeWorkloadSummary employee={employee} />
         </div>
 
-        <EmployeeIncidentTimeline incidents={incidents} />
+        {/* Per-category incident trend charts */}
+        <div style={{ marginBottom: "30px" }}>
+          <ChartPanel
+            series={incidentSeries}
+            activeIndex={safeActiveIndex}
+            setActiveIndex={setActiveSeriesIndex}
+          />
+        </div>
+
+        <EmployeeIncidentTimeline
+          incidents={incidents}
+          onIncidentClick={(inc) => setSelectedIncident(inc)}
+        />
 
         <div className="h-24 lg:hidden" />
       </main>
 
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-6 py-4 flex justify-around items-center" 
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-6 py-4 flex justify-around items-center"
         style={{
           background: "rgba(20, 1, 22, 0.9)",
           backdropFilter: "blur(20px)",
           borderTop: "1px solid rgba(255, 255, 255, 0.1)",
         }}
-        >
+      >
         <SidebarLink to="/dashboard" label="Home" end />
         <SidebarLink to="/employees" label="Employees" />
         <SidebarLink to="/settings" label="Settings" />
-      </nav>  
+      </nav>
 
+      <IncidentModal
+        incident={selectedIncident}
+        isOpen={!!selectedIncident}
+        onClose={() => setSelectedIncident(null)}
+      />
     </div>
   );
 }

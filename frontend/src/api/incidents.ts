@@ -23,6 +23,10 @@ export async function getIncidents(skip = 0, limit = 20): Promise<Incident[]> {
   return apiFetch<Incident[]>(`/incidents?skip=${skip}&limit=${limit}`);
 }
 
+export async function getEmployeeIncidents(userId: string, limit = 500): Promise<Incident[]> {
+  return apiFetch<Incident[]>(`/incidents?employee_user_id=${userId}&limit=${limit}`);
+}
+
 export async function getIncidentStats(): Promise<IncidentStats> {
   return apiFetch<IncidentStats>("/incidents/stats");
 }

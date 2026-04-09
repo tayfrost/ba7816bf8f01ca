@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { DateRange } from "../state/timeRange";
+import { enumerateDays } from "../state/timeRange";
 import { getUsage } from "../api";
 import type { Series, SeriesPoint } from "../api";
 import { makeAllSeries } from "../state/metricsMock";
@@ -16,6 +17,22 @@ const PLACEHOLDER_SERIES = [
   { key: "harassment", label: "Harassment", points: [] },
   { key: "suicidal_ideation", label: "Suicidal ideation", points: [] },
 ] as import("../api").Series[];
+
+/**
+ * Fill every date in [start, end] with 0 if the series has no point for that day.
+ * This ensures the chart always covers the full selected window, not just the days with data.
+ */
+function fillRangeGaps(series: Series[], start: string, end: string): Series[] {
+  const allDates = enumerateDays(start, end);
+  return series.map((s) => {
+    const pointMap = new Map(s.points.map((p) => [p.date, p.value]));
+    const points: SeriesPoint[] = allDates.map((date) => ({
+      date,
+      value: pointMap.get(date) ?? 0,
+    }));
+    return { ...s, points };
+  });
+}
 
 /** Simple moving average — keeps the same number of points, uses available window at edges. */
 function smoothPoints(points: SeriesPoint[], window: number = 7): SeriesPoint[] {
@@ -48,8 +65,11 @@ export function useDashboardData(range: DateRange) {
         if (cancelled) return;
 
         const fetched = res?.series ?? [];
-        // Keep placeholder series (empty points) if API returned nothing — polling will fill them in
-        setSeries(fetched.length > 0 ? smoothSeries(fetched) : PLACEHOLDER_SERIES);
+        // Fill every date in the window with 0 for missing days, then smooth
+        setSeries(fetched.length > 0
+          ? smoothSeries(fillRangeGaps(fetched, range.start, range.end))
+          : PLACEHOLDER_SERIES
+        );
         setStatus("success");
       } catch (e) {
         if (cancelled) return;

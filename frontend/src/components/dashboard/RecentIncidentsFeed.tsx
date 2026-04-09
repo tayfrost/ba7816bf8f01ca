@@ -49,7 +49,7 @@ export default function RecentIncidentsFeed({ incidents, onIncidentClick }: Prop
               }}
             >
               <span style={{ fontSize: "12px", opacity: 0.5 }}>
-                #{incident.incident_id}
+                {incident.created_at ? incident.created_at.slice(0, 10) : ""}
               </span>
               <span
                 style={{

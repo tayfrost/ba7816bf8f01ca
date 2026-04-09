@@ -8,17 +8,21 @@ type Props = {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div
-      style={{
-        padding: "16px",
-        borderRadius: "18px",
-        background: "rgba(255,255,255,0.04)",
-      }}
-    >
-      <div style={{ opacity: 0.5, fontSize: "12px", marginBottom: "6px" }}>
-        {label}
-      </div>
+    <div style={{ padding: "16px", borderRadius: "18px", background: "rgba(255,255,255,0.04)" }}>
+      <div style={{ opacity: 0.5, fontSize: "12px", marginBottom: "6px" }}>{label}</div>
       <div style={{ fontSize: "28px", fontWeight: 900 }}>{value}</div>
+    </div>
+  );
+}
+
+function DateTimeCard({ label, iso }: { label: string; iso: string }) {
+  const clean = iso.replace(/\+\d{2}:\d{2}$/, "").replace(/Z$/, "").split(".")[0];
+  const [date, time] = clean.split("T");
+  return (
+    <div style={{ padding: "16px", borderRadius: "18px", background: "rgba(255,255,255,0.04)" }}>
+      <div style={{ opacity: 0.5, fontSize: "12px", marginBottom: "8px" }}>{label}</div>
+      <div style={{ fontSize: "18px", fontWeight: 900 }}>{date || "—"}</div>
+      <div style={{ fontSize: "13px", fontWeight: 700, opacity: 0.5, marginTop: "4px" }}>{time || ""}</div>
     </div>
   );
 }
@@ -42,7 +46,10 @@ export default function EmployeeWorkloadSummary({ employee }: Props) {
 
       <StatCard label="Flagged messages" value={employee.flaggedCount} />
       <StatCard label="Overtime hours" value={`${employee.overtimeHours}h`} />
-      <StatCard label="Last active" value={employee.lastActive} />
+      {employee.lastActive
+        ? <DateTimeCard label="Last active" iso={employee.lastActive} />
+        : <StatCard label="Last active" value="No activity" />
+      }
     </div>
   );
 }
