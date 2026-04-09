@@ -17,6 +17,14 @@ _SCORE_COLUMNS = (
     "burnout_score", "depression_score", "harassment_score", "suicidal_ideation_score",
 )
 
+_NON_PERSIST_CATEGORIES = {"neutral", "humor_sarcasm", "humor-sarcasm"}
+
+
+def _should_skip_storage(state: AgentState) -> bool:
+    """Skip persistence for upstream non-risk categories by policy."""
+    category = str(state.get("filter_category", "")).strip().lower()
+    return category in _NON_PERSIST_CATEGORIES
+
 
 def _build_scores_payload(state: AgentState) -> dict:
     """Pass LLM scores (0-100 ints) through to incident_scores columns as 0.0-1.0 floats."""
@@ -46,6 +54,19 @@ def _build_scores_payload(state: AgentState) -> dict:
 
 async def store_incident(state: AgentState) -> AgentState:
     logger.info("[NODE: store_incident] Starting database storage")
+
+    if _should_skip_storage(state):
+        logger.info(
+            "[NODE: store_incident] Skipping persistence due to filter_category=%s policy",
+            state.get("filter_category"),
+        )
+        return {
+            **state,
+            "store_succeeded": True,
+            "store_error": None,
+            "store_skipped": True,
+            "store_skip_reason": "non_persist_filter_category",
+        }
 
     hr_report = state.get("hr_report", {})
     content_to_store = {
@@ -105,4 +126,10 @@ async def store_incident(state: AgentState) -> AgentState:
         logger.error(f"[NODE: store_incident] Failed to store incident: {e}", exc_info=True)
         return {**state, "store_succeeded": False, "store_error": str(e)}
 
-    return {**state, "store_succeeded": True, "store_error": None}
+    return {
+        **state,
+        "store_succeeded": True,
+        "store_error": None,
+        "store_skipped": False,
+        "store_skip_reason": None,
+    }

@@ -14,6 +14,8 @@ import base64
 import logging
 import re
 import uuid
+import time
+from threading import Lock
 from typing import Optional, Tuple
 from datetime import datetime, timezone
 
@@ -31,6 +33,24 @@ logger = logging.getLogger(__name__)
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
+
+_GMAIL_DISPATCH_TTL_SECONDS = 900
+_GMAIL_DISPATCH_CACHE: dict[str, float] = {}
+_GMAIL_DISPATCH_LOCK = Lock()
+
+
+def _gmail_message_seen_recently(message_id: str) -> bool:
+    """Return True if this Gmail message_id was already dispatched recently."""
+    now = time.time()
+    with _GMAIL_DISPATCH_LOCK:
+        expired = [k for k, ts in _GMAIL_DISPATCH_CACHE.items() if now - ts > _GMAIL_DISPATCH_TTL_SECONDS]
+        for k in expired:
+            _GMAIL_DISPATCH_CACHE.pop(k, None)
+
+        seen = message_id in _GMAIL_DISPATCH_CACHE
+        if not seen:
+            _GMAIL_DISPATCH_CACHE[message_id] = now
+        return seen
 
 
 # ── Slack ─────────────────────────────────────────────────────────
@@ -141,6 +161,7 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
             "user_id":         str(user_id),
             "company_id":      company_id,
             "source":          "slack",
+            "source_message_id": f"{team_id}:{channel_id}:{message_ts}",
             "sent_at":         sent_at,
             "conversation_id": channel_id,
             "team_id":         team_id,
@@ -190,7 +211,22 @@ def process_gmail_event(payload: dict) -> bool:
     db.set_google_mailbox_history_id(account.google_mailbox_id, latest_history_id)
 
     dispatched = 0
+    seen_in_notification: set[str] = set()
     for message in messages:
+        gmail_message_id = str(message.get("id", "")).strip()
+        if not gmail_message_id:
+            logger.warning("Gmail message missing id; skipping dispatch")
+            continue
+
+        if gmail_message_id in seen_in_notification:
+            logger.info("Gmail message duplicated in same notification; skipping id=%s", gmail_message_id)
+            continue
+        seen_in_notification.add(gmail_message_id)
+
+        if _gmail_message_seen_recently(gmail_message_id):
+            logger.info("Gmail message already dispatched recently; skipping id=%s", gmail_message_id)
+            continue
+
         body, _ = _extract_best_body(message)
         if not body:
             continue
@@ -211,6 +247,7 @@ def process_gmail_event(payload: dict) -> bool:
                 "user_id":         str(account.user_id),
                 "company_id":      account.company_id,
                 "source":          "gmail",
+                "source_message_id": gmail_message_id,
                 "sent_at":         sent_at,
                 "conversation_id": "gmail",
                 "email":           user_email,

@@ -207,8 +207,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: https://sentinelai.work
+        VITE_API_BASE_URL: https://sentinelai.work/api
         VITE_PAYMENTS_URL: https://sentinelai.work
+        VITE_DASHBOARD_DEBUG: "false"
     container_name: sentinel-frontend
     ports:
       - "127.0.0.1:8080:80"

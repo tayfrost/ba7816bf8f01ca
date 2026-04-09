@@ -11,9 +11,11 @@ import os
 import json
 import sys
 import time
+import hashlib
 import urllib.request
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
 from pathlib import Path
 
 logging.basicConfig(
@@ -74,8 +76,47 @@ grpc_batch_size = Histogram(
 
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:8001/analyze")
 _AI_DISPATCH_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai-dispatch")
+_DISPATCH_DEDUP_TTL_SECONDS = int(os.getenv("AI_DISPATCH_DEDUP_TTL_SECONDS", "180"))
+_DISPATCH_DEDUP: dict[str, float] = {}
+_DISPATCH_DEDUP_LOCK = Lock()
 
 _GRPC_SECRET = os.getenv("GRPC_SECRET", "")
+
+
+def _build_dispatch_key(meta: dict, text: str) -> str:
+    """Build a stable dedupe key for AI dispatch attempts."""
+    user_id = str(meta.get("user_id", ""))
+    company_id = str(meta.get("company_id", ""))
+    source = str(meta.get("source", ""))
+    source_message_id = str(meta.get("source_message_id", ""))
+    sent_at = str(meta.get("sent_at", ""))
+    conversation_id = str(meta.get("conversation_id", ""))
+    payload = "|".join([
+        user_id,
+        company_id,
+        source,
+        source_message_id,
+        sent_at,
+        conversation_id,
+        text.strip(),
+    ])
+    return hashlib.sha1(payload.encode("utf-8", errors="ignore")).hexdigest()
+
+
+def _reserve_dispatch_slot(key: str) -> bool:
+    """Reserve key if not recently seen. Returns False for duplicate within TTL."""
+    now = time.time()
+    with _DISPATCH_DEDUP_LOCK:
+        expired = [k for k, ts in _DISPATCH_DEDUP.items() if now - ts > _DISPATCH_DEDUP_TTL_SECONDS]
+        for k in expired:
+            _DISPATCH_DEDUP.pop(k, None)
+
+        last_seen = _DISPATCH_DEDUP.get(key)
+        if last_seen is not None and now - last_seen <= _DISPATCH_DEDUP_TTL_SECONDS:
+            return False
+
+        _DISPATCH_DEDUP[key] = now
+        return True
 
 
 class _SecretInterceptor(grpc.ServerInterceptor):
@@ -289,11 +330,26 @@ class FilterServiceServicer(filter_pb2_grpc.FilterServiceServicer):
             should_dispatch = final_result["is_risk"] or soft_hit or risk_hit
 
             if should_dispatch and meta:
-                logger.info(
-                    "Dispatching to AI — reason: is_risk=%s soft_hit=%s risk_hit=%s user_id=%s",
-                    final_result["is_risk"], soft_hit, risk_hit, meta.get("user_id"),
-                )
-                _AI_DISPATCH_POOL.submit(_dispatch_to_ai, meta, text, final_result)
+                dispatch_key = _build_dispatch_key(meta, text)
+                if not _reserve_dispatch_slot(dispatch_key):
+                    logger.info(
+                        "Skipping duplicate AI dispatch within ttl=%ss user_id=%s source=%s source_message_id=%s sent_at=%s",
+                        _DISPATCH_DEDUP_TTL_SECONDS,
+                        meta.get("user_id"),
+                        meta.get("source"),
+                        meta.get("source_message_id"),
+                        meta.get("sent_at"),
+                    )
+                else:
+                    logger.info(
+                        "Dispatching to AI — reason: is_risk=%s soft_hit=%s risk_hit=%s user_id=%s source_message_id=%s",
+                        final_result["is_risk"],
+                        soft_hit,
+                        risk_hit,
+                        meta.get("user_id"),
+                        meta.get("source_message_id"),
+                    )
+                    _AI_DISPATCH_POOL.submit(_dispatch_to_ai, meta, text, final_result)
 
             grpc_requests_total.labels(method="ClassifyMessage", outcome="success").inc()
             grpc_request_duration_seconds.labels(method="ClassifyMessage").observe(time.perf_counter() - _start)
