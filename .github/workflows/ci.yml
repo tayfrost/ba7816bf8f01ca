@@ -234,13 +234,35 @@ jobs:
           POSTGRES_PASSWORD: postgres
         run: python database/database/tables.py
 
-      - name: Ensure setuptools for proto compilation
-        run: python -m pip install --upgrade setuptools
+      - name: Diagnostics: Python and pip info before setuptools
+        run: |
+          which python
+          python --version
+          which pip
+          pip --version
+          python -m pip list
+
+      - name: Ensure setuptools for proto compilation (force reinstall)
+        run: |
+          python -m pip install --force-reinstall setuptools
+          python -m pip show setuptools
+          python -c "import pkg_resources; print('pkg_resources location:', pkg_resources.__file__)"
+          python -m pip list
+
+      - name: Diagnostics: Python and pip info after setuptools
+        run: |
+          which python
+          python --version
+          which pip
+          pip --version
+          python -m pip list
 
       - name: Compile Protos
         run: |
+          echo "About to run compile_protos.py"
           SCRIPT=$(find . -name compile_protos.py | head -n 1)
-          python $SCRIPT
+          echo "SCRIPT=$SCRIPT"
+          python $SCRIPT || (echo "FAILED: python $SCRIPT" && exit 1)
 
       - name: Start API server
         working-directory: ${{ github.workspace }}
