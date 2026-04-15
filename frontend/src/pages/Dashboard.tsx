@@ -15,6 +15,7 @@ import MetricCarousel from "../components/dashboard/MetricCarousel";
 import StatusBanner from "../components/dashboard/StatusBanner";
 import ChartPanel from "../components/dashboard/ChartPanel";
 import { useIncidents } from "../hooks/useIncidents";
+import { useCompany } from "../hooks/useCompany";
 import IncidentStatsPanel from "../components/dashboard/IncidentStatsPanel";
 import RecentIncidentsFeed from "../components/dashboard/RecentIncidentsFeed";
 import IncidentModal from "../components/dashboard/IncidentModal";
@@ -25,6 +26,7 @@ import { dashboardDebug, summarizeSeries } from "../utils/dashboardDebug";
 
 export default function Dashboard() {
   const { signup, plan, integrations } = useOnboarding();
+  const { company } = useCompany();
   const navigate = useNavigate();
 
   const [preset, setPreset] = useState<RangePreset>("week");
@@ -117,7 +119,7 @@ export default function Dashboard() {
       <main className="flex-grow min-w-0 p-4 md:p-10 lg:p-[60px] overflow-y-auto h-screen">
         
         <DashboardHeader
-          companyName={signup?.companyName}
+          companyName={company?.company_name ?? signup?.companyName}
           plan={plan}
           connectedCount={connectedCount}
           riskScore={riskScore}
