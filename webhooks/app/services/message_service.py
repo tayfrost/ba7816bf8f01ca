@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
+from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -67,7 +68,7 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
     if payload.get("type") != "event_callback" or event.get("type") != "message":
         return False
 
-    if event.get("subtype") == "bot_message":
+    if event.get("subtype") == "bot_message" or event.get("bot_id"):
         return False
 
     team_id    = payload.get("team_id", "")
@@ -303,11 +304,18 @@ def _fetch_new_messages(account, user_email: str) -> Tuple[list, str]:
 
         return messages, latest_history_id
 
+    except RefreshError as e:
+        logger.warning(f"Gmail token refresh failed for {user_email} — skipping: {e}")
+        return [], account.last_history_id
     except HttpError as e:
-        if getattr(e, "resp", None) and e.resp.status == 404:
+        status_code = getattr(e, "resp", None) and e.resp.status
+        if status_code == 404:
             logger.warning(f"History window expired for {user_email}, resetting cursor")
             profile = service.users().getProfile(userId="me").execute()
             return [], str(profile.get("historyId"))
+        if status_code in (401, 403):
+            logger.warning(f"Gmail auth error {status_code} for {user_email} — token likely expired/revoked, skipping")
+            return [], account.last_history_id
         raise
 
 

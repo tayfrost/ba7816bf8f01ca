@@ -1,6 +1,12 @@
 import Button from "../Button";
+import { deleteMyCompany } from "../../api/companies";
 
 export default function DangerZone() {
+  const handleDelete = async () => {
+    await deleteMyCompany();
+    window.location.href = "/login";
+  };
+
   return (
     <div
       style={{
@@ -22,6 +28,7 @@ export default function DangerZone() {
         variant="secondary"
         className="!bg-red-500/20 !text-red-300 hover:!bg-red-500/30 border-red-400/40"
         style={{ marginTop: "12px" }}
+        onClick={handleDelete}
       >
         Delete Workspace
       </Button>

@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 import logging
 
 from fastapi import APIRouter, Depends, Query
@@ -75,12 +75,27 @@ async def get_usage(
         logger.info("[usage] first_row=%s", rows[0])
         logger.info("[usage] last_row=%s", rows[-1])
 
-    # Build a point list per category
+    # Build a full date spine from start to min(end, today), filling quiet days with 0
+    today = datetime.now(timezone.utc).date()
+    spine_end = min(end_dt.date(), today)
+    spine_start = start_dt.date()
+    all_days: list[date] = []
+    d = spine_start
+    while d <= spine_end:
+        all_days.append(d)
+        d += timedelta(days=1)
+
+    row_by_day = {
+        (row["day"] if isinstance(row["day"], date) else row["day"].date()): row
+        for row in rows
+    }
+
     category_points: dict[str, list[SeriesPoint]] = {key: [] for key, _ in SCORE_CATEGORIES}
-    for row in rows:
-        day_str = row["day"].isoformat() if hasattr(row["day"], "isoformat") else str(row["day"])
+    for day in all_days:
+        row = row_by_day.get(day)
+        day_str = day.isoformat()
         for key, _ in SCORE_CATEGORIES:
-            category_points[key].append(SeriesPoint(date=day_str, value=row[key]))
+            category_points[key].append(SeriesPoint(date=day_str, value=float(row[key]) if row else 0.0))
 
     series_list: list[Series] = [
         Series(
