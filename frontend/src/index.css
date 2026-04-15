@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --color-top: #e38d26;    /* Rich Golden Orange */
+  --color-bottom: #f7e9c1; /* Warm Oatmeal */
+  
+  /* UI Elements */
+  --color-brand-deep: #3f0345;  /* Deep purple for contrast */
+  --color-brand-accent: #fcd34d; /* Bright Golden Halo */
+}
+
+:root {
+  --dynamic-text: var(--color-brand-deep);
+  --dynamic-card: rgba(255, 255, 255, 0.15);
+  --dynamic-border: rgba(255, 255, 255, 0.3);
+}
+
+body.theme-dark {
+  background-image: linear-gradient(to bottom, #20022bfd, #1a011d) !important;
+  background-attachment: fixed !important;
+  --dynamic-text: #ffffff;
+  --dynamic-card: rgba(255, 255, 255, 0.05);
+  --dynamic-border: rgba(255, 255, 255, 0.1);
+}
+
+@layer base {
+  body {
+    @apply antialiased m-0 p-0;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+    
+    background-image: linear-gradient(to bottom, var(--color-top), var(--color-bottom));
+    background-attachment: fixed; 
+    background-size: cover;
+    
+    min-height: 100vh;
+    transition: background 0.4s ease, color 0.3s ease;
+    color: var(--dynamic-text);
+  }
+}

@@ -1,0 +1,30 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# ── System dependencies ───────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Python dependencies ───────────────────────────────────────────
+COPY webhooks/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ── Generate filter proto stubs ───────────────────────────────────
+COPY protos/filter ./protos/filter
+RUN python -m grpc_tools.protoc \
+    -I./protos \
+    --python_out=. \
+    --grpc_python_out=. \
+    ./protos/filter/v1/filter.proto && \
+    touch filter/__init__.py && \
+    touch filter/v1/__init__.py
+
+# ── Application source ────────────────────────────────────────────
+COPY webhooks/ .
+ENV PYTHONPATH=/app
+
+# ── Entry point ───────────────────────────────────────────────────
+CMD ["pytest", "app/tests/", "-v", "--tb=short", \
+     "--ignore=app/tests/test_filter_integration.py"]

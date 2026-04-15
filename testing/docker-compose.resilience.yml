@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    container_name: toxiproxy
+    ports:
+      - "127.0.0.1:8474:8474"   # Secured: Toxiproxy API
+    networks:
+      - sentinelai_default
+    restart: unless-stopped
+
+  toxiproxy-setup:
+    image: curlimages/curl:latest
+    container_name: toxiproxy-setup
+    depends_on:
+      - toxiproxy
+    networks:
+      - sentinelai_default
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sleep 3
+        curl -s -X POST -H "Content-Type: application/json" -d '{"name": "api_proxy", "listen": "0.0.0.0:18000", "upstream": "sentinelai-api-1:8000"}' http://toxiproxy:8474/proxies
+        curl -s -X POST -H "Content-Type: application/json" -d '{"name": "payments_proxy", "listen": "0.0.0.0:18004", "upstream": "sentinelai-payments-1:8001"}' http://toxiproxy:8474/proxies
+        curl -s -X POST -H "Content-Type: application/json" -d '{"name": "webhooks_proxy", "listen": "0.0.0.0:19000", "upstream": "sentinelai-webhooks-1:8000"}' http://toxiproxy:8474/proxies
+        echo "Toxiproxy proxies created"
+    restart: on-failure
+  k6:
+    image: grafana/k6:latest
+    container_name: k6
+    volumes:
+      - ./k6:/scripts
+    networks:
+      - sentinelai_default
+    profiles: ["load"]
+
+  locust:
+    image: locustio/locust:latest
+    container_name: locust
+    ports:
+      - "127.0.0.1:8089:8089"   # Secured: Access via SSH Tunnel
+    volumes:
+      - ./locust:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --host http://sentinelai-api-1:8000
+    networks:
+      - sentinelai_default
+    profiles: ["load"]
+
+networks:
+  sentinelai_default:
+    external: true
+    name: sentinelai_sentinelai

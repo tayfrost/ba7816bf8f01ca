@@ -1,29 +1,253 @@
 version: '3.8'
 
 services:
+
+  ai_service:
+    build:
+      context: .
+      dockerfile: ai_service/Dockerfile
+    depends_on:
+      kg-mcp-server:
+        condition: service_healthy
+    env_file:
+      - ./ai_service/.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - sentinelai
+
+  filter:
+    build:
+      context: .
+      dockerfile: filter/Dockerfile
+    volumes:
+      - filter_models:/app/models
+    environment:
+      - INFERENCE_BACKEND=pytorch
+    # restart: unless-stopped
+    depends_on:
+      ai_service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 50051), timeout=2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - sentinelai
+
   webhooks:
-    build: ./webhooks
-    ports:
-      - "8000:8000"
+    build:
+      context: .
+      dockerfile: webhooks/Dockerfile
     env_file:
       - ./webhooks/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@pgvector:5432/sentinelai
     depends_on:
-      - pgvector
-    restart: unless-stopped
+      pgvector:
+        condition: service_started
+      api:
+        condition: service_healthy
+      filter:
+        condition: service_healthy
+    # restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/metrics')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - sentinelai
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    env_file:
+      - ./api/.env
+    depends_on:
+      pgvector:
+        condition: service_started
+      payments:
+        condition: service_healthy
+    # restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - sentinelai
 
   pgvector:
     image: pgvector/pgvector:pg16
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=sentinelai
-    ports:
-      - "5432:5432"
+    env_file:
+      - ./.env
     volumes:
       - pgvector_data:/var/lib/postgresql/data
-    restart: unless-stopped
+    # restart: unless-stopped
+    networks:
+      - sentinelai
+
+  kg-mcp-server:
+    build:
+      context: .
+      dockerfile: knowledge-graph/mcp-server/Dockerfile
+    environment:
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8001
+      - KG_DATA_PATH=/app/data/papers.json
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8001))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - sentinelai
+
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: sentinelai-neo4j
+    profiles: ["dev"]
+    env_file:
+      - ./.env.neo4j
+    environment:
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_initial__size: 256m
+      NEO4J_dbms_memory_heap_max__size: 512m
+    volumes:
+      - neo4j_data:/data
+    # restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sentinelai
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres-exporter
+    # restart: unless-stopped
+    env_file:
+      - ./.env
+    volumes:
+      - ./monitoring/postgres-exporter/queries.yaml:/etc/postgres-exporter/queries.yaml:ro
+    command:
+      - '--extend.query-path=/etc/postgres-exporter/queries.yaml'
+    depends_on:
+      - pgvector
+    networks:
+      - sentinelai
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    # restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      postgres-exporter:
+        condition: service_started
+      api:
+        condition: service_healthy
+      webhooks:
+        condition: service_healthy
+      payments:
+        condition: service_healthy
+    networks:
+      - sentinelai
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    # restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    env_file:
+      - ./.env.grafana
+    environment:
+      - GF_SERVER_ROOT_URL=https://sentinelai.work/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - sentinelai
+
+  sentinel-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: https://sentinelai.work/api
+        VITE_PAYMENTS_URL: https://sentinelai.work
+        VITE_DASHBOARD_DEBUG: "false"
+    container_name: sentinel-frontend
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      webhooks:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+    # restart: unless-stopped
+    networks:
+      - sentinelai
+
+  payments:
+    build: ./payments
+    env_file:
+      - ./payments/.env
+    environment:
+      - FRONTEND_URL=https://sentinelai.work
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@pgvector:5432/sentinelai
+    depends_on:
+      - pgvector
+    # restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - sentinelai
+
+networks:
+  sentinelai:
+    driver: bridge
 
 volumes:
   pgvector_data:
+  prometheus_data:
+  grafana_data:
+  neo4j_data:
+  filter_models:

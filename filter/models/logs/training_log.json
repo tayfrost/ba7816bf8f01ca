@@ -1,0 +1,45 @@
+{
+  "experiment_id": "bert_dual_head_20260408_004029",
+  "config": {
+    "model_name": "bert-base-uncased",
+    "num_category_classes": 7,
+    "num_severity_classes": 4,
+    "batch_size": 16,
+    "learning_rate": 0.0003,
+    "num_epochs": 3,
+    "max_length": 128,
+    "lora_r": 8,
+    "lora_alpha": 16,
+    "lora_dropout": 0.1,
+    "seed": 42
+  },
+  "device": "cuda",
+  "epochs": [
+    {
+      "epoch": 1,
+      "train_loss": 2.0972481744629996,
+      "val_loss": 1.5078155804764142,
+      "val_category_acc": 0.68,
+      "val_severity_acc": 0.7371428571428571
+    },
+    {
+      "epoch": 2,
+      "train_loss": 1.4201618984767368,
+      "val_loss": 1.2907137247649105,
+      "val_category_acc": 0.76,
+      "val_severity_acc": 0.7571428571428571
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.2259370547533035,
+      "val_loss": 1.2300140180371024,
+      "val_category_acc": 0.7742857142857142,
+      "val_severity_acc": 0.7785714285714286
+    }
+  ],
+  "final_test_metrics": {
+    "loss": 1.2084991037845612,
+    "category_accuracy": 0.7585714285714286,
+    "severity_accuracy": 0.7857142857142857
+  }
+}

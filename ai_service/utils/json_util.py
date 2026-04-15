@@ -1,0 +1,38 @@
+import re
+import json
+import logging
+from json_repair import repair_json
+
+logger = logging.getLogger(__name__)
+
+def safe_json_loads(text) -> dict:
+    """
+    Two-layer repair:
+    1. Regex extracts the first JSON block.
+    2. json-repair fixes syntax errors (quotes, commas, etc).
+    Handles None, list, and non-string inputs gracefully.
+    """
+    if not isinstance(text, str):
+        text = "" if text is None else str(text)
+    try:
+        # Layer 1: Regex Extraction
+        # Finds everything between the first '{' and the last '}'
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if not match:
+            # Model sometimes omits outer braces — wrap and retry
+            logger.warning("No JSON braces found; attempting to wrap as object.")
+            json_content = "{" + text.strip().rstrip(",") + "}"
+        else:
+            json_content = match.group(0)
+
+        # Layer 2: json-repair + Parsing
+        # repair_json returns a valid JSON string
+        repaired_json = repair_json(json_content)
+        result = json.loads(repaired_json)
+        
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to parse or repair JSON: {e}")
+        # Return a safe default to prevent the graph from breaking
+        return {"is_risk": False, "reasoning": "Error during JSON repair."}
