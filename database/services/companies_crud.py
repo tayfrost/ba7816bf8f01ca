@@ -1,5 +1,5 @@
 from database.database import models as model
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete as sa_delete
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session as SASession
 from typing import Optional as optional
@@ -201,6 +201,49 @@ def restore_company(company_id: int,*,session: optional[SASession] = None) -> bo
     finally:
         if own_session:
             session.close()
+
+def hard_delete_company_cascade(company_id: int, *, session: optional[SASession] = None) -> bool:
+    """
+    Hard-delete a company and ALL its child data in FK-safe order.
+    Used by the Danger Zone 'Delete Workspace' action.
+    Deletion order:
+      incident_scores (CASCADE from message_incidents at DB level)
+      → message_incidents → google_mailboxes → slack_accounts
+      → slack_workspaces → subscriptions → auth_users → users → company
+    """
+    own_session = session is None
+    if own_session:
+        session = Session()
+
+    try:
+        company = session.get(model.Company, company_id)
+        if not company:
+            return False
+
+        cid = int(company_id)
+
+        # incident_scores cascade automatically via ON DELETE CASCADE on message_incidents
+        session.execute(sa_delete(model.MessageIncident).where(model.MessageIncident.company_id == cid))
+        session.execute(sa_delete(model.GoogleMailbox).where(model.GoogleMailbox.company_id == cid))
+        session.execute(sa_delete(model.SlackAccount).where(model.SlackAccount.company_id == cid))
+        session.execute(sa_delete(model.SlackWorkspace).where(model.SlackWorkspace.company_id == cid))
+        session.execute(sa_delete(model.Subscription).where(model.Subscription.company_id == cid))
+        session.execute(sa_delete(model.AuthUser).where(model.AuthUser.company_id == cid))
+        session.execute(sa_delete(model.User).where(model.User.company_id == cid))
+        session.delete(company)
+        session.commit()
+        return True
+
+    except IntegrityError as e:
+        session.rollback()
+        raise RuntimeError(f"DB rejected hard_delete_company_cascade: {e.orig}") from e
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        if own_session:
+            session.close()
+
 
 def hard_delete_company(company_id: int,*,session: optional[SASession] = None) -> bool:
     """

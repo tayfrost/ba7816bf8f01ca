@@ -64,8 +64,8 @@ async def update_my_company(
 
 
 @router.delete("/me", status_code=status.HTTP_200_OK)
-async def soft_delete_my_company(user: CurrentUser = Depends(require_role("biller"))):
-    deleted = await asyncio.to_thread(companies_crud.soft_delete_company, user.company_id)
+async def delete_my_company(user: CurrentUser = Depends(require_role("biller"))):
+    deleted = await asyncio.to_thread(companies_crud.hard_delete_company_cascade, user.company_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
     return {"detail": "Company deleted"}

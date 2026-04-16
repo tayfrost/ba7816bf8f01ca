@@ -4,7 +4,7 @@ import { deleteMyCompany } from "../../api/companies";
 export default function DangerZone() {
   const handleDelete = async () => {
     await deleteMyCompany();
-    window.location.href = "/login";
+    window.location.href = "/";
   };
 
   return (
