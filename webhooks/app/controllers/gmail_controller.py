@@ -81,6 +81,22 @@ def gmail_callback(code: str = None, state: str = None):
                 status_code=302,
             )
         return {"ok": True, "connected_user": user_email}
+    except ValueError as e:
+        if str(e) == "EMAIL_ALREADY_REGISTERED":
+            logger.warning(f"Gmail connect blocked — email already registered in another company: company={company_id}")
+            if frontend_url:
+                return RedirectResponse(
+                    f"{frontend_url}/{return_page}?provider=gmail&status=email_conflict",
+                    status_code=302,
+                )
+            raise HTTPException(status_code=409, detail="This Gmail address is already connected to another workspace.")
+        logger.error(f"Gmail OAuth failed: {e}")
+        if frontend_url:
+            return RedirectResponse(
+                f"{frontend_url}/{return_page}?provider=gmail&status=error",
+                status_code=302,
+            )
+        raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         logger.error(f"Gmail OAuth failed: {e}")
         if frontend_url:

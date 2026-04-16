@@ -157,6 +157,10 @@ def process_gmail_oauth(code: str, company_id: int) -> str:
     logger.info(f"Gmail OAuth completed for {user_email} company={company_id}")
  
     # 3. Upsert mailbox
+    global_mailbox = db.get_mailbox_by_email_global(user_email)
+    if global_mailbox and global_mailbox.company_id != company_id:
+        raise ValueError("EMAIL_ALREADY_REGISTERED")
+
     existing_mailbox = db.get_google_mailbox_by_email(company_id, user_email)
     if existing_mailbox:
         # Reconnect — refresh the token, keep the existing user_id

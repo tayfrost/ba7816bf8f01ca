@@ -95,7 +95,9 @@ export default function ConnectAccounts() {
       refreshIntegrations();
     }
 
-    if (provider && oauthStatus === "error") {
+    if (provider === "gmail" && oauthStatus === "email_conflict") {
+      setError("This Gmail address is already connected to another SentinelAI workspace. Please contact your admin.");
+    } else if (provider && oauthStatus === "error") {
       setError(`${providerTitle(provider as Provider)} connection failed.`);
     }
 

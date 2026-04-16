@@ -35,6 +35,13 @@ export default function RegisterGmail() {
       setSearchParams(companyId ? { company_id: companyId } : {}, { replace: true });
     }
 
+    if (provider === "gmail" && oauthStatus === "email_conflict") {
+      setError(
+        "This Gmail address is already connected to another SentinelAI workspace. Please contact your admin."
+      );
+      setSearchParams(companyId ? { company_id: companyId } : {}, { replace: true });
+    }
+
     if (provider === "gmail" && oauthStatus === "error") {
       setError(
         "Gmail connection failed. The link may have expired or your company's seat limit has been reached. Contact your admin."
