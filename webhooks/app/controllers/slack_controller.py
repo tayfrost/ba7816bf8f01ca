@@ -15,7 +15,7 @@ from fastapi import APIRouter, Request, HTTPException
 
 from fastapi.responses import RedirectResponse
 from app.services.slack_service import verify_slack_signature
-from app.services.oauth_service import process_slack_oauth, get_slack_auth_url
+from app.services.oauth_service import process_slack_oauth, get_slack_auth_url, WorkspaceTakenError
 from app.services.message_service import process_slack_message
 
 logger = logging.getLogger(__name__)
@@ -77,6 +77,10 @@ async def slack_oauth_callback(code: str | None = None, state: str | None = None
         if frontend_url:
             return RedirectResponse(f"{frontend_url}/connect-accounts?provider=slack&status=success", status_code=302)
         return {"ok": True}
+    except WorkspaceTakenError:
+        if frontend_url:
+            return RedirectResponse(f"{frontend_url}/connect-accounts?provider=slack&status=workspace_taken", status_code=302)
+        raise HTTPException(status_code=409, detail="This Slack workspace is already connected to another account.")
     except ValueError as e:
         if frontend_url:
             return RedirectResponse(f"{frontend_url}/connect-accounts?provider=slack&status=error", status_code=302)

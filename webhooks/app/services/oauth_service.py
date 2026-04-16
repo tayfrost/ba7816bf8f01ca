@@ -20,6 +20,10 @@ from app.services import db_service as db
 
 logger = logging.getLogger(__name__)
 
+
+class WorkspaceTakenError(Exception):
+    """Raised when a Slack workspace is already connected to a different company."""
+
 GMAIL_CLIENT_ID     = os.getenv("GMAIL_CLIENT_ID")
 GMAIL_CLIENT_SECRET = os.getenv("GMAIL_CLIENT_SECRET")
 GMAIL_PUBSUB_TOPIC  = os.getenv("GMAIL_PUBSUB_TOPIC")
@@ -71,6 +75,14 @@ def process_slack_oauth(oauth_data: dict) -> WorkspaceCredentials:
  
     existing = db.get_workspace_by_team_id(team_id)
     if existing:
+        if existing.company_id != company_id:
+            logger.warning(
+                f"Slack workspace team={team_id} belongs to company={existing.company_id}, "
+                f"rejected connection attempt from company={company_id}"
+            )
+            raise WorkspaceTakenError(
+                "This Slack workspace is already connected to another account."
+            )
         db.update_workspace_token(team_id, access_token)
         logger.info(f"Slack workspace token refreshed team={team_id}")
     else:

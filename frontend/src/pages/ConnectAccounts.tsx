@@ -95,7 +95,9 @@ export default function ConnectAccounts() {
       refreshIntegrations();
     }
 
-    if (provider === "gmail" && oauthStatus === "email_conflict") {
+    if (provider === "slack" && oauthStatus === "workspace_taken") {
+      setError("This Slack workspace is already connected to another account. Please use that account or contact your admin.");
+    } else if (provider === "gmail" && oauthStatus === "email_conflict") {
       setError("This Gmail address is already connected to another SentinelAI workspace. Please contact your admin.");
     } else if (provider && oauthStatus === "error") {
       setError(`${providerTitle(provider as Provider)} connection failed.`);
