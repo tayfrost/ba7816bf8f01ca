@@ -122,6 +122,11 @@ def process_slack_message(payload: dict, timestamp: str) -> bool:
                 except Exception as exc:
                     logger.error(f"[merge] merge_users failed (non-fatal): {exc}")
     else:
+        # Skip registering the bot itself when it is @mentioned.
+        if display_name.strip().lower() == "sentinelai":
+            logger.info(f"Ignoring Slack event from bot user {slack_uid} ({display_name})")
+            return False
+
         # New Slack user — create a temporary seat, then create the account.
         # create_slack_account internally calls find_user_id_by_email and may
         # override the user_id we pass with an existing Gmail user's id.
